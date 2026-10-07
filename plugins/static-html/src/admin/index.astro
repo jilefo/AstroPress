@@ -1,0 +1,305 @@
+---
+/**
+ * /admin-ext/static-html — 静态 HTML 生成设置 / 手动生成 / 历史
+ */
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+if (!Astro.locals.user || !Astro.locals.db) return Astro.redirect("/login");
+---
+<AdminLayout title="静态HTML生成">
+    <style is:global>
+      * { box-sizing: border-box; }
+      .sh-wrap { max-width: 920px; margin: 0 auto; padding: 0 16px; display: grid; gap: 16px; }
+      .sh-card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 20px; }
+      .sh-card h1 { font-size: 20px; margin: 0 0 6px; }
+      .sh-card h2 { font-size: 15px; margin: 0 0 12px; }
+      .sh-muted { color: #646970; font-size: 12px; }
+      .sh-row { display: flex; align-items: center; gap: 8px; margin: 14px 0 4px; flex-wrap: wrap; }
+      .sh-row label { font-size: 13px; font-weight: 600; min-width: 96px; }
+      .sh-row input[type="text"], .sh-row input[type="time"], .sh-row input[type="number"], .sh-row select {
+        font-size: 13px; padding: 6px 8px; border: 1px solid #8c8f94; border-radius: 3px;
+      }
+      .sh-row input[type="text"] { width: 260px; }
+      .sh-row input[type="number"] { width: 90px; }
+      .sh-check { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+      .sh-btn { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 8px 18px; cursor: pointer; font-size: 13px; }
+      .sh-btn:disabled { opacity: .55; cursor: default; }
+      .sh-btn.big { font-size: 14px; padding: 10px 26px; }
+      .sh-msg { font-size: 13px; margin-top: 10px; min-height: 18px; }
+      .sh-ok { color: #00a32a; }
+      .sh-err { color: #b32d2e; }
+      .sh-status { margin-top: 14px; border: 1px solid #dcdcdd; border-radius: 4px; padding: 12px 14px; background: #f9fafb; display: none; }
+      .sh-status.is-open { display: block; }
+      .sh-status .phase { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+      .sh-stats { display: flex; gap: 22px; flex-wrap: wrap; font-size: 13px; color: #50575e; }
+      .sh-badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; }
+      .sh-badge.running { background: #f0f6fc; color: #135e96; border: 1px solid #c5dff4; }
+      .sh-badge.ok { background: #edfaef; color: #0a7d2b; border: 1px solid #b8e6c1; }
+      .sh-badge.warn { background: #fcf5e5; color: #996800; border: 1px solid #f0dca8; }
+      .sh-badge.error { background: #fbeaea; color: #b32d2e; border: 1px solid #f0c2c2; }
+      .sh-errors { margin: 10px 0 0; padding-left: 18px; font-size: 12px; color: #b32d2e; max-height: 150px; overflow: auto; }
+      .sh-errors li { font-family: ui-monospace, Consolas, monospace; margin-bottom: 2px; }
+      table.sh-runs { border-collapse: collapse; width: 100%; font-size: 12px; margin-top: 6px; }
+      table.sh-runs th, table.sh-runs td { border: 1px solid #dcdcdd; padding: 6px 8px; text-align: left; }
+      table.sh-runs th { background: #f6f7f7; }
+      .sh-empty { color: #646970; font-size: 13px; padding: 14px 0; }
+    </style>
+
+    <div class="sh-wrap">
+      <div class="sh-card">
+        <h1>静态 HTML 生成</h1>
+        <div class="sh-muted">
+          把全站 SSR 页面抓取为静态 HTML 落盘，并在最后统一生成 sitemap.xml 与 rss.xml。
+          可将导出目录整体上传到任意静态空间 / CDN / 对象存储。
+        </div>
+
+        <div class="sh-row">
+          <span class="sh-check"><input type="checkbox" id="enabled" /> <label for="enabled" style="min-width:auto;font-weight:400;">启用插件（关闭后定时任务停止）</label></span>
+        </div>
+
+        <div class="sh-row">
+          <label for="outputDir">输出目录</label>
+          <input type="text" id="outputDir" placeholder="static-html" />
+          <span class="sh-muted">相对站点根目录，如 static-html；禁止使用系统目录</span>
+        </div>
+
+        <div class="sh-row">
+          <label for="schedule">定时计划</label>
+          <select id="schedule">
+            <option value="manual">手动（仅点击按钮生成）</option>
+            <option value="hourly">每小时</option>
+            <option value="daily">每天定点</option>
+            <option value="weekly">每周定点</option>
+          </select>
+          <input type="time" id="scheduleTime" value="03:00" />
+          <select id="scheduleWeekday">
+            <option value="0">周日</option>
+            <option value="1">周一</option>
+            <option value="2">周二</option>
+            <option value="3">周三</option>
+            <option value="4">周四</option>
+            <option value="5">周五</option>
+            <option value="6">周六</option>
+          </select>
+          <span class="sh-muted">定时为 WP-Cron 风格：站点有访问时按分钟检查</span>
+        </div>
+
+        <div class="sh-row">
+          <label>导出内容</label>
+          <span class="sh-check"><input type="checkbox" id="includePages" /> 独立页面（/{'{slug}'}）</span>
+          <span class="sh-check"><input type="checkbox" id="includeAssets" /> 同源静态资源（CSS/JS/图片）</span>
+          <span class="sh-check">文章上限 <input type="number" id="maxPosts" min="1" max="10000" value="2000" /></span>
+        </div>
+
+        <div class="sh-row">
+          <label for="outputMode">输出模式</label>
+          <select id="outputMode">
+            <option value="static">纯静态目录（Nginx/任意静态托管）</option>
+            <option value="pages">Cloudflare Pages（含 _worker.js + _routes.json）</option>
+          </select>
+          <span class="sh-muted">Pages 模式会额外生成 _worker.js（目录补全/404/缓存头）与 _routes.json</span>
+        </div>
+
+        <button class="sh-btn" id="saveBtn">保存设置</button>
+        <div class="sh-msg" id="saveMsg"></div>
+      </div>
+
+      <div class="sh-card">
+        <h2>立即生成</h2>
+        <div class="sh-muted">抓取首页、全部已发布文章（/blog/ slug）、已发布独立页面，以及页面引用的同源资源。</div>
+        <div style="margin-top:12px;">
+          <button class="sh-btn big" id="genBtn">⚡ 立即生成静态 HTML</button>
+        </div>
+        <div class="sh-status" id="statusBox">
+          <div class="phase"><span class="sh-badge" id="runBadge">运行中</span> <span id="runPhase" style="margin-left:8px;"></span></div>
+          <div class="sh-stats">
+            <span>页面：<strong id="runPages">0</strong></span>
+            <span>资源：<strong id="runAssets">0</strong></span>
+            <span>大小：<strong id="runBytes">0</strong></span>
+            <span id="runWhen"></span>
+          </div>
+          <ul class="sh-errors" id="runErrors"></ul>
+        </div>
+      </div>
+
+      <div class="sh-card">
+        <h2>生成历史（最近 20 次）</h2>
+        <div id="runsBox"><div class="sh-empty">加载中…</div></div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        var $ = function (id) { return document.getElementById(id); };
+        var saveBtn = $("saveBtn"), genBtn = $("genBtn"), saveMsg = $("saveMsg");
+        var statusBox = $("statusBox"), runBadge = $("runBadge"), runPhase = $("runPhase");
+        var runPages = $("runPages"), runAssets = $("runAssets"), runBytes = $("runBytes"), runWhen = $("runWhen");
+        var runErrors = $("runErrors"), runsBox = $("runsBox");
+        var pollTimer = null;
+
+        function api(url, opts) {
+          return fetch(url, Object.assign({ headers: { "Content-Type": "application/json" }, credentials: "same-origin" }, opts))
+            .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, status: r.status, data: d }; }); });
+        }
+        function fmtBytes(n) {
+          if (n < 1024) return n + " B";
+          if (n < 1048576) return (n / 1024).toFixed(1) + " KB";
+          if (n < 1073741824) return (n / 1048576).toFixed(2) + " MB";
+          return (n / 1073741824).toFixed(2) + " GB";
+        }
+        function fmtTime(iso) {
+          if (!iso) return "-";
+          try { return new Date(iso).toLocaleString("zh-CN", { hour12: false }); } catch (e) { return iso; }
+        }
+        function esc(s) {
+          return String(s == null ? "" : s);
+        }
+        function setSaveMsg(text, cls) {
+          saveMsg.textContent = text;
+          saveMsg.className = "sh-msg " + (cls || "sh-muted");
+        }
+        function applyScheduleVisibility() {
+          var v = $("schedule").value;
+          $("scheduleTime").style.display = (v === "daily" || v === "weekly") ? "" : "none";
+          $("scheduleWeekday").style.display = v === "weekly" ? "" : "none";
+        }
+
+        function loadSettings() {
+          api("/admin-ext/api/static-html/settings").then(function (res) {
+            if (!res.ok) { setSaveMsg((res.data && res.data.error) || "加载失败", "sh-err"); return; }
+            var s = res.data;
+            $("enabled").checked = !!s.enabled;
+            $("outputDir").value = s.outputDir || "static-html";
+            $("schedule").value = s.schedule || "manual";
+            $("scheduleTime").value = s.scheduleTime || "03:00";
+            $("scheduleWeekday").value = String(s.scheduleWeekday || 0);
+            $("includePages").checked = s.includePages !== false;
+            $("includeAssets").checked = s.includeAssets !== false;
+            $("maxPosts").value = s.maxPosts || 2000;
+            $("outputMode").value = s.outputMode || "static";
+            applyScheduleVisibility();
+          });
+        }
+        $("schedule").addEventListener("change", applyScheduleVisibility);
+
+        saveBtn.addEventListener("click", function () {
+          setSaveMsg("保存中…", "sh-muted");
+          saveBtn.disabled = true;
+          var body = {
+            enabled: $("enabled").checked,
+            outputDir: $("outputDir").value.trim(),
+            schedule: $("schedule").value,
+            scheduleTime: $("scheduleTime").value || "03:00",
+            scheduleWeekday: Number($("scheduleWeekday").value),
+            includePages: $("includePages").checked,
+            includeAssets: $("includeAssets").checked,
+            maxPosts: Number($("maxPosts").value) || 2000,
+            outputMode: $("outputMode").value
+          };
+          api("/admin-ext/api/static-html/settings", { method: "POST", body: JSON.stringify(body) })
+            .then(function (res) {
+              saveBtn.disabled = false;
+              if (!res.ok) { setSaveMsg((res.data && res.data.error) || "保存失败", "sh-err"); return; }
+              var s = res.data.settings;
+              if (s.outputDir !== body.outputDir) $("outputDir").value = s.outputDir;
+              setSaveMsg("已保存。", "sh-ok");
+            })
+            .catch(function (e) { saveBtn.disabled = false; setSaveMsg(e.message || "网络错误", "sh-err"); });
+        });
+
+        function badgeClass(st) { return st === "running" ? "running" : st; }
+        function badgeText(st) {
+          return { running: "运行中", ok: "成功", warn: "部分成功", error: "失败", idle: "空闲" }[st] || st;
+        }
+
+        function renderState(st) {
+          if (!st || st.status === "idle") {
+            statusBox.classList.remove("is-open");
+            return;
+          }
+          statusBox.classList.add("is-open");
+          runBadge.textContent = badgeText(st.status);
+          runBadge.className = "sh-badge " + badgeClass(st.status);
+          runPhase.textContent = st.phase || "";
+          runPages.textContent = String(st.pages || 0);
+          runAssets.textContent = String(st.assets || 0);
+          runBytes.textContent = fmtBytes(st.bytes || 0);
+          runWhen.textContent = st.finishedAt ? "结束于 " + fmtTime(st.finishedAt) : (st.startedAt ? "开始于 " + fmtTime(st.startedAt) : "");
+          runErrors.textContent = "";
+          (st.errors || []).forEach(function (e) {
+            var li = document.createElement("li");
+            li.textContent = (e.status ? "[" + e.status + "] " : "") + esc(e.url) + " — " + esc(e.error);
+            runErrors.appendChild(li);
+          });
+        }
+
+        function renderRuns(runs) {
+          if (!runs || !runs.length) {
+            runsBox.innerHTML = '<div class="sh-empty">暂无生成记录</div>'; // ap-audit-ok: 静态串
+            return;
+          }
+          var table = document.createElement("table");
+          table.className = "sh-runs";
+          table.innerHTML = // ap-audit-ok: 静态表头
+            "<thead><tr><th>开始时间</th><th>触发</th><th>状态</th><th>页面</th><th>资源</th><th>大小</th><th>耗时</th><th>输出目录</th><th>错误</th></tr></thead>";
+          var tb = document.createElement("tbody");
+          runs.forEach(function (r) {
+            var tr = document.createElement("tr");
+            function td(text) { var c = document.createElement("td"); c.textContent = text == null ? "" : String(text); tr.appendChild(c); }
+            td(fmtTime(r.startedAt));
+            td(r.trigger === "schedule" ? "定时" : "手动");
+            var st = document.createElement("td");
+            var b = document.createElement("span");
+            b.className = "sh-badge " + badgeClass(r.status);
+            b.textContent = badgeText(r.status);
+            st.appendChild(b);
+            tr.appendChild(st);
+            td(r.pages);
+            td(r.assets);
+            td(fmtBytes(r.bytes));
+            td(r.ms >= 1000 ? (r.ms / 1000).toFixed(1) + " s" : r.ms + " ms");
+            td(r.outputDir);
+            td((r.errors || []).length);
+            tb.appendChild(tr);
+          });
+          table.appendChild(tb);
+          runsBox.textContent = "";
+          runsBox.appendChild(table);
+        }
+
+        function refresh() {
+          return api("/admin-ext/api/static-html/status").then(function (res) {
+            if (!res.ok) return;
+            renderState(res.data.state);
+            renderRuns(res.data.runs);
+            if (res.data.state && res.data.state.running) {
+              if (!pollTimer) pollTimer = setInterval(poll, 2000);
+              genBtn.disabled = true;
+            } else {
+              if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+              genBtn.disabled = false;
+            }
+          });
+        }
+        function poll() { refresh(); }
+
+        genBtn.addEventListener("click", function () {
+          if (!confirm("确定立即生成静态 HTML？生成期间请勿改动站点内容。")) return;
+          genBtn.disabled = true;
+          api("/admin-ext/api/static-html/generate", { method: "POST", body: JSON.stringify({ confirm: true }) })
+            .then(function (res) {
+              if (!res.ok) {
+                alert((res.data && res.data.error) || "启动失败");
+                genBtn.disabled = false;
+                return;
+              }
+              if (!pollTimer) pollTimer = setInterval(poll, 2000);
+              refresh();
+            })
+            .catch(function (e) { genBtn.disabled = false; alert(e.message || "网络错误"); });
+        });
+
+        loadSettings();
+        refresh();
+      })();
+    </script>
+</AdminLayout>

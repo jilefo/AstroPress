@@ -31,8 +31,8 @@ releases/
 
 **V8 轮发布物料已就绪（最新发布包 v1.0.4，2026-10-07）**：
 
-- [v1.0.4/astropress-v1.0.4-source.zip](v1.0.4/astropress-v1.0.4-source.zip) —— 纯净开源源码包（7.4 MB，2124 文件；内置安全扫描 PASS，新增排除 `releases/` 与内部工作文档 HANDOVER/PLAN/CLAUDE）
-- [v1.0.4/checksums.txt](v1.0.4/checksums.txt) —— SHA256：`61de528a…eefd`
+- [v1.0.4/astropress-v1.0.4-source.zip](v1.0.4/astropress-v1.0.4-source.zip) —— 纯净开源源码包（2.1 MB，1427 文件；内置安全扫描 PASS，新增排除 `releases/` 与内部工作文档 HANDOVER/PLAN/CLAUDE）
+- [v1.0.4/checksums.txt](v1.0.4/checksums.txt) —— SHA256：`f2d21d04…5261`
 - [v1.0.4/release-notes.md](v1.0.4/release-notes.md) —— 发布说明（Node+SQLite 对等验证 54/54 / 页面缓存 epoch 收口 ≤2s / 开源发布工程化与 .github 基建）
 - 对应线上版本：V2 `8c0162e7`、主站 `cdde9018`（epoch 2s 收口构建）；根 `package.json` 版本对齐 `1.0.4`
 - V8 轮验收：Node 混沌 54/54 + epoch 双实例收敛断言 7/7×2 + 全仓脱敏 186+ 文件 + secret-scan 零泄漏，记录见 [onlinereadme.md](../onlinereadme.md) 与 [CHANGELOG.md](../CHANGELOG.md) V8 轮条目。
