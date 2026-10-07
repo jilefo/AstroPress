@@ -102,14 +102,14 @@ def git(args, cwd=ROOT):
 
 def latest_version() -> str:
     rel = os.path.join(ROOT, "releases")
-    versions = [
-        d for d in os.listdir(rel)
-        if re.fullmatch(r"\d+\.\d+\.\d+", d)
-        and os.path.isdir(os.path.join(rel, d))
-    ]
+    versions = []
+    for d in os.listdir(rel):
+        m = re.fullmatch(r"v?(\d+)\.(\d+)\.(\d+)", d)
+        if m and os.path.isdir(os.path.join(rel, d)):
+            versions.append(tuple(map(int, m.groups())))
     if not versions:
-        fail("releases/ 下未找到版本目录")
-    return sorted(versions, key=lambda v: tuple(map(int, v.split("."))))[-1]
+        fail("releases/ 下未找到版本目录（形如 v1.0.4）")
+    return ".".join(map(str, sorted(versions)[-1]))
 
 
 def check_tag_pushed(version: str):
@@ -135,7 +135,7 @@ def main():
 
     version = args.version or latest_version()
     tag = f"v{version}"
-    vdir = os.path.join(ROOT, "releases", version)
+    vdir = os.path.join(ROOT, "releases", f"v{version}")
     zip_name = f"astropress-v{version}-source.zip"
     zip_path = os.path.join(vdir, zip_name)
     sums_path = os.path.join(vdir, "checksums.txt")
