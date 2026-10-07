@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { wpTermRelationships, wpTermTaxonomy, wpTerms } from "@astropress/core/schema";
 import { eq, and, inArray } from "drizzle-orm";
+import { readJsonBody } from "../../../../../lib/json-body";
 
 // GET /api/posts/:id/terms/:taxonomy — get term IDs assigned to this post
 export const GET: APIRoute = async ({ locals, params }) => {
@@ -34,7 +35,9 @@ export const PUT: APIRoute = async ({ locals, params, request }) => {
   const postId = Number(params.id);
   const taxonomy = params.taxonomy!;
 
-  const { termTaxonomyIds } = await request.json() as { termTaxonomyIds: number[] };
+  const parsed = await readJsonBody<{ termTaxonomyIds: number[] }>(request);
+  if (!parsed.ok) return parsed.response;
+  const { termTaxonomyIds } = parsed.data;
 
   // Get all termTaxonomyIds for this taxonomy so we can delete only this taxonomy's relationships
   const allTTIds = await db

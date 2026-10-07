@@ -5,19 +5,21 @@
 `apps/admin/{package.json, astro.config.ts, src/plugins.ts}` 三处既有装配点接线。
 （F 轮为例外：对 `apps/`、`packages/` 的安全/稳定性修复均在 CHANGELOG 中逐条显式登记。）
 
-## [Unreleased] — 2026-10-07（V8 轮：Node+SQLite 对等验证 · epoch 收口 ≤2s · 开源发布工程化 v1.0.4）
+## [Unreleased] — 2026-10-07（V8 轮：Node+SQLite 对等验证 · epoch 收口 ≤2s · 开源发布工程化 v1.0.4 · 核心 API 输入校验收口 · 混沌门禁常规化）
 
-V2 实例最终部署版本 `8c0162e7`；旧实例 astropress 部署版本 `cdde9018`。双实例代码一致，epoch 收敛断言 7/7×2 全绿。
+V2 实例最终部署版本 `9050001b`；旧实例 astropress 部署版本 `1987103c`（中优先级任务部署后版本；高优先级阶段分别为 `8c0162e7`/`cdde9018`）。双实例代码一致，epoch 收敛断言 7/7×2、坏 JSON 探针 41/41×2、A/C/D 混沌门禁 17/17×2 全绿。
 
 ### 变更
 
 1. **页面缓存 epoch 进程内 TTL 15s→2s**（[epoch.ts](plugins/page-cache/src/lib/epoch.ts)）：内容写操作后跨 isolate 全局可见窗口 ≤2s（此前 15s），fail-open 语义不变（纪元读取失败全量视为有效，不产生 5xx）。Durable Object 方案经评估暂不采用：`@astrojs/cloudflare` 11.2.0 不支持自定义 DO 导出，构建链注入风险大，已留档。
+2. **核心 API 裸 `request.json()` 统一收口（V8 中优先级任务 4）**：新增公共 helper [json-body.ts](apps/admin/src/lib/json-body.ts)（`readJsonBody` 判别联合 + `jsonError`，非法 JSON/空 body 一律 400 中文 JSON），覆盖 30 个文件 31 处入站解析——posts/menus/users/terms/taxonomies/post-types/forms/custom-fields/page-schema/pages/themes（10 端点）/ai 等管理 API；V7 已修的 posts/index、posts/bulk 手写样板同步迁移到 helper。连带把 menus 创建/重命名的纯文本 400 统一为 JSON。插件侧（ads/ai-chat/i18n/autofill/webhook 等）V 轮已全部 try/catch，本轮复扫确认无漏网。
 
 ### 新增
 
 1. **Node+SQLite 形态对等验证**（[logs/v8_node_chaos.py](logs/v8_node_chaos.py)）：生产构建（`dist/server/entry.mjs`）+ SQLite 直连跑关键混沌组 **54/54 PASS**——确认 D1 JSON1 原子写（`json_patch`/`json_set`）、原子滑窗评论频控、零残留语义在 Node 对等成立；文件管理/WebDAV/Git 同步/备份等 6 个 Cloudflare 平台屏蔽插件在 Node 全解锁，媒体上传走本地磁盘。
 2. **epoch 收敛断言工具**（[logs/v8_cf_epoch.py](logs/v8_cf_epoch.py)）：发文/改标题/删除三类写后收敛轮询（0.4s 间隔 / 8s 超时 / 断言 ≤3.5s），双实例各 **7/7 PASS**，实测收敛 1.56–3.06s（V6 时代断言窗口为 ≤16s、实测最高 5.2s）。
-3. **开源发布工程化**：全仓脱敏 186+ 文件（明文凭据清零，测试脚本改 `ASTROPRESS_TEST_PASSWORD` 环境变量注入，管理员凭据迁至 `.ap-data/credential.txt`，git 与发布包双排除）；`.gitignore` 补齐第三方参考物/内部工作文档/发布包产物；新增 `.github/` 开源基建六件——[ci.yml](.github/workflows/ci.yml)（typecheck → Node 构建 → CF 构建 → 部署脚本语法检查）、Issue 模板×3、PR 模板、CODEOWNERS、dependabot；根 `package.json` 版本对齐 `1.0.4`；发布包 [astropress-v1.0.4-source.zip](releases/v1.0.4/astropress-v1.0.4-source.zip)（7.4 MB，2124 文件，内置强制安全扫描 PASS）。
+3. **开源发布工程化**：全仓脱敏 186+ 文件（明文凭据清零，测试脚本改 `ASTROPRESS_TEST_PASSWORD` 环境变量注入，管理员凭据迁至 `.ap-data/credential.txt`，git 与发布包双排除）；`.gitignore` 补齐第三方参考物/内部工作文档/发布包产物；新增 `.github/` 开源基建六件——[ci.yml](.github/workflows/ci.yml)（typecheck → Node 构建 → CF 构建 → 部署脚本语法检查）、Issue 模板×3、PR 模板、CODEOWNERS、dependabot；根 `package.json` 版本对齐 `1.0.4`；发布包 [astropress-v1.0.4-source.zip](releases/v1.0.4/astropress-v1.0.4-source.zip)（2.1 MB，1427 文件，以 `git ls-files` 为唯一白名单打包，内置强制安全扫描 PASS，SHA256 `f2d21d04…5261`）。
+4. **写路径混沌复测快组门禁（V8 中优先级任务 5）**：新增 [v8_gate_acd.py](logs/v8_gate_acd.py)，自包含 ~90s 跑完 A 评论频控（7 项）/C 重定向并发（5 项）/D 链接原子计数（5 项）共 17 断言，同一脚本双形态通用（Node http 内置 Secure cookie 策略，CF https 直跑），非零退出码可直接接部署流水线；配套 [v8_badjson_probe.py](logs/v8_badjson_probe.py) 对 35 个 JSON 端点发畸形 body，断言 400 + JSON content-type + 中文 error 且不回退首页 HTML；[v8_gate_residue.py](logs/v8_gate_residue.py) 三端零残留独立扫描。
 
 ### 文档
 
@@ -26,6 +28,7 @@ V2 实例最终部署版本 `8c0162e7`；旧实例 astropress 部署版本 `cdde
 ### 验证证据
 
 - Node 混沌：[logs/v8_node_chaos_result.json](logs/v8_node_chaos_result.json) 54/54；epoch 收敛：[logs/v8_cf_epoch_result_v2.json](logs/v8_cf_epoch_result_v2.json) / [v8_cf_epoch_result_old.json](logs/v8_cf_epoch_result_old.json) 各 7/7。
+- 中优先级任务 4/5（Node/V2/OLD 三形态）：坏 JSON 探针 [v8_badjson_node.json](logs/v8_badjson_node.json) / [v8_badjson_v2.json](logs/v8_badjson_v2.json) / [v8_badjson_old.json](logs/v8_badjson_old.json) 各 **41/41 PASS**；A/C/D 门禁 [v8_gate_acd_node.json](logs/v8_gate_acd_node.json) / [v8_gate_acd_v2.json](logs/v8_gate_acd_v2.json) / [v8_gate_acd_old.json](logs/v8_gate_acd_old.json) 各 **17/17 PASS**（A07 批评论前台可见 Node 0.6s / V2 2.9s / OLD 3.1s）；三端 V8GATE 残留扫描为 0。
 - secret-scan 复跑零真实泄漏（检出能力自检通过）；发布检查单见 [releases/README.md](releases/README.md)；测试数据零残留（local.db 已恢复测试前备份并断言）。
 
 ---

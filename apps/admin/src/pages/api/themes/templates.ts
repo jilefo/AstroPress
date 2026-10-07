@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { eq } from "drizzle-orm";
 import { wpOptions } from "@astropress/core/schema";
 import type { ThemeTemplate, TemplateType, DisplayCondition } from "@astropress/core/types/theme";
+import { readJsonBody } from "../../../lib/json-body";
 
 const VALID_TYPES: TemplateType[] = [
   "header", "footer", "single-post", "single-page", "archive", "404", "search",
@@ -66,7 +67,9 @@ export const POST: APIRoute = async ({ locals, request }) => {
   const db = locals.db;
   if (!db || !locals.user) return new Response("未登录或登录已过期", { status: 401 });
 
-  const body = await request.json() as any;
+  const parsed = await readJsonBody<any>(request);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
   const type = body.type as TemplateType;
 
   if (!type || !VALID_TYPES.includes(type)) {

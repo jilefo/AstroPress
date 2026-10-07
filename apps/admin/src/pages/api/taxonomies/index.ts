@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { wpOptions } from "@astropress/core/schema";
 import { eq } from "drizzle-orm";
 import { registerTaxonomy } from "@astropress/core/registry";
+import { readJsonBody } from "../../../lib/json-body";
 
 async function getStored(db: any): Promise<any[]> {
   const [row] = await db
@@ -16,7 +17,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const db = locals.db;
   if (!locals.user || !db) return new Response("未登录或登录已过期", { status: 401 });
 
-  const body = await request.json() as any;
+  const parsed = await readJsonBody<any>(request);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
   const { key, ...config } = body;
 
   if (!key || !/^[a-z0-9_]+$/.test(key)) {

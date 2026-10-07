@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { wpOptions } from "@astropress/core/schema";
 import { eq } from "drizzle-orm";
+import { readJsonBody } from "../../../../lib/json-body";
 
 const key = (id: string) => `astropress_form_entries_${id}`;
 
@@ -32,7 +33,9 @@ export const GET: APIRoute = async ({ params, url, locals }) => {
 export const PATCH: APIRoute = async ({ params, request, locals }) => {
   const db = locals.db;
   if (!locals.user || !db) return new Response("未登录或登录已过期", { status: 401 });
-  const { entryId, status, action } = await request.json() as any;
+  const parsed = await readJsonBody<{ entryId: any; status?: string; action?: string }>(request);
+  if (!parsed.ok) return parsed.response;
+  const { entryId, status, action } = parsed.data;
   const entries = await getEntries(db, params.id!);
   let updated = entries;
   if (action === "delete") {

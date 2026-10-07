@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { eq } from "drizzle-orm";
 import { wpOptions } from "@astropress/core/schema";
+import { readJsonBody } from "../../../lib/json-body";
 
 const BLOCK_TYPES_DOC = `
 AVAILABLE BLOCK TYPES — always prefer these over "html". Use html ONLY when nothing else fits.
@@ -84,7 +85,9 @@ export const POST: APIRoute = async ({ locals, request }) => {
   if (!db || !locals.user) return new Response("未登录或登录已过期", { status: 401 });
   const cfAI = (locals as any).runtime?.env?.AI;
 
-  const { prompt, currentBlocks, singleBlock } = await request.json() as any;
+  const parsed = await readJsonBody<{ prompt?: string; currentBlocks?: any; singleBlock?: any }>(request);
+  if (!parsed.ok) return parsed.response;
+  const { prompt, currentBlocks, singleBlock } = parsed.data;
   if (!prompt?.trim()) {
     return new Response(JSON.stringify({ error: "提示词不能为空" }), {
       status: 400,

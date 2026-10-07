@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { eq, and } from "drizzle-orm";
 import { wpUsers, wpUsermeta } from "@astropress/core/schema";
 import { hashPassword } from "@astropress/auth";
+import { readJsonBody } from "../../../lib/json-body";
 
 async function getUserRole(db: any, userId: number): Promise<string> {
   const [row] = await db
@@ -51,7 +52,9 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
   if (!db || !locals.user) return new Response("未登录或登录已过期", { status: 401 });
 
   const id = Number(params.id);
-  const body = await request.json() as any;
+  const parsed = await readJsonBody<any>(request);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
   const { userEmail, displayName, password, role } = body;
 
   const updates: Record<string, any> = {};

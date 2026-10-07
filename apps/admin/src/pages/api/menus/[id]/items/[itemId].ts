@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { eq } from "drizzle-orm";
 import { wpPosts, wpPostmeta, wpTermRelationships } from "@astropress/core/schema";
+import { readJsonBody } from "../../../../../lib/json-body";
 
 // PATCH — rename label or change parent/order for a single item
 export const PATCH: APIRoute = async ({ params, request, locals }) => {
@@ -8,7 +9,9 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
   if (!db || !locals.user) return new Response("未登录或登录已过期", { status: 401 });
 
   const itemId = Number(params.itemId);
-  const body = await request.json() as { title?: string; url?: string; menuOrder?: number; postParent?: number };
+  const parsed = await readJsonBody<{ title?: string; url?: string; menuOrder?: number; postParent?: number }>(request);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
 
   if (body.title !== undefined || body.menuOrder !== undefined || body.postParent !== undefined) {
     const set: Record<string, any> = {};

@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { eq } from "drizzle-orm";
 import { wpOptions } from "@astropress/core/schema";
 import type { UserTemplate } from "../../../lib/templateLibrary";
+import { readJsonBody } from "../../../lib/json-body";
 
 function uid() {
   return Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10);
@@ -49,7 +50,9 @@ export const POST: APIRoute = async ({ locals, request }) => {
   const db = locals.db;
   if (!db || !locals.user) return new Response("未登录或登录已过期", { status: 401 });
 
-  const body = await request.json() as any;
+  const parsed = await readJsonBody<any>(request);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
   if (!body.name || !Array.isArray(body.blocks)) {
     return new Response(JSON.stringify({ error: "名称和区块内容均为必填项" }), {
       status: 400,

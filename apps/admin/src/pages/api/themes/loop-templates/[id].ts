@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { eq } from "drizzle-orm";
 import { wpOptions } from "@astropress/core/schema";
 import type { LoopTemplate } from "@astropress/core/types/theme";
+import { readJsonBody } from "../../../../lib/json-body";
 
 async function loadUserTemplates(db: any): Promise<LoopTemplate[]> {
   const [row] = await db.select({ value: wpOptions.optionValue }).from(wpOptions)
@@ -24,7 +25,9 @@ export const PUT: APIRoute = async ({ locals, params, request }) => {
   const db = locals.db;
   if (!db || !locals.user) return new Response("未登录或登录已过期", { status: 401 });
   const { id } = params;
-  const body = await request.json() as any;
+  const parsed = await readJsonBody<any>(request);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
   const templates = await loadUserTemplates(db);
   const idx = templates.findIndex(t => t.id === id);
   if (idx === -1) return new Response("列表模板不存在", { status: 404 });

@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { eq } from "drizzle-orm";
 import { wpOptions } from "@astropress/core/schema";
+import { readJsonBody } from "../../../lib/json-body";
 
 const OPTION_KEY = "astropress_ai_settings";
 
@@ -42,7 +43,9 @@ export const PUT: APIRoute = async ({ locals, request }) => {
   const db = locals.db;
   if (!db || !locals.user) return new Response("未登录或登录已过期", { status: 401 });
 
-  const body = await request.json() as any;
+  const parsed = await readJsonBody<any>(request);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
   const { activeProvider, providers, systemContext } = body;
 
   // Load existing to preserve real API keys when masked value is sent

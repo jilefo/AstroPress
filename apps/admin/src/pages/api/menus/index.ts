@@ -1,13 +1,16 @@
 import type { APIRoute } from "astro";
 import { wpTerms, wpTermTaxonomy } from "@astropress/core/schema";
 import { slugify } from "../../../lib/slugify";
+import { readJsonBody, jsonError } from "../../../lib/json-body";
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const db = locals.db;
   if (!db || !locals.user) return new Response("未登录或登录已过期", { status: 401 });
 
-  const { name } = await request.json() as { name: string };
-  if (!name?.trim()) return new Response("名称不能为空", { status: 400 });
+  const parsed = await readJsonBody<{ name: string }>(request);
+  if (!parsed.ok) return parsed.response;
+  const { name } = parsed.data;
+  if (!name?.trim()) return jsonError(400, "名称不能为空");
 
   const slug = slugify(name) || `menu-${Date.now().toString(36)}`;
 

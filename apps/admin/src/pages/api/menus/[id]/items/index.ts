@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { eq, and, count } from "drizzle-orm";
 import { wpPosts, wpPostmeta, wpTermRelationships, wpTermTaxonomy } from "@astropress/core/schema";
+import { readJsonBody, jsonError } from "../../../../../lib/json-body";
 
 export const POST: APIRoute = async ({ params, request, locals }) => {
   const db = locals.db;
@@ -8,7 +9,9 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
   if (!db || !user) return new Response("未登录或登录已过期", { status: 401 });
 
   const menuId = Number(params.id);
-  const { url, title } = await request.json() as { url: string; title: string };
+  const parsed = await readJsonBody<{ url: string; title: string }>(request);
+  if (!parsed.ok) return parsed.response;
+  const { url, title } = parsed.data;
 
   // Find nav_menu term_taxonomy_id
   const [tt] = await db
@@ -63,7 +66,10 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
   const db = locals.db;
   if (!db || !locals.user) return new Response("未登录或登录已过期", { status: 401 });
 
-  const items = await request.json() as Array<{ id: number; menuOrder: number; postParent: number }>;
+  const parsed = await readJsonBody<Array<{ id: number; menuOrder: number; postParent: number }>>(request);
+  if (!parsed.ok) return parsed.response;
+  const items = parsed.data;
+  if (!Array.isArray(items)) return jsonError(400, "请求体必须是数组");
   for (const item of items) {
     await db.update(wpPosts)
       .set({ menuOrder: item.menuOrder, postParent: item.postParent })

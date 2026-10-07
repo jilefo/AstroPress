@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { wpPostmeta } from "@astropress/core/schema";
 import { eq, and, inArray } from "drizzle-orm";
+import { readJsonBody } from "../../../lib/json-body";
 
 export const GET: APIRoute = async ({ url, locals }) => {
   const db = locals.db;
@@ -26,7 +27,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const db = locals.db;
   if (!locals.user || !db) return new Response("未登录或登录已过期", { status: 401 });
 
-  const { postId, values } = await request.json() as { postId: number; values: Record<string, string> };
+  const parsed = await readJsonBody<{ postId: number; values: Record<string, string> }>(request);
+  if (!parsed.ok) return parsed.response;
+  const { postId, values } = parsed.data;
   if (!postId || !values) return new Response(JSON.stringify({ error: "缺少文章 ID 或字段值" }), { status: 400, headers: { "Content-Type": "application/json" } });
 
   for (const [key, value] of Object.entries(values)) {

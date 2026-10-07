@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { wpTerms, wpTermTaxonomy } from "@astropress/core/schema";
 import { eq, and, asc } from "drizzle-orm";
 import { slugify } from "../../../../lib/slugify";
+import { readJsonBody } from "../../../../lib/json-body";
 
 // GET /api/terms/:taxonomy  — list all terms for a taxonomy
 export const GET: APIRoute = async ({ locals, params }) => {
@@ -35,7 +36,9 @@ export const POST: APIRoute = async ({ locals, params, request }) => {
   if (!locals.user || !db) return new Response("未登录或登录已过期", { status: 401 });
 
   const taxonomy = params.taxonomy!;
-  const { name } = await request.json() as any;
+  const parsed = await readJsonBody<{ name: string }>(request);
+  if (!parsed.ok) return parsed.response;
+  const { name } = parsed.data;
   if (!name?.trim()) {
     return new Response(JSON.stringify({ error: "名称不能为空" }), {
       status: 400,

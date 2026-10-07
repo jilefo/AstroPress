@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { wpOptions } from "@astropress/core/schema";
 import { eq } from "drizzle-orm";
+import { readJsonBody } from "../../../lib/json-body";
 
 export type { };
 
@@ -26,7 +27,9 @@ export const GET: APIRoute = async ({ locals }) => {
 export const POST: APIRoute = async ({ request, locals }) => {
   const db = locals.db;
   if (!locals.user || !db) return new Response("未登录或登录已过期", { status: 401 });
-  const form = await request.json() as any;
+  const parsed = await readJsonBody<any>(request);
+  if (!parsed.ok) return parsed.response;
+  const form = parsed.data;
   if (!form.id) return new Response(JSON.stringify({ error: "缺少表单 ID" }), { status: 400, headers: { "Content-Type": "application/json" } });
   const forms = await getStored(db);
   const idx = forms.findIndex(f => f.id === form.id);

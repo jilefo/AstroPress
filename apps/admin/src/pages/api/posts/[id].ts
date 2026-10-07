@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { getPost, updatePost, deletePost } from "../../../lib/posts";
+import { readJsonBody } from "../../../lib/json-body";
 
 export const GET: APIRoute = async ({ params, locals }) => {
   const db = locals.db;
@@ -19,13 +20,15 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
   if (!db || !locals.user) return new Response("未登录或登录已过期", { status: 401 });
 
   const id = Number(params.id);
-  const body = await request.json() as {
+  const parsed = await readJsonBody<{
     title?: string;
     content?: string;
     excerpt?: string;
     status?: string;
     slug?: string;
-  };
+  }>(request);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
 
   await updatePost(db, id, body);
   return new Response(JSON.stringify({ ok: true }), {

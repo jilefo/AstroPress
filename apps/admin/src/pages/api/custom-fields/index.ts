@@ -3,6 +3,7 @@ import { wpOptions } from "@astropress/core/schema";
 import { eq } from "drizzle-orm";
 import { registerFieldGroup, unregisterFieldGroup } from "@astropress/core/registry";
 import type { FieldGroup } from "@astropress/core/registry";
+import { readJsonBody } from "../../../lib/json-body";
 
 async function getStored(db: any): Promise<FieldGroup[]> {
   const [row] = await db
@@ -34,7 +35,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const db = locals.db;
   if (!locals.user || !db) return new Response("未登录或登录已过期", { status: 401 });
 
-  const group = await request.json() as FieldGroup;
+  const parsed = await readJsonBody<FieldGroup>(request);
+  if (!parsed.ok) return parsed.response;
+  const group = parsed.data;
   if (!group.id || !group.title) {
     return new Response(JSON.stringify({ error: "缺少 ID 或标题" }), { status: 400, headers: { "Content-Type": "application/json" } });
   }

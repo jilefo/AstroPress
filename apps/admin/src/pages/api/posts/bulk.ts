@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { inArray } from "drizzle-orm";
 import { wpPosts, wpPostmeta } from "@astropress/core/schema";
+import { readJsonBody } from "../../../lib/json-body";
 
 const ALLOWED_ACTIONS = new Set(["trash", "restore", "delete", "publish", "draft"]);
 
@@ -8,12 +9,9 @@ export const POST: APIRoute = async ({ locals, request }) => {
   const db = locals.db;
   if (!db || !locals.user) return new Response("未登录或登录已过期", { status: 401 });
 
-  let body: { action: string; ids: number[] };
-  try {
-    body = await request.json();
-  } catch {
-    return new Response(JSON.stringify({ error: "无效的 JSON 数据" }), { status: 400, headers: { "Content-Type": "application/json" } });
-  }
+  const parsed = await readJsonBody<{ action: string; ids: number[] }>(request);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
 
   const { action, ids } = body;
   if (!action || !Array.isArray(ids) || ids.length === 0) {

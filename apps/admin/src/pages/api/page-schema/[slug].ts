@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { eq } from "drizzle-orm";
 import { wpOptions } from "@astropress/core/schema";
+import { readJsonBody } from "../../../lib/json-body";
 
 function optionKey(slug: string) {
   return `astropress_page_schema_${slug}`;
@@ -28,7 +29,9 @@ export const PUT: APIRoute = async ({ locals, params, request }) => {
   if (!db || !locals.user) return new Response("未登录或登录已过期", { status: 401 });
 
   const slug = params.slug!;
-  const body = await request.json();
+  const parsed = await readJsonBody<unknown>(request);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
   const key = optionKey(slug);
 
   const existing = await db

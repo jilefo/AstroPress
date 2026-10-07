@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { eq } from "drizzle-orm";
 import { wpOptions } from "@astropress/core/schema";
 import type { TemplateSlots, TemplateType } from "@astropress/core/types/theme";
+import { readJsonBody } from "../../../lib/json-body";
 
 async function loadSlots(db: any): Promise<TemplateSlots> {
   const [row] = await db
@@ -54,12 +55,14 @@ export const GET: APIRoute = async ({ locals }) => {
 export const PUT: APIRoute = async ({ locals, request }) => {
   const db = locals.db;
   if (!db || !locals.user) return new Response("未登录或登录已过期", { status: 401 });
-  const { type, schemaSlug } = await request.json() as any;
+  const parsed = await readJsonBody<{ type?: string; schemaSlug?: string | null }>(request);
+  if (!parsed.ok) return parsed.response;
+  const { type, schemaSlug } = parsed.data;
   const slots = await loadSlots(db);
   if (schemaSlug === null || schemaSlug === undefined) {
     delete slots[type as TemplateType];
   } else {
-    (slots as any)[type] = schemaSlug;
+    (slots as any)[type as TemplateType] = schemaSlug;
   }
   await saveSlots(db, slots);
   return new Response(JSON.stringify({ ok: true, slots }), { headers: { "Content-Type": "application/json" } });

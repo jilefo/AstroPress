@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { eq, and } from "drizzle-orm";
 import { wpTerms, wpTermTaxonomy, wpTermRelationships, wpPosts, wpPostmeta } from "@astropress/core/schema";
 import { slugify } from "../../../lib/slugify";
+import { readJsonBody, jsonError } from "../../../lib/json-body";
 
 // PATCH — rename menu
 export const PATCH: APIRoute = async ({ params, request, locals }) => {
@@ -9,8 +10,10 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
   if (!db || !locals.user) return new Response("未登录或登录已过期", { status: 401 });
 
   const menuId = Number(params.id);
-  const { name } = await request.json() as { name: string };
-  if (!name?.trim()) return new Response("名称不能为空", { status: 400 });
+  const parsed = await readJsonBody<{ name: string }>(request);
+  if (!parsed.ok) return parsed.response;
+  const { name } = parsed.data;
+  if (!name?.trim()) return jsonError(400, "名称不能为空");
 
   const slug = slugify(name) || `menu-${Date.now().toString(36)}`;
   await db.update(wpTerms).set({ name, slug }).where(eq(wpTerms.termId, menuId));

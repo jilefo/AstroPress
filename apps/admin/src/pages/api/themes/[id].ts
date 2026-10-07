@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { eq } from "drizzle-orm";
 import { wpOptions } from "@astropress/core/schema";
 import type { Theme } from "@astropress/core/types/theme";
+import { readJsonBody } from "../../../lib/json-body";
 
 async function loadThemes(db: any): Promise<Theme[]> {
   const [row] = await db
@@ -43,7 +44,9 @@ export const PUT: APIRoute = async ({ locals, params, request }) => {
   if (!db || !locals.user) return new Response("未登录或登录已过期", { status: 401 });
 
   const { id } = params;
-  const body = await request.json() as any;
+  const parsed = await readJsonBody<any>(request);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
   const themes = await loadThemes(db);
   const idx = themes.findIndex(t => t.id === id);
   if (idx === -1) return new Response("主题不存在", { status: 404 });

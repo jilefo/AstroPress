@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { wpOptions } from "@astropress/core/schema";
 import { DEFAULT_THEME_TOKENS } from "@astropress/core/types/theme";
 import type { Theme } from "@astropress/core/types/theme";
+import { readJsonBody } from "../../../lib/json-body";
 
 async function upsertOption(db: any, name: string, value: string) {
   const existing = await db.select({ id: wpOptions.optionId }).from(wpOptions).where(eq(wpOptions.optionName, name)).limit(1);
@@ -31,7 +32,9 @@ export const PUT: APIRoute = async ({ locals, request }) => {
   const db = locals.db;
   if (!db || !locals.user) return new Response("未登录或登录已过期", { status: 401 });
 
-  const tokens = await request.json() as any;
+  const parsed = await readJsonBody<any>(request);
+  if (!parsed.ok) return parsed.response;
+  const tokens = parsed.data;
 
   // Save global config
   await upsertOption(db, "astropress_theme_config", JSON.stringify(tokens));

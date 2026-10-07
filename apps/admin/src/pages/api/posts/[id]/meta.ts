@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { eq, and } from "drizzle-orm";
 import { wpPostmeta } from "@astropress/core/schema";
+import { readJsonBody } from "../../../../lib/json-body";
 
 export const GET: APIRoute = async ({ params, locals }) => {
   const db = locals.db;
@@ -23,7 +24,9 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
   if (!db || !locals.user) return new Response("未登录或登录已过期", { status: 401 });
 
   const postId = Number(params.id);
-  const body = await request.json() as Record<string, string>;
+  const parsed = await readJsonBody<Record<string, string>>(request);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
 
   for (const [key, value] of Object.entries(body)) {
     // Check if meta key exists

@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { wpOptions } from "@astropress/core/schema";
 import { DEFAULT_THEME_TOKENS } from "@astropress/core/types/theme";
 import type { Theme } from "@astropress/core/types/theme";
+import { readJsonBody } from "../../../lib/json-body";
 
 function uid() {
   return Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10);
@@ -62,7 +63,9 @@ export const POST: APIRoute = async ({ locals, request }) => {
   const db = locals.db;
   if (!db || !locals.user) return new Response("未登录或登录已过期", { status: 401 });
 
-  const body = await request.json() as any;
+  const parsed = await readJsonBody<any>(request);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
   const now = new Date().toISOString();
 
   const newTheme: Theme = {
