@@ -1,0 +1,26 @@
+{
+  "name": "wpno-vc",
+  "version": "1.2.0",
+  "description": "Novel and paid reading blog theme with red accent",
+  "author": "wpno",
+  "tokens": {
+    "fonts": {
+      "body": "sans-serif, -apple-system, sans-serif",
+      "heading": "sans-serif, -apple-system, sans-serif"
+    },
+    "spacing": {
+      "sectionY": "48px",
+      "borderRadius": "6px",
+      "containerMax": "900px"
+    },
+    "colors": {
+      "textMuted": "#717171",
+      "surface": "#fff5f5",
+      "background": "#ffffff",
+      "secondary": "#e50000",
+      "border": "#ffd6d6",
+      "text": "#333333",
+      "primary": "#e01531"
+    }
+  }
+}

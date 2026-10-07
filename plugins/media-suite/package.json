@@ -1,0 +1,24 @@
+{
+    "name":  "@astropress/plugin-media-suite",
+    "version":  "1.0.0",
+    "private":  true,
+    "type":  "module",
+    "description":  "合并套件：媒体文件夹 · 安全响应头",
+    "exports":  {
+                    ".":  "./src/index.ts",
+                    "./integration":  "./src/integration.ts"
+                },
+    "scripts":  {
+                    "typecheck":  "tsc --noEmit"
+                },
+    "dependencies":  {
+                         "@astropress/core":  "workspace:*",
+                         "@astropress/plugin-media-folders":  "workspace:*",
+                         "@astropress/plugin-security-headers":  "workspace:*"
+                     },
+    "devDependencies":  {
+                            "astro":  "^4.0.0",
+                            "typescript":  "^5.4.0",
+                            "@cloudflare/workers-types":  "^4.0.0"
+                        }
+}

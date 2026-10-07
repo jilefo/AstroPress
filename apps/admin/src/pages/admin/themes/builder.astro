@@ -1,0 +1,587 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { wpOptions } from "@astropress/core/schema";
+import { eq } from "drizzle-orm";
+import type { ThemeTemplate, TemplateSlots } from "@astropress/core/types/theme";
+import { TEMPLATE_TYPE_LABELS } from "@astropress/core/types/theme";
+
+const db = Astro.locals.db;
+if (!Astro.locals.user || !db) return Astro.redirect("/login");
+
+// Load active theme
+const [activeThemeRow] = await db.select({ value: wpOptions.optionValue }).from(wpOptions).where(eq(wpOptions.optionName, "astropress_active_theme")).limit(1);
+const [themesRow2] = await db.select({ value: wpOptions.optionValue }).from(wpOptions).where(eq(wpOptions.optionName, "astropress_themes")).limit(1);
+const [siteUrlRow] = await db.select({ value: wpOptions.optionValue }).from(wpOptions).where(eq(wpOptions.optionName, "siteurl")).limit(1);
+const activeThemeId = activeThemeRow?.value ?? "base-theme";
+const allThemesArr: any[] = themesRow2?.value ? JSON.parse(themesRow2.value) : [];
+const activeThemeName = allThemesArr.find((t: any) => t.id === activeThemeId)?.name ?? "主题";
+const siteUrl = siteUrlRow?.value ?? "http://localhost:4322";
+
+// Load templates
+const [templatesRow] = await db.select({ value: wpOptions.optionValue }).from(wpOptions).where(eq(wpOptions.optionName, "astropress_theme_templates")).limit(1);
+const templates: ThemeTemplate[] = templatesRow?.value ? JSON.parse(templatesRow.value) : [];
+
+// Load current slots
+const [slotsRow] = await db.select({ value: wpOptions.optionValue }).from(wpOptions).where(eq(wpOptions.optionName, "astropress_template_slots")).limit(1);
+let slots: TemplateSlots = {};
+if (slotsRow?.value) {
+  slots = JSON.parse(slotsRow.value);
+} else {
+  // Auto-migrate: first template of each type with conditions becomes the slot
+  for (const tmpl of templates) {
+    if (!(slots as any)[tmpl.type] && (tmpl.conditions?.length ?? 0) > 0) {
+      (slots as any)[tmpl.type] = tmpl.schemaSlug;
+    }
+  }
+}
+
+const allTypes = Object.keys(TEMPLATE_TYPE_LABELS) as (keyof typeof TEMPLATE_TYPE_LABELS)[];
+
+const typeIcons: Record<string, string> = {
+  header: "▭", footer: "▬", "single-post": "▤", "single-page": "▣",
+  archive: "▦", search: "⊕", "404": "⊗",
+};
+
+// Group templates by type
+const byType: Record<string, ThemeTemplate[]> = {};
+for (const t of allTypes) byType[t] = templates.filter(tmpl => tmpl.type === t);
+---
+<AdminLayout title="主题构建器">
+
+<style is:inline>
+  .builder-wrap { display:flex; height:calc(100vh - 80px); margin:-20px; overflow:hidden; }
+
+  /* Sidebar */
+  .builder-sidebar { width:220px; flex-shrink:0; background:#f6f7f7; border-right:1px solid #dcdcde; display:flex; flex-direction:column; }
+  .sidebar-header { padding:10px 12px 10px 16px; border-bottom:1px solid #dcdcde; display:flex; align-items:center; justify-content:space-between; gap:6px; }
+  .sidebar-header-title { font-size:11px; font-weight:700; color:#646970; text-transform:uppercase; letter-spacing:0.5px; }
+  .sidebar-back { font-size:12px; color:#2271b1; text-decoration:none; }
+  .sidebar-label { padding:12px 16px 6px; font-size:10px; font-weight:700; color:#8c8f94; text-transform:uppercase; letter-spacing:0.5px; }
+  .sidebar-item { display:flex; align-items:center; gap:10px; width:100%; padding:9px 16px; background:none; border:none; border-left:3px solid transparent; cursor:pointer; font-size:13px; color:#1d2327; text-align:left; font-family:inherit; }
+  .sidebar-item:hover { background:#eef0f2; }
+  .sidebar-item.active { background:#fff; border-left-color:#2271b1; color:#2271b1; font-weight:600; }
+  .sidebar-icon { font-size:14px; flex-shrink:0; opacity:0.7; width:18px; text-align:center; }
+  .sidebar-count { margin-left:auto; font-size:11px; background:#dcdcde; border-radius:99px; padding:1px 6px; color:#646970; }
+  .sidebar-item.active .sidebar-count { background:#cce0f5; color:#2271b1; }
+
+  .menu-btn { background:none; border:none; cursor:pointer; padding:5px; border-radius:4px; color:#646970; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .menu-btn:hover { background:#eef0f2; color:#1d2327; }
+
+  .sidebar-view { display:none; flex-direction:column; flex:1; overflow:hidden; }
+  .sidebar-view.active { display:flex; }
+
+  .sm-panel { display:flex; flex-direction:column; flex:1; background:#2d3241; color:#d0d0d0; overflow-y:auto; }
+  .sm-panel-header { background:#1d2327; padding:13px 16px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #3c434a; flex-shrink:0; }
+  .sm-panel-title { color:#fff; font-weight:700; font-size:14px; }
+  .sm-close { background:none; border:none; color:#8c8f94; cursor:pointer; font-size:18px; line-height:1; padding:2px; }
+  .sm-close:hover { color:#e0e0e0; }
+  .sm-section-label { padding:14px 18px 6px; font-size:10px; font-weight:700; color:#8c8f94; letter-spacing:1.2px; text-transform:uppercase; }
+  .sm-divider { border:none; border-top:1px solid #3c434a; margin:4px 0; }
+  .sm-item { display:flex; align-items:center; gap:16px; padding:13px 18px; color:#c8ccd0; text-decoration:none; font-size:14px; cursor:pointer; background:none; border:none; width:100%; font-family:inherit; text-align:left; transition:background 0.12s; }
+  .sm-item:hover { background:#3c434a; color:#fff; }
+
+  /* Main content */
+  .builder-main { flex:1; overflow-y:auto; padding:28px 32px; }
+  .section { display:none; }
+  .section.active { display:block; }
+  .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+  .section-title { font-size:18px; font-weight:700; color:#1d2327; margin:0; }
+  .section-desc { font-size:13px; color:#646970; margin:4px 0 0; }
+
+  /* Template cards */
+  .tmpl-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:16px; }
+  .tmpl-card { border:1px solid #dcdcde; border-radius:6px; overflow:hidden; background:#fff; cursor:pointer; transition:border-color 0.15s,box-shadow 0.15s; position:relative; }
+  .tmpl-card:hover { border-color:#2271b1; box-shadow:0 2px 12px rgba(34,113,177,0.15); }
+  .tmpl-card.is-active { border:2px solid #00ba37; }
+  .tmpl-thumb { height:120px; background:linear-gradient(180deg,#f8fafc 0%,#f1f5f9 100%); position:relative; overflow:hidden; display:flex; flex-direction:column; padding:0; }
+
+  .tmpl-hover { position:absolute; inset:0; background:rgba(0,0,0,0.55); display:none; align-items:center; justify-content:center; gap:6px; flex-wrap:wrap; padding:8px; }
+  .tmpl-card:hover .tmpl-hover { display:flex; }
+  .h-btn { padding:7px 14px; font-size:12px; font-weight:600; border-radius:3px; cursor:pointer; border:none; text-decoration:none; display:inline-flex; align-items:center; }
+  .h-btn-primary { background:#2271b1; color:#fff; }
+  .h-btn-green { background:#00ba37; color:#fff; }
+  .h-btn-sec { background:rgba(255,255,255,0.15); color:#fff; border:1px solid rgba(255,255,255,0.4) !important; }
+  .h-btn-del { background:rgba(214,54,56,0.2); color:#f87171; border:1px solid rgba(214,54,56,0.5) !important; }
+
+  .tmpl-label { padding:10px 12px; border-top:1px solid #f0f0f1; }
+  .tmpl-name-row { display:flex; align-items:center; gap:6px; }
+  .tmpl-badge { font-size:10px; font-weight:700; padding:2px 7px; border-radius:99px; margin-left:auto; }
+  .tmpl-badge-active { background:#d7f0e0; color:#00723b; }
+  .tmpl-name { font-size:13px; font-weight:600; color:#1d2327; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
+
+  .add-card { border:2px dashed #c3c4c7; border-radius:6px; min-height:160px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; background:transparent; gap:8px; color:#646970; font-size:13px; font-family:inherit; transition:border-color 0.15s,color 0.15s; }
+  .add-card:hover { border-color:#2271b1; color:#2271b1; }
+
+  /* Right panel */
+  .right-panel { width:0; flex-shrink:0; background:#fff; border-left:1px solid #dcdcde; display:flex; flex-direction:column; transition:width 0.25s ease; overflow:hidden; }
+  .right-panel.open { width:420px; }
+  .rp-header { padding:10px 14px; border-bottom:1px solid #dcdcde; display:flex; align-items:center; justify-content:space-between; background:#f6f7f7; flex-shrink:0; }
+  .rp-title { font-size:13px; font-weight:600; color:#1d2327; }
+  .rp-close { background:none; border:none; cursor:pointer; color:#646970; font-size:18px; line-height:1; padding:0; }
+  .rp-iframe { flex:1; border:none; width:100%; }
+
+  /* Library modal */
+  .lib-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index:9999; }
+  .lib-modal.open { display:flex; }
+  .lib-dialog { background:#fff; border-radius:8px; width:860px; max-width:96vw; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.3); }
+  .lib-header { padding:18px 24px; border-bottom:1px solid #dcdcde; display:flex; align-items:center; justify-content:space-between; }
+  .lib-body { padding:24px; flex:1; overflow-y:auto; }
+  .lib-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:16px; }
+  .lib-card { border:2px solid #dcdcde; border-radius:6px; overflow:hidden; cursor:pointer; transition:border-color 0.15s,box-shadow 0.15s; background:#f8fafc; }
+  .lib-card:hover { border-color:#2271b1; box-shadow:0 2px 12px rgba(34,113,177,0.15); }
+  .lib-preview { height:120px; display:flex; align-items:center; justify-content:center; font-size:32px; background:linear-gradient(135deg,#e8f0fe,#f1f5f9); }
+  .lib-info { padding:10px 12px; background:#fff; }
+  .lib-name { font-size:13px; font-weight:600; color:#1d2327; }
+  .lib-badge-free { font-size:10px; background:#d7f0e0; color:#00723b; padding:2px 7px; border-radius:99px; margin-left:6px; font-weight:600; }
+  .lib-blank { border:2px dashed #c3c4c7; background:#fff; }
+  .lib-blank:hover { border-color:#2271b1; }
+
+  /* Theme store modal */
+  .store-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index:9999; }
+  .store-modal.open { display:flex; }
+  .store-dialog { background:#fff; border-radius:8px; width:920px; max-width:96vw; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.3); }
+  .store-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:20px; }
+  .store-card { border:1px solid #dcdcde; border-radius:8px; overflow:hidden; background:#fff; }
+  .store-preview { height:160px; background:linear-gradient(135deg,#1e293b,#334155); display:flex; align-items:center; justify-content:center; font-size:24px; color:#fff; }
+  .store-info { padding:14px 16px; }
+</style>
+
+<div class="builder-wrap">
+  <!-- Sidebar -->
+  <div class="builder-sidebar">
+    <!-- View 1: Template nav -->
+    <div class="sidebar-view active" id="sidebar-nav">
+      <div class="sidebar-header">
+        <button class="menu-btn" onclick="showSettingsPanel()" title="设置">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <span class="sidebar-header-title">主题构建器</span>
+        <a href="/admin/themes" class="sidebar-back">← 主题</a>
+      </div>
+      <div class="sidebar-label">模板类型</div>
+      {allTypes.map((type, i) => (
+        <button class={`sidebar-item ${i === 0 ? "active" : ""}`} data-type={type} onclick={`selectType('${type}')`}>
+          <span class="sidebar-icon">{typeIcons[type] ?? "□"}</span>
+          {TEMPLATE_TYPE_LABELS[type]}
+          <span class="sidebar-count" id={`count-${type}`}>{byType[type].length}</span>
+        </button>
+      ))}
+    </div>
+
+    <!-- View 2: Settings panel -->
+    <div class="sidebar-view" id="sidebar-settings">
+      <div class="sm-panel">
+        <div class="sm-panel-header">
+          <span class="sm-panel-title" id="sm-theme-name">设置</span>
+          <button class="sm-close" onclick="hideSettingsPanel()">✕</button>
+        </div>
+        <div class="sm-section-label">自定义</div>
+        <button class="sm-item" onclick="openRightPanel('/admin/themes/customize/' + activeThemeId, '主题令牌')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          主题令牌
+        </button>
+        <button class="sm-item" onclick="openThemeStore()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          主题商店
+        </button>
+        <hr class="sm-divider" />
+        <div class="sm-section-label">导航</div>
+        <button class="sm-item" onclick="hideSettingsPanel()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          模板构建器
+        </button>
+        <a class="sm-item" id="sm-viewsite" href="#" target="_blank">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          查看站点
+        </a>
+        <a class="sm-item" href="/admin/dashboard">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          退出到仪表盘
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div class="builder-main" id="builder-main">
+    {allTypes.map((type, i) => (
+      <div class={`section ${i === 0 ? "active" : ""}`} id={`section-${type}`}>
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">{TEMPLATE_TYPE_LABELS[type]}</h2>
+            <p class="section-desc">
+              {type === "header" && "控制显示在页面顶部的页眉。"}
+              {type === "footer" && "控制显示在页面底部的页脚。"}
+              {type === "single-post" && "用于单篇博客文章页面的模板。"}
+              {type === "single-page" && "用于单个页面（关于、联系等）的模板。"}
+              {type === "archive" && "用于文章列表、分类和标签归档页面的模板。"}
+              {type === "search" && "用于搜索结果页面的模板。"}
+              {type === "404" && "用于 404 未找到错误页面的模板。"}
+            </p>
+          </div>
+          <button onclick={`openLibrary('${type}')`} class="button button-primary" style="flex-shrink:0">+ 添加模板</button>
+        </div>
+
+        <div class="tmpl-grid" id={`grid-${type}`}>
+          {byType[type].map(tmpl => {
+            const isActive = (slots as any)[type] === tmpl.schemaSlug;
+            return (
+              <div class={`tmpl-card ${isActive ? "is-active" : ""}`} data-id={tmpl.id} data-slug={tmpl.schemaSlug} data-type={type}>
+                <!-- Preview thumb -->
+                <div class="tmpl-thumb">
+                  {(type === "header" || type === "footer") && (
+                    <div style="height:100%;background:linear-gradient(180deg,#e8f0fe 0%,#f8fafc 100%);display:flex;flex-direction:column;align-items:stretch">
+                      <div style="height:24px;background:#2271b1;display:flex;align-items:center;padding:0 8px;gap:6px">
+                        <div style="width:24px;height:5px;background:rgba(255,255,255,0.7);border-radius:2px"></div>
+                        <div style="flex:1"></div>
+                        {[1,2,3].map((_: number) => <div style="width:16px;height:3px;background:rgba(255,255,255,0.5);border-radius:2px"></div>)}
+                      </div>
+                      {type === "footer" && <div style="flex:1;display:flex;align-items:flex-end"><div style="width:100%;height:28px;background:#334155"></div></div>}
+                    </div>
+                  )}
+                  {(type === "single-post" || type === "single-page") && (
+                    <div style="padding:10px;display:flex;flex-direction:column;gap:5px">
+                      <div style="height:7px;width:65%;background:#2271b1;border-radius:2px;opacity:0.8"></div>
+                      <div style="height:3px;width:35%;background:#e2e8f0;border-radius:2px"></div>
+                      <div style="display:flex;flex-direction:column;gap:3px;margin-top:4px">
+                        {[100,88,95,80].map((w: number) => <div style={`height:2px;width:${w}%;background:#e2e8f0;border-radius:1px`}></div>)}
+                      </div>
+                    </div>
+                  )}
+                  {(type === "archive" || type === "search") && (
+                    <div style="padding:10px;display:flex;flex-direction:column;gap:4px">
+                      <div style="height:6px;width:45%;background:#7c3aed;border-radius:2px;opacity:0.7"></div>
+                      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:4px;flex:1">
+                        {[1,2,3,4].map((_: number) => <div style="background:#f1f5f9;border-radius:3px;border:1px solid #e2e8f0;min-height:28px"></div>)}
+                      </div>
+                    </div>
+                  )}
+                  {type === "404" && (
+                    <div style="height:100%;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#e2e8f0;">404</div>
+                  )}
+                  <!-- Hover actions -->
+                  <div class="tmpl-hover">
+                    <a href={`/admin/themes/edit/${tmpl.schemaSlug}`} class="h-btn h-btn-primary" onclick="event.stopPropagation()">编辑</a>
+                    {!isActive && (
+                      <button class="h-btn h-btn-green" onclick={`event.stopPropagation();setActive('${tmpl.id}','${type}',this)`}>设为启用</button>
+                    )}
+                    {!isActive && (
+                      <button class="h-btn h-btn-del" onclick={`event.stopPropagation();deleteTemplate('${tmpl.id}','${type}')`}>✕</button>
+                    )}
+                  </div>
+                </div>
+                <div class="tmpl-label">
+                  <div class="tmpl-name-row">
+                    <span class="tmpl-name">{tmpl.name}</span>
+                    {isActive && <span class="tmpl-badge tmpl-badge-active">启用</span>}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          <button class="add-card" onclick={`openLibrary('${type}')`}>
+            <span style="font-size:24px">+</span>
+            添加 {TEMPLATE_TYPE_LABELS[type]}
+          </button>
+        </div>
+      </div>
+    ))}
+  </div>
+
+  <!-- Right panel (customize iframe) -->
+  <div class="right-panel" id="right-panel">
+    <div class="rp-header">
+      <span class="rp-title" id="rp-title">设置</span>
+      <button class="rp-close" onclick="closeRightPanel()">✕</button>
+    </div>
+    <iframe class="rp-iframe" id="rp-iframe" src="about:blank"></iframe>
+  </div>
+</div>
+
+<!-- Template Library Modal -->
+<div id="lib-modal" class="lib-modal">
+  <div class="lib-dialog" onclick="event.stopPropagation()">
+    <div class="lib-header">
+      <div>
+        <h2 style="margin:0;font-size:17px;font-weight:700;color:#1d2327" id="lib-modal-title">选择模板</h2>
+        <p style="margin:4px 0 0;font-size:12px;color:#646970">选择预置模板，或从空白模板开始。</p>
+      </div>
+      <button onclick="closeLibrary()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#646970;line-height:1;padding:0">×</button>
+    </div>
+    <div class="lib-body">
+      <div class="lib-grid" id="lib-grid">
+        <div style="text-align:center;padding:40px;color:#646970;grid-column:1/-1">正在加载模板…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Theme Store Modal -->
+<div id="store-modal" class="store-modal">
+  <div class="store-dialog" onclick="event.stopPropagation()">
+    <div class="lib-header">
+      <div>
+        <h2 style="margin:0;font-size:17px;font-weight:700;color:#1d2327">主题商店</h2>
+        <p style="margin:4px 0 0;font-size:12px;color:#646970">安装完整主题——包含令牌、模板和演示页面。</p>
+      </div>
+      <button onclick="closeThemeStore()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#646970;line-height:1;padding:0">×</button>
+    </div>
+    <div class="lib-body">
+      <div class="store-grid" id="store-grid">
+        <div style="text-align:center;padding:40px;color:#646970;grid-column:1/-1">正在加载主题…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</AdminLayout>
+
+<script is:inline define:vars={{ activeThemeId, activeThemeName, siteUrl, slotsJson: JSON.stringify(slots) }}>
+  // Current slot assignments (type → schemaSlug)
+  let slots = JSON.parse(slotsJson);
+  let libCurrentType = null;
+
+  // Init sidebar
+  document.getElementById('sm-theme-name').textContent = activeThemeName;
+  document.getElementById('sm-viewsite').href = siteUrl;
+
+  // ── Sidebar toggle ────────────────────────────────────────────────────────
+  window.showSettingsPanel = function() {
+    document.getElementById('sidebar-nav').classList.remove('active');
+    document.getElementById('sidebar-settings').classList.add('active');
+  };
+  window.hideSettingsPanel = function() {
+    document.getElementById('sidebar-settings').classList.remove('active');
+    document.getElementById('sidebar-nav').classList.add('active');
+  };
+
+  // ── Right panel (customize iframe) ────────────────────────────────────────
+  window.openRightPanel = function(url, title) {
+    hideSettingsPanel();
+    document.getElementById('rp-title').textContent = title;
+    document.getElementById('rp-iframe').src = url;
+    document.getElementById('right-panel').classList.add('open');
+  };
+  window.closeRightPanel = function() {
+    document.getElementById('right-panel').classList.remove('open');
+    setTimeout(function() { document.getElementById('rp-iframe').src = 'about:blank'; }, 300);
+  };
+
+  // ── Sidebar nav ───────────────────────────────────────────────────────────
+  window.selectType = function(type) {
+    document.querySelectorAll('.sidebar-item').forEach(function(el) { el.classList.remove('active'); });
+    document.querySelectorAll('.section').forEach(function(el) { el.classList.remove('active'); });
+    var item = document.querySelector('[data-type="' + type + '"]');
+    var section = document.getElementById('section-' + type);
+    if (item) item.classList.add('active');
+    if (section) section.classList.add('active');
+  };
+
+  // ── Set Active ────────────────────────────────────────────────────────────
+  window.setActive = async function(id, type, btn) {
+    btn.textContent = '保存中…';
+    btn.disabled = true;
+    try {
+      var res = await fetch('/api/themes/templates/' + id, { method: 'POST' });
+      var data = await res.json();
+      if (res.ok) {
+        slots = data.slots;
+        // Update UI: remove active badge from old active card, add to new
+        var grid = document.getElementById('grid-' + type);
+        if (grid) {
+          grid.querySelectorAll('.tmpl-card').forEach(function(card) {
+            var slug = card.dataset.slug;
+            var isNowActive = slug === slots[type];
+            card.classList.toggle('is-active', isNowActive);
+            var badge = card.querySelector('.tmpl-badge');
+            if (isNowActive) {
+              if (!badge) {
+                badge = document.createElement('span');
+                badge.className = 'tmpl-badge tmpl-badge-active';
+                badge.textContent = '启用';
+                card.querySelector('.tmpl-name-row').appendChild(badge);
+              }
+              // Remove set-active and delete buttons from hover overlay
+              card.querySelectorAll('.h-btn-green, .h-btn-del').forEach(function(b) { b.remove(); });
+            } else {
+              if (badge) badge.remove();
+            }
+          });
+        }
+        btn.textContent = '设为启用';
+        btn.disabled = false;
+      } else {
+        alert('设为启用失败');
+        btn.textContent = '设为启用';
+        btn.disabled = false;
+      }
+    } catch(e) {
+      alert('错误：' + e.message);
+      btn.textContent = '设为启用';
+      btn.disabled = false;
+    }
+  };
+
+  // ── Delete template ───────────────────────────────────────────────────────
+  window.deleteTemplate = async function(id, type) {
+    if (!confirm('确定删除该模板及其设计吗？此操作无法撤销。')) return;
+    var res = await fetch('/api/themes/templates/' + id + '?deleteSchema=1', { method: 'DELETE' });
+    if (!res.ok) { alert('删除模板失败'); return; }
+    var card = document.querySelector('.tmpl-card[data-id="' + id + '"]');
+    if (card) card.remove();
+    var badge = document.getElementById('count-' + type);
+    if (badge) badge.textContent = Math.max(0, parseInt(badge.textContent) - 1).toString();
+  };
+
+  // ── Template Library ──────────────────────────────────────────────────────
+  window.openLibrary = async function(type) {
+    libCurrentType = type;
+    document.getElementById('lib-modal-title').textContent = '选择「' + ({header:'页眉',footer:'页脚','single-post':'文章页','single-page':'页面',archive:'归档页',search:'搜索页','404':'404页'})[type] + '」模板';
+    document.getElementById('lib-modal').classList.add('open');
+    var grid = document.getElementById('lib-grid');
+    grid.innerHTML = '<div style="text-align:center;padding:40px;color:#646970;grid-column:1/-1">正在加载…</div>';
+
+    try {
+      var res = await fetch('/api/themes/store?type=' + encodeURIComponent(type));
+      var data = await res.json();
+      var templates = (data.templates && data.templates[type]) || [];
+      renderLibrary(templates, type);
+    } catch(e) {
+      grid.innerHTML = '<div style="color:#d63638;grid-column:1/-1">加载模板失败。</div>';
+    }
+  };
+
+  function renderLibrary(templates, type) {
+    var grid = document.getElementById('lib-grid');
+    var icons = { header:'▭', footer:'▬', 'single-post':'▤', 'single-page':'▣', archive:'▦', search:'⊕', '404':'⊗' };
+    var icon = icons[type] || '□';
+
+    var html = '';
+    // Blank option
+    html += '<div class="lib-card lib-blank" onclick="createBlankTemplate(\'' + type + '\')" style="min-height:160px;">';
+    html += '<div class="lib-preview" style="background:#f6f7f7;"><span style="font-size:32px;color:#c3c4c7">+</span></div>';
+    html += '<div class="lib-info"><span class="lib-name">空白模板</span></div>';
+    html += '</div>';
+
+    templates.forEach(function(t) {
+      html += '<div class="lib-card" onclick="installLibTemplate(\'' + type + '\',\'' + t.id + '\')">';
+      html += '<div class="lib-preview"><span style="font-size:36px;opacity:0.3;">' + icon + '</span></div>';
+      html += '<div class="lib-info"><span class="lib-name">' + t.name + '</span>';
+      if (t.free) html += '<span class="lib-badge-free">免费</span>';
+      html += '</div></div>';
+    });
+
+    grid.innerHTML = html;
+  }
+
+  window.closeLibrary = function() {
+    document.getElementById('lib-modal').classList.remove('open');
+  };
+
+  window.createBlankTemplate = async function(type) {
+    var name = prompt('模板名称（选填）：') || '';
+    var res = await fetch('/api/themes/templates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: type, name: name || undefined, setActive: true }),
+    });
+    var data = await res.json();
+    if (res.ok && data.template) {
+      closeLibrary();
+      window.location.href = '/admin/themes/edit/' + data.template.schemaSlug;
+    } else {
+      alert(data.error || '创建模板失败');
+    }
+  };
+
+  window.installLibTemplate = async function(type, libId) {
+    // Fetch the full template package from the store
+    var storeRes = await fetch('/api/themes/store?type=' + encodeURIComponent(type));
+    var storeData = await storeRes.json();
+    var templates = (storeData.templates && storeData.templates[type]) || [];
+    var tpl = templates.find(function(t) { return t.id === libId; });
+    if (!tpl) { alert('模板不存在'); return; }
+
+    // Create template with pre-filled blocks
+    var name = tpl.name;
+    var res = await fetch('/api/themes/templates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: type, name: name, blocks: tpl.blocks, setActive: true }),
+    });
+    var data = await res.json();
+    if (res.ok && data.template) {
+      closeLibrary();
+      window.location.href = '/admin/themes/edit/' + data.template.schemaSlug;
+    } else {
+      alert(data.error || '安装模板失败');
+    }
+  };
+
+  // ── Theme Store ───────────────────────────────────────────────────────────
+  window.openThemeStore = async function() {
+    hideSettingsPanel();
+    document.getElementById('store-modal').classList.add('open');
+    var grid = document.getElementById('store-grid');
+    grid.innerHTML = '<div style="text-align:center;padding:40px;color:#646970;grid-column:1/-1">正在加载主题…</div>';
+
+    try {
+      var res = await fetch('/api/themes/store?type=themes');
+      var data = await res.json();
+      renderThemeStore(data.themes || []);
+    } catch(e) {
+      grid.innerHTML = '<div style="color:#d63638;grid-column:1/-1">加载主题失败。</div>';
+    }
+  };
+
+  window.closeThemeStore = function() {
+    document.getElementById('store-modal').classList.remove('open');
+  };
+
+  function renderThemeStore(themes) {
+    var grid = document.getElementById('store-grid');
+    if (!themes.length) { grid.innerHTML = '<div style="color:#646970;grid-column:1/-1">暂无可提供的主题。</div>'; return; }
+    grid.innerHTML = themes.map(function(t) {
+      return '<div class="store-card">'
+        + '<div class="store-preview">' + (t.name.charAt(0)) + '</div>'
+        + '<div class="store-info">'
+        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+        + '<span style="font-size:14px;font-weight:700;color:#1d2327;">' + t.name + '</span>'
+        + (t.free ? '<span class="lib-badge-free">免费</span>' : '<span style="font-size:10px;background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:99px;font-weight:600;">付费</span>')
+        + '</div>'
+        + '<p style="margin:0 0 12px;font-size:12px;color:#646970;">' + (t.description || '') + '</p>'
+        + '<button onclick="installTheme(\'' + t.id + '\',\'' + t.name + '\')" class="button button-primary" style="font-size:12px;padding:6px 14px;">安装主题</button>'
+        + '</div></div>';
+    }).join('');
+  }
+
+  window.installTheme = async function(id, name) {
+    if (!confirm('确定安装“' + name + '”吗？新的模板和令牌将应用到你的站点。')) return;
+    var pkgRes = await fetch('/api/themes/store?type=theme-package&id=' + encodeURIComponent(id));
+    var pkgData = await pkgRes.json();
+    if (!pkgData.package) { alert('无法加载主题包'); return; }
+
+    var res = await fetch('/api/themes/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ package: pkgData.package }),
+    });
+    var data = await res.json();
+    if (res.ok && data.ok) {
+      closeThemeStore();
+      alert('主题安装成功！已创建 ' + data.templatesCreated + ' 个模板和 ' + data.pagesCreated.length + ' 个页面。');
+      window.location.reload();
+    } else {
+      alert(data.error || '安装主题失败');
+    }
+  };
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      hideSettingsPanel();
+      closeRightPanel();
+      closeLibrary();
+      closeThemeStore();
+    }
+  });
+</script>

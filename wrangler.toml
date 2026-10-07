@@ -1,0 +1,32 @@
+# Required at repo root for Cloudflare to detect this as a Workers project.
+# DO NOT DELETE — Cloudflare's git scanner reads this file.
+#
+# IMPORTANT: In the Cloudflare dashboard set Root directory = apps/admin
+# so that the build and `npx wrangler deploy` both run from apps/admin/,
+# which makes Wrangler use apps/admin/wrangler.toml (the real config).
+
+name = "astropress"
+main = "./apps/admin/dist/_worker.js/index.js"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+binding = "ASSETS"
+directory = "./apps/admin/dist"
+not_found_handling = "404-page"
+
+[build]
+command = "pnpm --filter @astropress/admin run deploy:cf"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "astropress"
+database_id = "cc70dbc4-221c-4614-9072-c642041c5534"
+
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "astropress-media"
+
+# Workers AI — enables Cloudflare-hosted LLM inference (AI 写作/助手)
+[ai]
+binding = "AI"

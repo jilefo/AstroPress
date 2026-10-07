@@ -1,0 +1,155 @@
+---
+import { eq } from "drizzle-orm";
+import { wpOptions } from "@astropress/core/schema";
+
+// If already set up, redirect to admin
+const db = Astro.locals.db;
+if (db) {
+  const [row] = await db
+    .select({ value: wpOptions.optionValue })
+    .from(wpOptions)
+    .where(eq(wpOptions.optionName, "astropress_setup_complete"))
+    .limit(1);
+  if (row?.value === "1") return Astro.redirect("/admin/dashboard");
+}
+
+const error = Astro.url.searchParams.get("error");
+const errorMessages: Record<string, string> = {
+  fields: "请填写所有必填项。",
+  password: "两次输入的密码不一致。",
+  unknown: "安装失败，请重试。",
+};
+---
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>安装 — AstroPress</title>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; }
+      body {
+        margin: 0; font-family: system-ui, -apple-system, sans-serif;
+        background: #f0f0f1; min-height: 100vh;
+        display: flex; align-items: center; justify-content: center;
+      }
+      .card {
+        background: #fff; border: 1px solid #dcdcde; border-radius: 6px;
+        padding: 40px 48px; width: 100%; max-width: 480px;
+        box-shadow: 0 4px 16px rgba(0,0,0,.08);
+      }
+      .brand { text-align: center; margin-bottom: 32px; }
+      .brand-logo { font-size: 40px; margin-bottom: 8px; }
+      .brand-name { font-size: 22px; font-weight: 700; color: #1d2327; }
+      .brand-sub { font-size: 13px; color: #646970; margin-top: 4px; }
+      .step-indicator {
+        display: flex; gap: 0; margin-bottom: 28px; border-radius: 4px; overflow: hidden;
+        border: 1px solid #dcdcde;
+      }
+      .step { flex: 1; padding: 8px; text-align: center; font-size: 11px; font-weight: 600; background: #f6f7f7; color: #646970; }
+      .step.active { background: #2271b1; color: #fff; }
+      .step.done { background: #d1e7dd; color: #146c43; }
+      label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; color: #1d2327; }
+      input, textarea {
+        display: block; width: 100%; padding: 9px 12px; font-size: 14px;
+        border: 1px solid #8c8f94; border-radius: 3px; margin-bottom: 16px; outline: none;
+      }
+      input:focus { border-color: #2271b1; box-shadow: 0 0 0 1px #2271b1; }
+      .hint { font-size: 11px; color: #646970; margin-top: -12px; margin-bottom: 16px; }
+      button[type="submit"] {
+        width: 100%; padding: 11px; background: #2271b1; color: #fff;
+        border: none; border-radius: 3px; font-size: 15px; font-weight: 600;
+        cursor: pointer; margin-top: 4px;
+      }
+      button[type="submit"]:hover { background: #135e96; }
+      .error {
+        background: #fcf0f1; border-left: 4px solid #d63638;
+        color: #d63638; padding: 10px 14px; font-size: 13px;
+        border-radius: 2px; margin-bottom: 20px;
+      }
+      h2 { font-size: 16px; font-weight: 600; margin: 0 0 20px; color: #1d2327; }
+      .divider { border: none; border-top: 1px solid #dcdcde; margin: 20px 0; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="brand">
+        <div class="brand-logo">⚡</div>
+        <div class="brand-name">AstroPress</div>
+        <div class="brand-sub">安装向导 — 不到一分钟即可完成</div>
+      </div>
+
+      <div class="step-indicator">
+        <div class="step active">1 站点信息</div>
+        <div class="step">2 管理员账号</div>
+        <div class="step">3 完成</div>
+      </div>
+
+      {error && <div class="error">{errorMessages[error] ?? errorMessages.unknown}</div>}
+
+      <form method="POST" action="/api/setup">
+        <h2>站点信息</h2>
+        <label for="site_title">站点标题</label>
+        <input id="site_title" name="site_title" type="text" placeholder="我的 AstroPress 站点" required />
+
+        <label for="site_url">站点地址</label>
+        <input id="site_url" name="site_url" type="url" placeholder="https://example.com" required />
+        <p class="hint">站点对外可访问的完整网址。</p>
+
+        <label for="tagline">站点副标题 <span style="font-weight:400;color:#646970">（选填）</span></label>
+        <input id="tagline" name="tagline" type="text" placeholder="又一个 AstroPress 站点" />
+
+        <hr class="divider" />
+
+        <h2>管理员账号</h2>
+        <label for="admin_email">管理员邮箱</label>
+        <input id="admin_email" name="admin_email" type="email" placeholder="admin@example.com" required />
+
+        <label for="admin_password">登录密码</label>
+      <input id="admin_password" name="admin_password" type="password" required minlength="8" />
+      <div id="pw-strength" style="display:flex;align-items:center;gap:6px;margin:-10px 0 16px;font-size:11px;height:18px">
+        <span style="width:60px;color:#646970">密码强度：</span>
+        <span style="flex:1;height:4px;background:#dcdcde;border-radius:2px;overflow:hidden">
+          <span id="pw-bar" style="display:block;height:100%;width:0;border-radius:2px;background:#d63638;transition:width .2s,background .2s"></span>
+        </span>
+        <span id="pw-text" style="width:36px;color:#d63638;font-weight:600">—</span>
+      </div>
+
+      <label for="admin_password2">确认密码</label>
+      <input id="admin_password2" name="admin_password2" type="password" required />
+
+      <button type="submit">安装 AstroPress</button>
+      </form>
+
+      <script is:inline>
+        (function () {
+          var pw = document.getElementById("admin_password");
+          var bar = document.getElementById("pw-bar");
+          var txt = document.getElementById("pw-text");
+          if (!pw || !bar || !txt) return;
+          function score(s) {
+            var n = 0;
+            if (s.length >= 8) n += 1;
+            if (s.length >= 12) n += 1;
+            if (/[A-Z]/.test(s)) n += 1;
+            if (/[a-z]/.test(s)) n += 1;
+            if (/\d/.test(s)) n += 1;
+            if (/[^A-Za-z0-9]/.test(s)) n += 1;
+            return Math.min(n, 6);
+          }
+          function render(s) {
+            var sc = score(s);
+            var w = Math.round((sc / 6) * 100);
+            var col = sc <= 2 ? "#d63638" : (sc <= 4 ? "#dba617" : "#00a32a");
+            var lbl = sc <= 2 ? "弱" : (sc <= 4 ? "中" : "强");
+            bar.style.width = w + "%";
+            bar.style.background = col;
+            txt.textContent = lbl;
+            txt.style.color = col;
+          }
+          pw.addEventListener("input", function () { render(pw.value); });
+        })();
+      </script>
+    </div>
+  </body>
+</html>

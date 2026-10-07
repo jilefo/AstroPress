@@ -1,0 +1,23 @@
+{
+  "name": "@astropress/plugin-seo-tools",
+  "version": "0.1.0",
+  "description": "SEO 工具：RSS 2.0 订阅源（/rss.xml）与 robots.txt 管理",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./integration.admin": "./src/integration.admin.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@astropress/core": "workspace:*",
+    "drizzle-orm": "^0.36.0"
+  },
+  "devDependencies": {
+    "astro": "^4.0.0",
+    "typescript": "^5.4.0",
+    "@cloudflare/workers-types": "^4.0.0"
+  }
+}

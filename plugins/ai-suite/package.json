@@ -1,0 +1,26 @@
+{
+    "name":  "@astropress/plugin-ai-suite",
+    "version":  "1.0.0",
+    "private":  true,
+    "type":  "module",
+    "description":  "合并套件：多语言 · 界面翻译 · AI 助手 · AI 自动填写",
+    "exports":  {
+                    ".":  "./src/index.ts",
+                    "./integration":  "./src/integration.ts"
+                },
+    "scripts":  {
+                    "typecheck":  "tsc --noEmit"
+                },
+    "dependencies":  {
+                         "@astropress/core":  "workspace:*",
+                         "@astropress/plugin-multilingual":  "workspace:*",
+                         "@astropress/plugin-admin-i18n":  "workspace:*",
+                         "@astropress/plugin-ai-chat":  "workspace:*",
+                         "@astropress/plugin-ai-autofill":  "workspace:*"
+                     },
+    "devDependencies":  {
+                            "astro":  "^4.0.0",
+                            "typescript":  "^5.4.0",
+                            "@cloudflare/workers-types":  "^4.0.0"
+                        }
+}

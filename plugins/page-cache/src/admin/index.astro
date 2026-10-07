@@ -1,0 +1,201 @@
+---
+/**
+ * /admin-ext/page-cache — 页面缓存插件设置页
+ */
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+if (!Astro.locals.user || !Astro.locals.db) return Astro.redirect("/login");
+---
+<AdminLayout title="页面缓存">
+    <style is:global>
+      * { box-sizing: border-box; }
+      .wrap { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+      .card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 20px; margin-bottom: 20px; }
+      h1 { font-size: 20px; margin: 0 0 16px; }
+      h2 { font-size: 15px; margin: 0 0 12px; }
+      label { display: block; font-size: 13px; font-weight: 600; margin: 16px 0 4px; }
+      input[type="number"] { width: 140px; font-size: 13px; padding: 6px 8px; border: 1px solid #8c8f94; border-radius: 3px; }
+      textarea { width: 100%; font-size: 13px; padding: 6px 8px; border: 1px solid #8c8f94; border-radius: 3px; font-family: Consolas, Monaco, monospace; resize: vertical; }
+      button { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 8px 16px; cursor: pointer; font-size: 13px; }
+      .btn-secondary { background: #f6f7f7; color: #2c3338; border: 1px solid #c3c4c7; }
+      .btn-danger { background: #d63638; color: #fff; }
+      .msg { font-size: 13px; margin-top: 10px; min-height: 18px; }
+      .ok { color: #00a32a; }
+      .err { color: #b32d2e; }
+      .hint { font-size: 12px; color: #646970; margin-top: 4px; }
+      .check { display: flex; align-items: center; gap: 6px; font-size: 13px; margin-top: 16px; }
+      .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+      .stat-box { background: #f6f7f7; border: 1px solid #dcdcdd; border-radius: 4px; padding: 12px; text-align: center; }
+      .stat-num { font-size: 22px; font-weight: 600; color: #2271b1; }
+      .stat-label { font-size: 12px; color: #646970; margin-top: 4px; }
+      .stats-actions { display: flex; gap: 8px; margin-top: 16px; }
+    </style>
+
+    <div class="wrap">
+      <div class="card">
+        <h1>页面缓存</h1>
+
+        <div class="check" style="margin-top:0">
+          <input type="checkbox" id="enabled" checked />
+          <label for="enabled" style="margin:0">启用全页 HTML 缓存</label>
+        </div>
+
+        <label for="ttlSec">缓存有效期（秒）</label>
+        <input type="number" id="ttlSec" min="1" max="86400" value="300" />
+        <div class="hint">范围 1～86400 秒（默认 300 秒）。</div>
+
+        <label for="maxEntries">最大缓存条目数</label>
+        <input type="number" id="maxEntries" min="10" max="5000" value="500" />
+        <div class="hint">范围 10～5000，超出后按 LRU 自动淘汰最旧条目（默认 500）。</div>
+
+        <div class="check">
+          <input type="checkbox" id="cache404" />
+          <label for="cache404" style="margin:0">缓存 404 页面</label>
+        </div>
+
+        <div class="check">
+          <input type="checkbox" id="cacheWithQuery" />
+          <label for="cacheWithQuery" style="margin:0">允许缓存带查询参数（?query）的请求</label>
+        </div>
+
+        <label for="excludes">排除路径</label>
+        <textarea id="excludes" rows="5" placeholder="/search&#10;/feed&#10;/sitemap"></textarea>
+        <div class="hint">每行一条，路径中包含该片段即跳过缓存；最多 30 条，每条最长 200 字符。</div>
+
+        <button id="save">保存设置</button>
+        <div class="msg" id="msg"></div>
+      </div>
+
+      <div class="card">
+        <h2>缓存统计</h2>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="stat-num" id="statEntries">–</div>
+            <div class="stat-label">当前条目数</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="statHits">–</div>
+            <div class="stat-label">命中</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="statMisses">–</div>
+            <div class="stat-label">未命中</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="statRate">–</div>
+            <div class="stat-label">命中率</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="statBytes">–</div>
+            <div class="stat-label">占用空间</div>
+          </div>
+        </div>
+        <div class="stats-actions">
+          <button type="button" class="btn-secondary" id="refreshStats">刷新统计</button>
+          <button type="button" class="btn-danger" id="purge">立即清空缓存</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        var msg = document.getElementById("msg");
+
+        function setText(id, text) {
+          var el = document.getElementById(id);
+          if (el) el.textContent = text;
+        }
+
+        function showMsg(ok, text) {
+          msg.className = "msg " + (ok ? "ok" : "err");
+          msg.textContent = text;
+          setTimeout(function () { msg.textContent = ""; }, 3000);
+        }
+
+        function formatBytes(n) {
+          n = Number(n) || 0;
+          if (n < 1024) return n + " B";
+          if (n < 1024 * 1024) return (n / 1024).toFixed(1) + " KB";
+          return (n / (1024 * 1024)).toFixed(2) + " MB";
+        }
+
+        async function loadSettings() {
+          var r = await fetch("/admin-ext/api/page-cache/settings");
+          if (!r.ok) return;
+          var s = await r.json();
+          (document.getElementById("enabled") as HTMLInputElement).checked = !!s.enabled;
+          (document.getElementById("ttlSec") as HTMLInputElement).value = String(s.ttlSec);
+          (document.getElementById("maxEntries") as HTMLInputElement).value = String(s.maxEntries);
+          (document.getElementById("cache404") as HTMLInputElement).checked = !!s.cache404;
+          (document.getElementById("cacheWithQuery") as HTMLInputElement).checked = !!s.cacheWithQuery;
+          (document.getElementById("excludes") as HTMLTextAreaElement).value = Array.isArray(s.excludes)
+            ? s.excludes.join("\n")
+            : "";
+        }
+
+        async function refreshStats() {
+          var r = await fetch("/admin-ext/api/page-cache/stats");
+          if (!r.ok) return;
+          var d = await r.json();
+          setText("statEntries", String(d.entries ?? 0) + " / " + String(d.maxEntries ?? 0));
+          setText("statHits", String(d.hits ?? 0));
+          setText("statMisses", String(d.misses ?? 0));
+          var total = (d.hits || 0) + (d.misses || 0);
+          setText("statRate", total > 0 ? ((d.hits / total) * 100).toFixed(1) + "%" : "–");
+          setText("statBytes", formatBytes(d.bytes));
+        }
+
+        document.getElementById("save")!.addEventListener("click", async function () {
+          var excludes = (document.getElementById("excludes") as HTMLTextAreaElement).value
+            .split("\n")
+            .map(function (x) { return x.trim(); })
+            .filter(function (x) { return x.length > 0; });
+          var payload = {
+            enabled: (document.getElementById("enabled") as HTMLInputElement).checked,
+            ttlSec: parseInt((document.getElementById("ttlSec") as HTMLInputElement).value, 10),
+            maxEntries: parseInt((document.getElementById("maxEntries") as HTMLInputElement).value, 10),
+            cache404: (document.getElementById("cache404") as HTMLInputElement).checked,
+            cacheWithQuery: (document.getElementById("cacheWithQuery") as HTMLInputElement).checked,
+            excludes: excludes,
+          };
+          var r = await fetch("/admin-ext/api/page-cache/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          var d = await r.json().catch(function () { return {}; });
+          if (r.ok && d.settings) {
+            showMsg(true, "已保存。");
+            (document.getElementById("ttlSec") as HTMLInputElement).value = String(d.settings.ttlSec);
+            (document.getElementById("maxEntries") as HTMLInputElement).value = String(d.settings.maxEntries);
+          } else {
+            showMsg(false, d.error || "保存失败");
+          }
+        });
+
+        document.getElementById("refreshStats")!.addEventListener("click", function () {
+          refreshStats();
+        });
+
+        document.getElementById("purge")!.addEventListener("click", async function () {
+          if (!window.confirm("确认清空全部页面缓存？")) return;
+          var r = await fetch("/admin-ext/api/page-cache/purge", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ confirm: true }),
+          });
+          var d = await r.json().catch(function () { return {}; });
+          if (r.ok) {
+            showMsg(true, "已清空 " + String(d.cleared ?? 0) + " 条缓存。");
+            refreshStats();
+          } else {
+            showMsg(false, d.error || "清空失败");
+          }
+        });
+
+        loadSettings();
+        refreshStats();
+        // 每 5 秒轮询统计
+        setInterval(refreshStats, 5000);
+      })();
+    </script>
+</AdminLayout>

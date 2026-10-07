@@ -1,0 +1,79 @@
+{
+ "summary": {
+  "total": 14,
+  "pass": 14,
+  "fail": 0
+ },
+ "results": [
+  {
+   "case": "related track 30 并发精确 +30",
+   "status": "pass",
+   "detail": "before=373 after=403 delta=30"
+  },
+  {
+   "case": "ads track 20 并发仅 1 行且计数=20",
+   "status": "pass",
+   "detail": "rows=1 delta=20 codes={200}"
+  },
+  {
+   "case": "评论 10 并发：≤3 入库其余 429",
+   "status": "pass",
+   "detail": "201=3 codes=[201, 201, 201, 429, 429, 429, 429, 429, 429, 429]"
+  },
+  {
+   "case": "插件状态 10 并发无 5xx 且终态一致",
+   "status": "pass",
+   "detail": "codes={200} final=False"
+  },
+  {
+   "case": "重定向快速建 5 删 5",
+   "status": "pass",
+   "detail": "created=5 listed=5"
+  },
+  {
+   "case": "并发建同名目录：唯一成功无5xx",
+   "status": "pass",
+   "detail": "codes=[200, 409, 409, 409, 409, 409, 409, 409]"
+  },
+  {
+   "case": "全部 18 个写端点畸形 JSON 不 5xx",
+   "status": "pass",
+   "detail": "18/18"
+  },
+  {
+   "case": "搜索 q=10000 字符不 5xx",
+   "status": "pass",
+   "detail": "status=200"
+  },
+  {
+   "case": "重定向超长 from 拒绝",
+   "status": "pass",
+   "detail": "status=400"
+  },
+  {
+   "case": "评论超长 content 拒绝",
+   "status": "pass",
+   "detail": "status=400"
+  },
+  {
+   "case": "超长 SQL 拒绝(400)",
+   "status": "pass",
+   "detail": "status=400"
+  },
+  {
+   "case": "ads track 批量超 50 拒绝",
+   "status": "pass",
+   "detail": "status=400"
+  },
+  {
+   "case": "写端点 GET 方法不 5xx",
+   "status": "pass",
+   "detail": "status=404"
+  },
+  {
+   "case": "100 并发混合请求全部 2xx/3xx",
+   "status": "pass",
+   "detail": "bad=[]"
+  }
+ ]
+}

@@ -1,0 +1,287 @@
+---
+/**
+ * /admin-ext/backup — 数据库与媒体库备份/恢复
+ */
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+if (!Astro.locals.user) return Astro.redirect("/login");
+---
+<AdminLayout title="备份与恢复">
+    <style is:global>
+      * { box-sizing: border-box; }
+      .wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; display: grid; gap: 20px; }
+      .card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 20px; }
+      h1 { font-size: 20px; margin: 0 0 6px; }
+      h2 { font-size: 15px; margin: 0 0 12px; }
+      .muted { color: #646970; font-size: 12px; }
+      .warn-box { border: 1px solid #f0c5c7; background: #fcf0f1; border-left: 4px solid #b32d2e; padding: 12px 14px; border-radius: 3px; color: #8a2426; margin: 14px 0; }
+      .warn-box strong { display: block; margin-bottom: 4px; }
+      .row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+      .check { display: flex; align-items: center; gap: 6px; }
+      .btn { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 7px 16px; cursor: pointer; font-size: 13px; text-decoration: none; display: inline-block; }
+      .btn:disabled { opacity: .5; cursor: default; }
+      .btn.secondary { background: #f6f7f7; color: #2271b1; border: 1px solid #2271b1; }
+      .btn.danger { background: #b32d2e; }
+      .msg { margin-top: 10px; font-size: 13px; min-height: 18px; }
+      .ok { color: #00a32a; }
+      .err { color: #b32d2e; }
+      table.grid { border-collapse: collapse; width: 100%; font-size: 12px; }
+      table.grid th, table.grid td { border: 1px solid #dcdcdd; padding: 7px 9px; text-align: left; vertical-align: middle; }
+      table.grid th { background: #f6f7f7; }
+      table.grid .actions { white-space: nowrap; }
+      table.grid .actions .btn { padding: 4px 10px; font-size: 12px; margin-right: 4px; }
+      code { background: #f0f0f1; padding: 1px 5px; border-radius: 3px; font-size: 11px; }
+      input[type="file"] { font-size: 12px; }
+      #restoreResult { display: none; margin-top: 14px; }
+      #restoreResult pre { background: #1d2327; color: #c3c4c7; padding: 12px; border-radius: 4px; overflow: auto; font-size: 12px; }
+      .empty { color: #646970; text-align: center; padding: 20px; }
+    </style>
+
+    <div class="wrap">
+      <div class="card">
+        <h1>备份与恢复</h1>
+        <div class="muted">备份文件（<code>.apzip</code>）保存在仓库根 <code>backups/</code> 目录，包含数据库逻辑转储 <code>dump.sql</code>、可选的数据库物理副本与媒体库。</div>
+
+        <div class="row" style="margin-top:16px;">
+          <button class="btn" id="createBtn">创建备份</button>
+          <label class="check"><input type="checkbox" id="includeMedia" checked /> 同时备份媒体库（单文件 &gt;50MB 跳过，合计 &gt;800MB 将拒绝）</label>
+        </div>
+        <div class="msg" id="createMsg"></div>
+      </div>
+
+      <div class="card">
+        <h2>自动备份</h2>
+        <div class="muted">WP-Cron 风格调度：后台有访问时自动检查触发，无需独立进程。Cloudflare Workers 环境不支持（无文件系统）。</div>
+        <div class="row" style="margin-top:12px;">
+          <label class="check"><input type="checkbox" id="autoEnabled" /> 启用自动备份</label>
+          <label class="check">周期
+            <select id="autoSchedule">
+              <option value="daily">每天</option>
+              <option value="weekly">每周</option>
+            </select>
+          </label>
+          <label class="check" id="weekdayWrap" style="display:none;">星期
+            <select id="autoWeekday">
+              <option value="1">一</option><option value="2">二</option><option value="3">三</option>
+              <option value="4">四</option><option value="5">五</option><option value="6">六</option>
+              <option value="0">日</option>
+            </select>
+          </label>
+          <label class="check">时间 <input type="time" id="autoTime" value="03:30" /></label>
+          <label class="check">保留最近 <input type="number" id="keepLast" min="1" max="60" value="7" style="width:64px;" /> 份</label>
+          <label class="check"><input type="checkbox" id="autoMedia" checked /> 包含媒体库</label>
+          <button class="btn" id="saveAutoBtn">保存设置</button>
+        </div>
+        <div class="msg" id="autoMsg"></div>
+      </div>
+
+      <div class="card">
+        <h2>恢复备份</h2>
+        <div class="warn-box">
+          <strong>危险操作：恢复会覆盖现有数据</strong>
+          恢复前建议先下载最新备份到本地保存。数据库恢复按 <code>dump.sql</code> 逐条执行（不存在的表自动创建），会话表 <code>wp_sessions</code> 不会被改动。
+        </div>
+        <div class="row">
+          <input type="file" id="restoreFile" accept=".apzip,application/zip" />
+          <span class="muted">或在下方列表中对已有备份点「恢复」</span>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <label class="check"><input type="checkbox" id="restoreDb" checked /> 恢复数据库（执行 dump.sql）</label>
+          <label class="check"><input type="checkbox" id="restoreMedia" checked /> 恢复媒体文件</label>
+          <button class="btn danger" id="uploadRestoreBtn">上传并恢复</button>
+        </div>
+        <div id="restoreResult">
+          <pre id="restoreResultText"></pre>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>备份列表</h2>
+        <table class="grid">
+          <thead>
+            <tr>
+              <th>文件</th><th>大小</th><th>时间</th><th>媒体数</th><th>表数</th><th>备注</th><th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="backupTbody">
+            <tr><td colspan="7" class="empty">加载中…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        var ESC_MAP = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+        function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return ESC_MAP[c]; }); }
+        function fmtSize(mb) { return mb >= 1 ? mb.toFixed(2) + " MB" : (mb * 1024).toFixed(0) + " KB"; }
+        function fmtTime(iso) {
+          if (!iso) return "-";
+          try { return new Date(iso).toLocaleString("zh-CN", { hour12: false }); } catch (e) { return iso; }
+        }
+        function api(url, opts) {
+          return fetch(url, Object.assign({ credentials: "same-origin" }, opts)).then(function (r) {
+            if (r.status === 401) { location.href = "/login"; throw new Error("未登录"); }
+            return r.json().then(function (d) { return { ok: r.ok, data: d }; });
+          });
+        }
+
+        var tbody = document.getElementById("backupTbody");
+        var currentEntries = [];
+
+        function render() {
+          if (!currentEntries.length) {
+            tbody.innerHTML = '<tr><td colspan="7" class="empty">暂无备份，点击「创建备份」开始。</td></tr>'; // ap-audit-ok: 静态空状态，无动态数据
+            return;
+          }
+          tbody.innerHTML = currentEntries.map(function (e) { // ap-audit-ok: 所有动态字段经 esc() 转义、href 经 encodeURIComponent，notes 为静态片段
+            var notes = [];
+            if (!e.manifestOk) notes.push('<span class="err">manifest 读取失败，仅显示原始信息</span>');
+            if (e.skipped && e.skipped.length) notes.push('<span class="err">跳过 ' + e.skipped.length + " 个超大媒体</span>");
+            return "<tr>" +
+              "<td><code>" + esc(e.file) + "</code></td>" +
+              "<td>" + fmtSize(e.sizeMB) + "</td>" +
+              "<td>" + esc(fmtTime(e.createdAt || e.mtime)) + "</td>" +
+              "<td>" + (e.mediaCount === null ? "-" : e.mediaCount) + "</td>" +
+              "<td>" + (e.tablesCount === null ? "-" : e.tablesCount) + "</td>" +
+              '<td class="muted">' + (notes.join("；") || "") + "</td>" +
+              '<td class="actions">' +
+                '<a class="btn secondary" href="/admin-ext/api/backup/download?file=' + encodeURIComponent(e.file) + '">下载</a>' +
+                '<button class="btn danger" data-act="restore" data-file="' + esc(e.file) + '">恢复</button>' +
+                '<button class="btn secondary" data-act="delete" data-file="' + esc(e.file) + '">删除</button>' +
+              "</td></tr>";
+          }).join("");
+        }
+
+        function load() {
+          api("/admin-ext/api/backup/list").then(function (res) {
+            currentEntries = res.ok ? res.data.entries || [] : [];
+            render();
+          });
+        }
+
+        function showRestoreResult(data, ok) {
+          var box = document.getElementById("restoreResult");
+          var pre = document.getElementById("restoreResultText");
+          box.style.display = "block";
+          pre.style.color = ok ? "#78d98a" : "#ff9ca2";
+          pre.textContent = JSON.stringify(data, null, 2);
+        }
+
+        function doRestore(formData) {
+          var db = document.getElementById("restoreDb").checked;
+          var media = document.getElementById("restoreMedia").checked;
+          if (!db && !media) { alert("请至少勾选一项恢复内容"); return; }
+          formData.append("db", String(db));
+          formData.append("media", String(media));
+          fetch("/admin-ext/api/backup/restore", { method: "POST", credentials: "same-origin", body: formData })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+              if (d.error) { showRestoreResult(d, false); return; }
+              showRestoreResult(d, d.ok);
+              load();
+            })
+            .catch(function (e) { showRestoreResult({ error: e.message || "网络错误" }, false); });
+        }
+
+        document.getElementById("createBtn").addEventListener("click", function () {
+          var btn = this;
+          var msg = document.getElementById("createMsg");
+          btn.disabled = true;
+          msg.className = "msg muted";
+          msg.textContent = "正在生成备份，请稍候（媒体较多时可能需要一段时间）…";
+          api("/admin-ext/api/backup/create", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ includeMedia: document.getElementById("includeMedia").checked }),
+          }).then(function (res) {
+            btn.disabled = false;
+            if (res.ok && res.data.ok) {
+              msg.className = "msg ok";
+              msg.textContent = "备份已创建：" + res.data.entry.file + "（" + fmtSize(res.data.entry.sizeMB) + "）";
+              load();
+            } else {
+              msg.className = "msg err";
+              msg.textContent = (res.data && res.data.error) || "创建失败";
+            }
+          }).catch(function (e) {
+            btn.disabled = false;
+            msg.className = "msg err";
+            msg.textContent = e.message || "网络错误";
+          });
+        });
+
+        document.getElementById("uploadRestoreBtn").addEventListener("click", function () {
+          var fileInput = document.getElementById("restoreFile");
+          if (!fileInput.files || !fileInput.files[0]) { alert("请先选择 .apzip 备份文件"); return; }
+          if (!confirm("恢复会覆盖现有数据，确定继续吗？建议先下载当前最新备份。")) return;
+          var fd = new FormData();
+          fd.append("file", fileInput.files[0]);
+          doRestore(fd);
+        });
+
+        tbody.addEventListener("click", function (e) {
+          var btn = e.target.closest("button[data-act]");
+          if (!btn) return;
+          var file = btn.getAttribute("data-file");
+          if (btn.getAttribute("data-act") === "delete") {
+            if (!confirm("确定删除备份 " + file + " ？此操作不可撤销。")) return;
+            api("/admin-ext/api/backup?file=" + encodeURIComponent(file), { method: "DELETE" })
+              .then(function (res) {
+                if (!res.ok) alert((res.data && res.data.error) || "删除失败");
+                load();
+              });
+            return;
+          }
+          if (btn.getAttribute("data-act") === "restore") {
+            if (!confirm("将用备份 " + file + " 覆盖现有数据，确定继续吗？")) return;
+            var fd = new FormData();
+            fd.append("existing", file);
+            doRestore(fd);
+          }
+        });
+
+        // ---- 自动备份设置 ----
+        var autoSchedule = document.getElementById("autoSchedule");
+        var weekdayWrap = document.getElementById("weekdayWrap");
+        autoSchedule.addEventListener("change", function () {
+          weekdayWrap.style.display = autoSchedule.value === "weekly" ? "" : "none";
+        });
+
+        function loadAutoSettings() {
+          api("/admin-ext/api/backup/settings").then(function (res) {
+            if (!res.ok || !res.data.settings) return;
+            var s = res.data.settings;
+            document.getElementById("autoEnabled").checked = !!s.autoEnabled;
+            autoSchedule.value = s.schedule || "daily";
+            weekdayWrap.style.display = autoSchedule.value === "weekly" ? "" : "none";
+            document.getElementById("autoWeekday").value = String(s.weekday ?? 1);
+            document.getElementById("autoTime").value = s.time || "03:30";
+            document.getElementById("keepLast").value = s.keepLast || 7;
+            document.getElementById("autoMedia").checked = !!s.includeMedia;
+          });
+        }
+
+        document.getElementById("saveAutoBtn").addEventListener("click", function () {
+          var msg = document.getElementById("autoMsg");
+          api("/admin-ext/api/backup/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              autoEnabled: document.getElementById("autoEnabled").checked,
+              schedule: autoSchedule.value,
+              weekday: parseInt(document.getElementById("autoWeekday").value, 10),
+              time: document.getElementById("autoTime").value,
+              keepLast: parseInt(document.getElementById("keepLast").value, 10),
+              includeMedia: document.getElementById("autoMedia").checked,
+            }),
+          }).then(function (res) {
+            msg.className = "msg " + (res.ok && res.data.ok ? "ok" : "err");
+            msg.textContent = res.ok && res.data.ok ? "自动备份设置已保存" : ((res.data && res.data.error) || "保存失败");
+          });
+        });
+
+        loadAutoSettings();
+        load();
+      })();
+    </script>
+</AdminLayout>

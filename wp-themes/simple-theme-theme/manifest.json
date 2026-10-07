@@ -1,0 +1,26 @@
+{
+  "name": "Simple Theme",
+  "version": "1.0.0",
+  "description": "Minimal single-column Vue-driven blog theme",
+  "author": "Simple",
+  "tokens": {
+    "fonts": {
+      "body": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      "heading": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    },
+    "spacing": {
+      "sectionY": "40px",
+      "borderRadius": "4px",
+      "containerMax": "800px"
+    },
+    "colors": {
+      "textMuted": "#727272",
+      "surface": "#f8f8f8",
+      "background": "#ffffff",
+      "secondary": "#006ee4",
+      "border": "#e0e0e0",
+      "text": "#333333",
+      "primary": "#333333"
+    }
+  }
+}

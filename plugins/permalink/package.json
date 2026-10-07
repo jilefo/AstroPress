@@ -1,0 +1,23 @@
+{
+  "name": "@astropress/plugin-permalink",
+  "version": "0.1.0",
+  "description": "固定链接美化：文章可直接通过 /{slug} 访问（内部重写到 /blog/{slug}），可选 301 迁移旧 /blog/* 链接",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./integration.admin": "./src/integration.admin.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@astropress/core": "workspace:*",
+    "drizzle-orm": "^0.36.0"
+  },
+  "devDependencies": {
+    "astro": "^4.0.0",
+    "typescript": "^5.4.0",
+    "@cloudflare/workers-types": "^4.0.0"
+  }
+}

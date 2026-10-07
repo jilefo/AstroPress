@@ -1,0 +1,147 @@
+---
+/**
+ * /admin-ext/maintenance-mode — 维护模式插件设置页
+ */
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+if (!Astro.locals.user || !Astro.locals.db) return Astro.redirect("/login");
+---
+<AdminLayout title="维护模式">
+    <style is:global>
+      * { box-sizing: border-box; }
+      .wrap { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+      .card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 20px; margin-bottom: 20px; }
+      h1 { font-size: 20px; margin: 0 0 16px; }
+      h2 { font-size: 15px; margin: 0 0 12px; }
+      label { display: block; font-size: 13px; font-weight: 600; margin: 16px 0 4px; }
+      input[type="text"], textarea { width: 100%; font-size: 13px; padding: 6px 8px; border: 1px solid #8c8f94; border-radius: 3px; background: #fff; }
+      textarea { font-family: Consolas, Monaco, monospace; resize: vertical; }
+      button { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 8px 16px; cursor: pointer; font-size: 13px; margin-top: 20px; }
+      .msg { font-size: 13px; margin-top: 10px; min-height: 18px; }
+      .ok { color: #00a32a; }
+      .err { color: #b32d2e; }
+      .hint { font-size: 12px; color: #646970; margin-top: 4px; }
+      .check { display: flex; align-items: center; gap: 6px; font-size: 13px; margin-top: 16px; }
+      .check label { font-weight: 400; margin: 0; }
+      .badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 10px; vertical-align: middle; margin-left: 8px; }
+      .badge-on { background: #d63638; color: #fff; }
+      .badge-off { background: #f0f0f1; color: #646970; }
+      .preview { border: 1px dashed #c3c4c7; border-radius: 8px; background: #f6f7f7; padding: 32px 24px; text-align: center; }
+      .preview-icon { font-size: 32px; line-height: 1; margin-bottom: 12px; }
+      .preview-title { font-size: 18px; font-weight: 600; color: #2c3338; margin-bottom: 8px; }
+      .preview-message { font-size: 13px; line-height: 1.8; color: #646970; white-space: pre-wrap; }
+      .preview-eta { margin-top: 12px; font-size: 12px; color: #2271b1; }
+    </style>
+
+    <div class="wrap">
+      <div class="card">
+        <h1>维护模式<span class="badge badge-off" id="statusBadge">已关闭</span></h1>
+
+        <div class="check" style="margin-top:0">
+          <input type="checkbox" id="enabled" />
+          <label for="enabled">开启维护模式</label>
+        </div>
+        <div class="hint">开启后，未登录访客访问任何页面都会看到 503 维护页（附 Retry-After: 300）。已登录管理员、/admin、/login、/api/、/admin-ext、静态资源不受影响。</div>
+
+        <label for="title">维护页标题</label>
+        <input type="text" id="title" maxlength="100" value="网站维护中" />
+
+        <label for="message">维护页正文</label>
+        <textarea id="message" rows="3" maxlength="500" placeholder="我们正在进行系统维护与升级，请稍后再来访问。"></textarea>
+
+        <label for="eta">预计恢复时间</label>
+        <input type="text" id="eta" maxlength="100" placeholder="例如：今天 18:00（留空则不显示）" />
+
+        <label for="allowedIps">IP 白名单</label>
+        <textarea id="allowedIps" rows="3" placeholder="203.0.113.10&#10;198.51.100.8"></textarea>
+        <div class="hint">每行一个 IP，精确匹配，命中即放行（可把自己的出口 IP 加进来，维护期间也能以访客身份访问）。最多 50 条。</div>
+
+        <button id="save">保存设置</button>
+        <div class="msg" id="msg"></div>
+      </div>
+
+      <div class="card">
+        <h2>访客看到的页面预览</h2>
+        <div class="preview">
+          <div class="preview-icon">🛠️</div>
+          <div class="preview-title" id="pvTitle">网站维护中</div>
+          <div class="preview-message" id="pvMessage"></div>
+          <div class="preview-eta" id="pvEta"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        var msg = document.getElementById("msg");
+        var badge = document.getElementById("statusBadge");
+
+        function showMsg(ok, text) {
+          msg.className = "msg " + (ok ? "ok" : "err");
+          msg.textContent = text;
+          setTimeout(function () { msg.textContent = ""; }, 3000);
+        }
+
+        function renderStatus(enabled) {
+          badge.textContent = enabled ? "已开启" : "已关闭";
+          badge.className = "badge " + (enabled ? "badge-on" : "badge-off");
+        }
+
+        function renderPreview() {
+          var title = document.getElementById("title").value.trim() || "网站维护中";
+          var message = document.getElementById("message").value.trim();
+          var eta = document.getElementById("eta").value.trim();
+          document.getElementById("pvTitle").textContent = title;
+          document.getElementById("pvMessage").textContent = message;
+          document.getElementById("pvEta").textContent = eta ? "预计恢复时间：" + eta : "";
+        }
+
+        async function load() {
+          var r = await fetch("/admin-ext/api/maintenance/settings");
+          if (!r.ok) return;
+          var s = await r.json();
+          document.getElementById("enabled").checked = !!s.enabled;
+          document.getElementById("title").value = s.title || "";
+          document.getElementById("message").value = s.message || "";
+          document.getElementById("eta").value = s.eta || "";
+          document.getElementById("allowedIps").value = Array.isArray(s.allowedIps)
+            ? s.allowedIps.join("\n")
+            : "";
+          renderStatus(!!s.enabled);
+          renderPreview();
+        }
+
+        document.getElementById("save").addEventListener("click", async function () {
+          var allowedIps = document.getElementById("allowedIps").value
+            .split("\n")
+            .map(function (x) { return x.trim(); })
+            .filter(function (x) { return x.length > 0; });
+          var payload = {
+            enabled: document.getElementById("enabled").checked,
+            title: document.getElementById("title").value.trim(),
+            message: document.getElementById("message").value.trim(),
+            eta: document.getElementById("eta").value.trim(),
+            allowedIps: allowedIps,
+          };
+          var r = await fetch("/admin-ext/api/maintenance/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          var d = await r.json().catch(function () { return {}; });
+          if (r.ok && d.settings) {
+            showMsg(true, d.settings.enabled ? "已保存，维护模式已开启。" : "已保存。");
+            renderStatus(!!d.settings.enabled);
+            renderPreview();
+          } else {
+            showMsg(false, d.error || "保存失败");
+          }
+        });
+
+        document.getElementById("title").addEventListener("input", renderPreview);
+        document.getElementById("message").addEventListener("input", renderPreview);
+        document.getElementById("eta").addEventListener("input", renderPreview);
+
+        load();
+      })();
+    </script>
+</AdminLayout>

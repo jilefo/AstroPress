@@ -1,0 +1,30 @@
+{
+    "name":  "@astropress/plugin-perf-suite",
+    "version":  "1.0.0",
+    "private":  true,
+    "type":  "module",
+    "description":  "合并套件：页面缓存 · 图片懒加载 · HTML优化 · 静态资源缓存 · 网站地图 · 静态HTML生成 · 404监控 · 缓存预热",
+    "exports":  {
+                    ".":  "./src/index.ts",
+                    "./integration":  "./src/integration.ts"
+                },
+    "scripts":  {
+                    "typecheck":  "tsc --noEmit"
+                },
+    "dependencies":  {
+                         "@astropress/core":  "workspace:*",
+                         "@astropress/plugin-page-cache":  "workspace:*",
+                         "@astropress/plugin-image-lazy":  "workspace:*",
+                         "@astropress/plugin-html-opt":  "workspace:*",
+                         "@astropress/plugin-asset-cache":  "workspace:*",
+                         "@astropress/plugin-sitemap":  "workspace:*",
+                         "@astropress/plugin-static-html":  "workspace:*",
+                         "@astropress/plugin-error-monitor":  "workspace:*",
+                         "@astropress/plugin-cache-warmer":  "workspace:*"
+                     },
+    "devDependencies":  {
+                            "astro":  "^4.0.0",
+                            "typescript":  "^5.4.0",
+                            "@cloudflare/workers-types":  "^4.0.0"
+                        }
+}

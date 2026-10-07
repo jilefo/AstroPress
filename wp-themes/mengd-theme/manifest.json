@@ -1,0 +1,26 @@
+{
+  "name": "MengD",
+  "version": "1.8.4",
+  "description": "Hexo theme MengD ported to AstroPress — cute pastel gradients, large rounded corners, pink-orange accents",
+  "author": "letture (ported)",
+  "tokens": {
+    "fonts": {
+      "body": "Consolas, Menlo, 'PingFang SC', 'Microsoft YaHei', sans-serif",
+      "heading": "Consolas, Menlo, 'PingFang SC', 'Microsoft YaHei', sans-serif"
+    },
+    "spacing": {
+      "sectionY": "30px",
+      "borderRadius": "10px",
+      "containerMax": "820px"
+    },
+    "colors": {
+      "textMuted": "#666666",
+      "surface": "#ffffff",
+      "background": "#eaeaea",
+      "secondary": "#008278",
+      "border": "#f0f0f0",
+      "text": "#333333",
+      "primary": "#006d65"
+    }
+  }
+}

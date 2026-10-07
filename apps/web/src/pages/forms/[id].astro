@@ -1,0 +1,454 @@
+---
+import { wpOptions } from "@astropress/core/schema";
+import { eq } from "drizzle-orm";
+
+const { id } = Astro.params;
+const db = Astro.locals.db;
+
+if (!db) return new Response("服务器开小差了，请稍后再试", { status: 500 });
+
+const [row] = await db.select({ value: wpOptions.optionValue }).from(wpOptions)
+  .where(eq(wpOptions.optionName, "astropress_forms")).limit(1);
+const forms: any[] = row?.value ? JSON.parse(row.value) : [];
+const form = forms.find((f) => f.id === id);
+
+if (!form) return new Response("表单不存在或已删除", { status: 404 });
+
+const fields: any[] = form.fields ?? [];
+const settings = form.settings ?? {};
+const submitText = settings.submitText ?? settings.submitButtonText ?? "提交";
+---
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{form.title ?? form.name}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f6f7f7;
+      color: #1d2327;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 40px 16px;
+    }
+    .form-card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.08);
+      padding: 36px 40px;
+      width: 100%;
+      max-width: 620px;
+    }
+    h1 { font-size: 22px; font-weight: 700; margin: 0 0 24px; }
+    .field { margin-bottom: 18px; }
+    .field label { display: block; font-weight: 500; font-size: 13px; margin-bottom: 4px; }
+    .field label .req { color: #dc3232; margin-left: 2px; }
+    .field input, .field textarea, .field select {
+      width: 100%; padding: 8px 10px; border: 1px solid #dcdcde; border-radius: 4px;
+      font-size: 14px; font-family: inherit; outline: none;
+    }
+    .field textarea { resize: vertical; }
+    .field .hint { font-size: 11px; color: #646970; margin: 3px 0 0; }
+    .field .err { font-size: 12px; color: #dc3232; margin: 3px 0 0; display: none; }
+    .field.has-error input, .field.has-error textarea, .field.has-error select { border-color: #dc3232; }
+    .field.has-error .err { display: block; }
+    .choices label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; margin-bottom: 6px; }
+    .name-row, .address-row { display: flex; gap: 8px; }
+    .name-row input, .address-row input { flex: 1; }
+    .rating-stars { display: flex; gap: 4px; }
+    .rating-stars button { background: none; border: none; cursor: pointer; font-size: 26px; color: #dcdcde; padding: 0; }
+    .rating-stars button.active { color: #f59e0b; }
+    .nps-wrap { display: flex; flex-direction: column; gap: 4px; }
+    .nps-nums { display: flex; gap: 4px; }
+    .nps-nums button { width: 36px; height: 36px; border: 1px solid #dcdcde; border-radius: 4px; cursor: pointer; font-size: 13px; background: #fff; }
+    .nps-nums button.active { background: #2271b1; color: #fff; border-color: #2271b1; }
+    .nps-labels { display: flex; justify-content: space-between; font-size: 11px; color: #646970; }
+    .section-divider { border: none; border-top: 1px solid #dcdcde; margin: 8px 0; }
+    .section-title { font-size: 15px; font-weight: 600; margin: 0 0 4px; border-bottom: 1px solid #dcdcde; padding-bottom: 8px; }
+    .submit-row { margin-top: 24px; }
+    .submit-btn {
+      padding: 9px 22px; background: #2271b1; color: #fff; border: none;
+      border-radius: 4px; font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+    .submit-btn:disabled { opacity: 0.7; cursor: default; }
+    .form-error {
+      margin-bottom: 16px; padding: 10px 14px; background: #fce8e8;
+      border: 1px solid #dc3232; border-radius: 4px; color: #dc3232; font-size: 13px; display: none;
+    }
+    .confirmation {
+      padding: 20px 24px; background: #f0f7ee; border: 1px solid #7ad03a;
+      border-radius: 8px; display: none;
+    }
+    .page-indicator { display: flex; gap: 4px; margin-bottom: 20px; }
+    .page-indicator span { height: 6px; flex: 1; border-radius: 3px; background: #dcdcde; }
+    .page-indicator span.done { background: #2271b1; }
+    .page-nav { display: flex; gap: 8px; margin-top: 16px; }
+    .btn-prev { padding: 9px 18px; background: #f6f7f7; border: 1px solid #dcdcde; border-radius: 4px; font-size: 14px; cursor: pointer; }
+    .page-section { display: none; }
+    .page-section.active { display: block; }
+  </style>
+</head>
+<body>
+<div class="form-card">
+  <h1>{form.title ?? form.name}</h1>
+  <div class="form-error" id="form-error"></div>
+  <div class="confirmation" id="confirmation"></div>
+  <form id="ap-form" novalidate>
+    {/* Build pages */}
+    {(() => {
+      const pages: any[][] = [];
+      let cur: any[] = [];
+      for (const f of fields) {
+        if (f.type === "page_break") { pages.push(cur); cur = []; }
+        else cur.push(f);
+      }
+      pages.push(cur);
+      const isMulti = pages.length > 1;
+      return pages.map((pageFields, pi) => (
+        <div class={`page-section${pi === 0 ? " active" : ""}`} data-page={pi}>
+          {isMulti && (
+            <div class="page-indicator">
+              {pages.map((_, i) => <span class={i <= pi ? "done" : ""}></span>)}
+            </div>
+          )}
+          {pageFields.map((field: any) => {
+            if (field.type === "hidden") {
+              return <input type="hidden" name={field.id} value={field.defaultValue ?? ""} data-field-id={field.id} />;
+            }
+            if (field.type === "html" || field.type === "content") {
+              return <div set:html={field.htmlContent ?? field.html ?? field.content ?? ""} />;
+            }
+            if (field.type === "section_divider") {
+              return (
+                <div class="field">
+                  {field.label && <p class="section-title">{field.label}</p>}
+                  <hr class="section-divider" />
+                  {field.description && <p class="hint">{field.description}</p>}
+                </div>
+              );
+            }
+            const hasChoices = ["dropdown","multiple_choice","checkboxes","likert"].includes(field.type);
+            const choices: any[] = field.choices ?? [];
+            return (
+              <div class="field" id={`field-wrap-${field.id}`} data-field-id={field.id}
+                data-conditional={field.conditionalLogic ? JSON.stringify(field.conditionalLogic) : ""}>
+                {field.type !== "section_divider" && (
+                  <label for={`field-${field.id}`}>
+                    {field.label}
+                    {field.required && <span class="req">*</span>}
+                  </label>
+                )}
+                {field.type === "text" && <input id={`field-${field.id}`} type="text" name={field.id} placeholder={field.placeholder ?? ""} />}
+                {field.type === "email" && <input id={`field-${field.id}`} type="email" name={field.id} placeholder={field.placeholder ?? ""} />}
+                {field.type === "url" && <input id={`field-${field.id}`} type="url" name={field.id} placeholder={field.placeholder ?? ""} />}
+                {field.type === "phone" && <input id={`field-${field.id}`} type="tel" name={field.id} placeholder={field.placeholder ?? ""} />}
+                {field.type === "password" && <input id={`field-${field.id}`} type="password" name={field.id} />}
+                {field.type === "number" && <input id={`field-${field.id}`} type="number" name={field.id} min={field.numberMin ?? ""} max={field.numberMax ?? ""} />}
+                {field.type === "range_slider" && (
+                  <div>
+                    <input id={`field-${field.id}`} type="range" name={field.id}
+                      min={field.min ?? 0} max={field.max ?? 100} step={field.step ?? 1}
+                      value={field.defaultValue ?? field.min ?? 0}
+                      oninput={`document.getElementById('range-val-${field.id}').textContent=this.value`} />
+                    <span id={`range-val-${field.id}`}>{field.defaultValue ?? field.min ?? 0}</span>
+                  </div>
+                )}
+                {field.type === "textarea" && <textarea id={`field-${field.id}`} name={field.id} rows={4} placeholder={field.placeholder ?? ""}></textarea>}
+                {field.type === "dropdown" && (
+                  <select id={`field-${field.id}`} name={field.id}>
+                    <option value="">— Select —</option>
+                    {choices.map((c: any) => <option value={c.value}>{c.label}</option>)}
+                  </select>
+                )}
+                {field.type === "multiple_choice" && (
+                  <div class="choices">
+                    {choices.map((c: any) => (
+                      <label>
+                        <input type="radio" name={field.id} value={c.value} />
+                        {c.label}
+                      </label>
+                    ))}
+                  </div>
+                )}
+                {field.type === "checkboxes" && (
+                  <div class="choices" id={`field-${field.id}`}>
+                    {choices.map((c: any) => (
+                      <label>
+                        <input type="checkbox" name={`${field.id}[]`} value={c.value} data-group={field.id} />
+                        {c.label}
+                      </label>
+                    ))}
+                  </div>
+                )}
+                {field.type === "name" && (
+                  <div class="name-row">
+                    <input type="text" name={`${field.id}[first]`} placeholder={field.subLabels?.first ?? "名字"} data-namefield={field.id} />
+                    {field.nameFormat === "first-middle-last" && <input type="text" name={`${field.id}[middle]`} placeholder={field.subLabels?.middle ?? "中间名"} data-namefield={field.id} />}
+                    <input type="text" name={`${field.id}[last]`} placeholder={field.subLabels?.last ?? "姓氏"} data-namefield={field.id} />
+                  </div>
+                )}
+                {field.type === "address" && (
+                  <div>
+                    <input type="text" name={`${field.id}[address1]`} placeholder="详细地址" style="margin-bottom:8px;" />
+                    <div class="address-row" style="margin-bottom:8px;">
+                      <input type="text" name={`${field.id}[city]`} placeholder="城市" />
+                      <input type="text" name={`${field.id}[state]`} placeholder="省/州" />
+                      <input type="text" name={`${field.id}[zip]`} placeholder="邮编" style="max-width:100px;" />
+                    </div>
+                    <input type="text" name={`${field.id}[country]`} placeholder="国家/地区" />
+                  </div>
+                )}
+                {field.type === "date_time" && (
+                  <div style="display:flex;gap:8px;">
+                    {field.dateEnable !== false && <input type="date" name={`${field.id}[date]`} style="flex:1;" />}
+                    {field.timeEnable && <input type="time" name={`${field.id}[time]`} style="flex:1;" />}
+                  </div>
+                )}
+                {field.type === "file" && (
+                  <input type="file" name={field.id}
+                    accept={field.fileExtensions ? field.fileExtensions.split(",").map((e: string) => `.${e.trim()}`).join(",") : ""}
+                    multiple={field.fileMaxCount > 1} />
+                )}
+                {field.type === "rating" && (
+                  <div class="rating-stars" id={`field-${field.id}`} data-rating="0">
+                    {Array.from({ length: field.ratingCount ?? 5 }, (_, i) => (
+                      <button type="button" data-val={i + 1} onclick={`setRating('${field.id}', ${i + 1})`}>★</button>
+                    ))}
+                    <input type="hidden" name={field.id} value="0" id={`rating-input-${field.id}`} />
+                  </div>
+                )}
+                {field.type === "nps" && (
+                  <div class="nps-wrap">
+                    <div class="nps-nums" id={`nps-${field.id}`}>
+                      {Array.from({ length: 11 }, (_, i) => (
+                        <button type="button" data-val={i} onclick={`setNps('${field.id}', ${i})`}>{i}</button>
+                      ))}
+                    </div>
+                    <div class="nps-labels">
+                      <span>{field.npsStart ?? "完全不可能"}</span>
+                      <span>{field.npsEnd ?? "非常可能"}</span>
+                    </div>
+                    <input type="hidden" name={field.id} value="" id={`nps-input-${field.id}`} />
+                  </div>
+                )}
+                {field.type === "captcha" && (
+                  <div style="padding:12px;border:1px solid #dcdcde;border-radius:4px;background:#f6f7f7;font-size:13px;color:#646970;">
+                    🤖 CAPTCHA (preview only)
+                  </div>
+                )}
+                {field.description && <p class="hint">{field.description}</p>}
+                <p class="err" id={`err-${field.id}`}>{field.label} is required.</p>
+              </div>
+            );
+          })}
+          {isMulti && (
+            <div class="page-nav">
+              {pi > 0 && <button type="button" class="btn-prev" onclick={`goPage(${pi - 1})`}>← Previous</button>}
+              {pi < pages.length - 1
+                ? <button type="button" class="submit-btn" onclick={`goPage(${pi + 1})`}>Next →</button>
+                : <button type="submit" class="submit-btn" id="submit-btn">{submitText}</button>
+              }
+            </div>
+          )}
+        </div>
+      ));
+    })()}
+    {(() => {
+      const hasPages = fields.some((f: any) => f.type === "page_break");
+      if (hasPages) return null;
+      return (
+        <div class="submit-row">
+          <button type="submit" class="submit-btn" id="submit-btn">{submitText}</button>
+        </div>
+      );
+    })()}
+  </form>
+</div>
+
+<script define:vars={{ formId: id, honeypot: settings.honeypot ?? false, confirmations: form.confirmations ?? [] }}>
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  function setRating(fieldId, val) {
+    document.getElementById('rating-input-' + fieldId).value = val;
+    var wrap = document.getElementById('field-' + fieldId);
+    wrap.dataset.rating = val;
+    wrap.querySelectorAll('button').forEach(function(btn) {
+      btn.classList.toggle('active', Number(btn.dataset.val) <= val);
+    });
+  }
+  function setNps(fieldId, val) {
+    document.getElementById('nps-input-' + fieldId).value = val;
+    document.getElementById('nps-' + fieldId).querySelectorAll('button').forEach(function(btn) {
+      btn.classList.toggle('active', Number(btn.dataset.val) === val);
+    });
+  }
+
+  // ── Multi-page ─────────────────────────────────────────────────────────────
+  var currentPage = 0;
+  function goPage(idx) {
+    var pages = document.querySelectorAll('.page-section');
+    if (idx > currentPage && !validatePage(currentPage)) return;
+    pages[currentPage].classList.remove('active');
+    currentPage = idx;
+    pages[currentPage].classList.add('active');
+    // Update indicators
+    pages.forEach(function(p) {
+      p.querySelectorAll('.page-indicator span').forEach(function(s, i) {
+        s.classList.toggle('done', i <= currentPage);
+      });
+    });
+  }
+
+  // ── Field values ───────────────────────────────────────────────────────────
+  function getValues() {
+    var vals = {};
+    var form = document.getElementById('ap-form');
+    // Text / select / hidden inputs
+    form.querySelectorAll('input:not([type=radio]):not([type=checkbox]):not([data-group])').forEach(function(el) {
+      if (el.name && el.type !== 'file') vals[el.name] = el.value;
+    });
+    // Radios
+    form.querySelectorAll('input[type=radio]:checked').forEach(function(el) {
+      vals[el.name] = el.value;
+    });
+    // Checkboxes (grouped)
+    var groups = {};
+    form.querySelectorAll('input[type=checkbox][data-group]').forEach(function(el) {
+      var g = el.dataset.group;
+      if (!groups[g]) groups[g] = [];
+      if (el.checked) groups[g].push(el.value);
+    });
+    Object.assign(vals, groups);
+    // Flatten name fields: { "id[first]": "John", "id[last]": "Doe" } → { id: { first, last } }
+    var composed = {};
+    Object.keys(vals).forEach(function(k) {
+      var m = k.match(/^(.+)\[(.+)\]$/);
+      if (m) {
+        if (!composed[m[1]]) composed[m[1]] = {};
+        composed[m[1]][m[2]] = vals[k];
+        delete vals[k];
+      }
+    });
+    Object.assign(vals, composed);
+    return vals;
+  }
+
+  // ── Validation ─────────────────────────────────────────────────────────────
+  function validatePage(pageIdx) {
+    var page = document.querySelector('[data-page="' + pageIdx + '"]');
+    if (!page) return true;
+    var ok = true;
+    page.querySelectorAll('.field[data-field-id]').forEach(function(wrap) {
+      var fid = wrap.dataset.fieldId;
+      var label = wrap.querySelector('label');
+      if (!label || !label.querySelector('.req')) return; // not required
+      var val = getFieldValue(fid);
+      var empty = val === '' || val === null || val === undefined || (Array.isArray(val) && val.length === 0);
+      wrap.classList.toggle('has-error', empty);
+      if (empty) ok = false;
+    });
+    return ok;
+  }
+
+  function getFieldValue(fid) {
+    var form = document.getElementById('ap-form');
+    // Hidden rating/nps
+    var hidden = document.getElementById('rating-input-' + fid) || document.getElementById('nps-input-' + fid);
+    if (hidden) return hidden.value;
+    // Radio
+    var radio = form.querySelector('input[type=radio][name="' + fid + '"]:checked');
+    if (radio) return radio.value;
+    // Checkboxes
+    var checks = form.querySelectorAll('input[type=checkbox][data-group="' + fid + '"]:checked');
+    if (checks.length > 0) return Array.from(checks).map(function(c) { return c.value; });
+    // Regular
+    var el = form.querySelector('[name="' + fid + '"]') || form.querySelector('[name="' + fid + '[first]"]');
+    return el ? el.value : '';
+  }
+
+  // ── Conditional logic ──────────────────────────────────────────────────────
+  function evalConditions() {
+    document.querySelectorAll('.field[data-conditional]').forEach(function(wrap) {
+      var raw = wrap.dataset.conditional;
+      if (!raw) return;
+      var cl;
+      try { cl = JSON.parse(raw); } catch { return; }
+      if (!cl || !cl.enabled) return;
+      var vals = getValues();
+      var results = (cl.rules || []).map(function(rule) {
+        var v = String(vals[rule.fieldId] || '');
+        switch (rule.operator) {
+          case 'is': return v === rule.value;
+          case 'is_not': return v !== rule.value;
+          case 'contains': return v.includes(rule.value);
+          case 'not_contains': return !v.includes(rule.value);
+          case 'greater_than': return Number(v) > Number(rule.value);
+          case 'less_than': return Number(v) < Number(rule.value);
+          case 'is_empty': return v === '';
+          case 'is_not_empty': return v !== '';
+          default: return true;
+        }
+      });
+      var passes = cl.logicType === 'all' ? results.every(Boolean) : results.some(Boolean);
+      var show = cl.action === 'show' ? passes : !passes;
+      wrap.style.display = show ? '' : 'none';
+    });
+  }
+
+  document.getElementById('ap-form').addEventListener('input', evalConditions);
+  evalConditions();
+
+  // ── Submit ─────────────────────────────────────────────────────────────────
+  document.getElementById('ap-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    var pages = document.querySelectorAll('.page-section');
+    var allOk = true;
+    pages.forEach(function(_, i) { if (!validatePage(i)) allOk = false; });
+    if (!allOk) return;
+
+    var btn = document.getElementById('submit-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '提交中…'; }
+
+    var errEl = document.getElementById('form-error');
+    errEl.style.display = 'none';
+
+    var vals = getValues();
+    if (honeypot) vals['__hp'] = '';
+
+    try {
+      var res = await fetch('/api/forms/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ formId: formId, fields: vals, pageUrl: window.location.href }),
+      });
+      var data = await res.json();
+      if (!res.ok) {
+        errEl.textContent = data.error || '提交失败，请稍后再试。';
+        errEl.style.display = 'block';
+        if (btn) { btn.disabled = false; btn.textContent = '提交'; }
+        return;
+      }
+      // Confirmation
+      var conf = data.confirmation;
+      document.getElementById('ap-form').style.display = 'none';
+      if (conf && conf.type === 'redirect' && conf.redirectUrl) {
+        window.location.href = conf.redirectUrl;
+        return;
+      }
+      var confEl = document.getElementById('confirmation');
+      confEl.innerHTML = (conf && conf.message) || '<p>提交成功，感谢您的填写！</p>';
+      confEl.style.display = 'block';
+    } catch {
+      errEl.textContent = '网络异常，请稍后再试。';
+      errEl.style.display = 'block';
+      if (btn) { btn.disabled = false; btn.textContent = '提交'; }
+    }
+  });
+</script>
+</body>
+</html>

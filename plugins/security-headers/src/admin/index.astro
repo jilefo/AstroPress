@@ -1,0 +1,155 @@
+---
+/**
+ * /admin-ext/security-headers — 安全响应头插件设置页
+ */
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+if (!Astro.locals.user || !Astro.locals.db) return Astro.redirect("/login");
+---
+<AdminLayout title="安全响应头">
+    <style is:global>
+      * { box-sizing: border-box; }
+      .wrap { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+      .card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 20px; }
+      h1 { font-size: 20px; margin: 0 0 16px; }
+      h2 { font-size: 15px; margin: 24px 0 12px; padding-top: 16px; border-top: 1px solid #e5e7eb; }
+      label { display: block; font-size: 13px; font-weight: 600; margin: 16px 0 4px; }
+      input[type="text"], input[type="number"], select, textarea { width: 100%; font-size: 13px; padding: 6px 8px; border: 1px solid #8c8f94; border-radius: 3px; background: #fff; }
+      input[type="number"] { width: 200px; }
+      textarea { font-family: Consolas, Monaco, monospace; resize: vertical; }
+      button { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 8px 16px; cursor: pointer; font-size: 13px; margin-top: 20px; }
+      .msg { font-size: 13px; margin-top: 10px; min-height: 18px; }
+      .ok { color: #00a32a; }
+      .err { color: #b32d2e; }
+      .hint { font-size: 12px; color: #646970; margin-top: 4px; }
+      .warn { font-size: 12px; color: #b32d2e; margin-top: 4px; }
+      .check { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+      .check label { font-weight: 400; margin: 0; }
+    </style>
+
+    <div class="wrap">
+      <div class="card">
+        <h1>安全响应头</h1>
+
+        <div class="check">
+          <input type="checkbox" id="enabled" checked />
+          <label for="enabled">启用安全响应头</label>
+        </div>
+        <div class="hint">关闭后本插件不会发送任何下列响应头。仅对前台公开页面生效，不影响后台（/admin、/admin-ext）。</div>
+
+        <h2>浏览器安全策略</h2>
+
+        <div class="check">
+          <input type="checkbox" id="nosniff" checked />
+          <label for="nosniff">发送 X-Content-Type-Options: nosniff（禁止浏览器嗅探 MIME 类型）</label>
+        </div>
+
+        <label for="frameOptions">X-Frame-Options（防止页面被 iframe 嵌套点击劫持）</label>
+        <select id="frameOptions">
+          <option value="off">关闭（不发送）</option>
+          <option value="SAMEORIGIN" selected>SAMEORIGIN（仅允许同源嵌套）</option>
+          <option value="DENY">DENY（完全禁止嵌套）</option>
+        </select>
+
+        <label for="referrerPolicy">Referrer-Policy（来源页信息上报策略）</label>
+        <select id="referrerPolicy">
+          <option value="">关闭（不发送）</option>
+          <option value="no-referrer">no-referrer</option>
+          <option value="same-origin">same-origin</option>
+          <option value="strict-origin">strict-origin</option>
+          <option value="strict-origin-when-cross-origin">strict-origin-when-cross-origin（默认，推荐）</option>
+          <option value="unsafe-url">unsafe-url</option>
+        </select>
+
+        <label for="permissionsPolicy">Permissions-Policy（浏览器功能授权，一行）</label>
+        <textarea id="permissionsPolicy" rows="1" placeholder="camera=(), microphone=(), geolocation=()"></textarea>
+        <div class="hint">留空 = 不发送该响应头。多个指令用英文逗号分隔。</div>
+
+        <h2>HTTPS 与内容安全策略</h2>
+
+        <label for="hstsMaxAge">Strict-Transport-Security（HSTS）max-age，单位秒</label>
+        <input type="number" id="hstsMaxAge" min="0" max="63072000" step="1" value="0" />
+        <div class="hint">0 = 关闭；建议 31536000（一年）。发送时固定附带 includeSubDomains。注意：仅在 HTTPS 访问下浏览器才会接受该响应头。</div>
+
+        <label for="csp">Content-Security-Policy（内容安全策略 CSP）</label>
+        <textarea id="csp" rows="4" placeholder="default-src 'self'; img-src 'self' https:; script-src 'self'"></textarea>
+        <div class="hint">留空 = 不发送该响应头。</div>
+        <div class="warn">警告：填写错误会拦截页面脚本/样式/图片等资源，建议先勾选下方"仅报告模式"观察一段时间，确认无误后再正式启用。</div>
+
+        <div class="check" style="margin-top:8px">
+          <input type="checkbox" id="cspReportOnly" />
+          <label for="cspReportOnly">仅报告模式（Report-Only）：只上报违规，不实际拦截</label>
+        </div>
+
+        <button id="save">保存设置</button>
+        <div class="msg" id="msg"></div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        var msg = document.getElementById("msg");
+
+        // 存储值可能是下拉项之外的合法取值（Referrer-Policy 允许任意标准值），
+        // 缺项时动态补一个 option，保证 GET 回填不丢值。
+        function ensureOption(select, value) {
+          if (!value) return;
+          var exists = false;
+          for (var i = 0; i < select.options.length; i++) {
+            if (select.options[i].value === value) { exists = true; break; }
+          }
+          if (!exists) {
+            var opt = document.createElement("option");
+            opt.value = value;
+            opt.textContent = value;
+            select.appendChild(opt);
+          }
+        }
+
+        async function load() {
+          var r = await fetch("/admin-ext/api/security-headers/settings");
+          if (!r.ok) return;
+          var s = await r.json();
+          document.getElementById("enabled").checked = !!s.enabled;
+          document.getElementById("nosniff").checked = !!s.nosniff;
+
+          var frame = document.getElementById("frameOptions");
+          frame.value = (s.frameOptions === "SAMEORIGIN" || s.frameOptions === "DENY" || s.frameOptions === "off")
+            ? s.frameOptions
+            : "SAMEORIGIN";
+
+          var ref = document.getElementById("referrerPolicy");
+          ensureOption(ref, s.referrerPolicy);
+          ref.value = s.referrerPolicy || "";
+
+          document.getElementById("permissionsPolicy").value = s.permissionsPolicy || "";
+          document.getElementById("hstsMaxAge").value = String(s.hstsMaxAge || 0);
+          document.getElementById("csp").value = s.csp || "";
+          document.getElementById("cspReportOnly").checked = !!s.cspReportOnly;
+        }
+
+        document.getElementById("save").addEventListener("click", async function () {
+          var payload = {
+            enabled: document.getElementById("enabled").checked,
+            nosniff: document.getElementById("nosniff").checked,
+            frameOptions: document.getElementById("frameOptions").value,
+            referrerPolicy: document.getElementById("referrerPolicy").value,
+            permissionsPolicy: document.getElementById("permissionsPolicy").value.trim(),
+            hstsMaxAge: Number(document.getElementById("hstsMaxAge").value) || 0,
+            csp: document.getElementById("csp").value.trim(),
+            cspReportOnly: document.getElementById("cspReportOnly").checked,
+          };
+          var r = await fetch("/admin-ext/api/security-headers/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          var d = await r.json();
+          msg.className = "msg " + (r.ok ? "ok" : "err");
+          msg.textContent = r.ok ? "已保存。" : (d.error || "保存失败");
+          setTimeout(function () { msg.textContent = ""; }, 3000);
+        });
+
+        load();
+      })();
+    </script>
+</AdminLayout>

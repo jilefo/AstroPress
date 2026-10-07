@@ -1,0 +1,26 @@
+{
+  "name": "SimplePost",
+  "version": "1.0.0",
+  "description": "Minimalist single-column blog theme with green accent",
+  "author": "Lushanjun",
+  "tokens": {
+    "fonts": {
+      "body": "sans-serif, -apple-system, 'PingFang SC', sans-serif",
+      "heading": "'PingFang SC', -apple-system, sans-serif"
+    },
+    "spacing": {
+      "sectionY": "48px",
+      "borderRadius": "6px",
+      "containerMax": "900px"
+    },
+    "colors": {
+      "textMuted": "#707070",
+      "surface": "#f5f5f5",
+      "background": "#ffffff",
+      "secondary": "#377f37",
+      "border": "#dddddd",
+      "text": "#333333",
+      "primary": "#333333"
+    }
+  }
+}

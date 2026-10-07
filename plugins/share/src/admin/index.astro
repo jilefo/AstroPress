@@ -1,0 +1,116 @@
+---
+/**
+ * /admin-ext/share — 社交分享插件设置页
+ */
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+if (!Astro.locals.user || !Astro.locals.db) return Astro.redirect("/login");
+---
+<AdminLayout title="社交分享">
+  <style is:global>
+    * { box-sizing: border-box; }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+    .card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 16px; }
+    label { display: block; font-size: 13px; font-weight: 600; margin: 16px 0 4px; }
+    input[type="text"], select { width: 100%; font-size: 13px; padding: 6px 8px; border: 1px solid #8c8f94; border-radius: 3px; }
+    button { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 8px 16px; cursor: pointer; font-size: 13px; margin-top: 20px; }
+    .msg { font-size: 13px; margin-top: 10px; min-height: 18px; }
+    .ok { color: #00a32a; }
+    .err { color: #b32d2e; }
+    .hint { font-size: 12px; color: #646970; margin-top: 4px; }
+    .check { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    @media (min-width: 640px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+    .platform-check { display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 6px; background: #f6f7f7; border-radius: 3px; }
+    .platform-check input { margin: 0; }
+  </style>
+
+  <div class="wrap">
+    <div class="card">
+      <h1>社交分享设置</h1>
+
+      <div class="check">
+        <input type="checkbox" id="enabled" checked />
+        <label for="enabled" style="margin:0">在文章页启用分享区块</label>
+      </div>
+
+      <label for="heading">区块标题</label>
+      <input type="text" id="heading" value="分享这篇文章" />
+      <div class="hint">留空则不显示标题。</div>
+
+      <label for="position">注入位置</label>
+      <select id="position">
+        <option value="after" selected>文章内容之后</option>
+        <option value="before">文章内容之前</option>
+        <option value="both">前后都显示</option>
+      </select>
+      <div class="hint">分享区块的插入位置。</div>
+
+      <label>启用平台</label>
+      <div class="grid" id="platforms">
+        <div class="platform-check"><input type="checkbox" id="p-wechat" checked /><label for="p-wechat" style="margin:0">微信</label></div>
+        <div class="platform-check"><input type="checkbox" id="p-weibo" checked /><label for="p-weibo" style="margin:0">微博</label></div>
+        <div class="platform-check"><input type="checkbox" id="p-qq" checked /><label for="p-qq" style="margin:0">QQ</label></div>
+        <div class="platform-check"><input type="checkbox" id="p-zhihu" /><label for="p-zhihu" style="margin:0">知乎</label></div>
+        <div class="platform-check"><input type="checkbox" id="p-twitter" checked /><label for="p-twitter" style="margin:0">Twitter/X</label></div>
+        <div class="platform-check"><input type="checkbox" id="p-facebook" /><label for="p-facebook" style="margin:0">Facebook</label></div>
+        <div class="platform-check"><input type="checkbox" id="p-linkedin" /><label for="p-linkedin" style="margin:0">LinkedIn</label></div>
+        <div class="platform-check"><input type="checkbox" id="p-telegram" /><label for="p-telegram" style="margin:0">Telegram</label></div>
+        <div class="platform-check"><input type="checkbox" id="p-whatsapp" /><label for="p-whatsapp" style="margin:0">WhatsApp</label></div>
+        <div class="platform-check"><input type="checkbox" id="p-copylink" checked /><label for="p-copylink" style="margin:0">复制链接</label></div>
+      </div>
+
+      <button id="save">保存设置</button>
+      <div class="msg" id="msg"></div>
+    </div>
+  </div>
+
+  <script>
+    (async () => {
+      const msg = document.getElementById("msg");
+      const map: Record<string, string> = {
+        wechat: "p-wechat", weibo: "p-weibo", qq: "p-qq", zhihu: "p-zhihu",
+        twitter: "p-twitter", facebook: "p-facebook", linkedin: "p-linkedin",
+        telegram: "p-telegram", whatsapp: "p-whatsapp", copylink: "p-copylink",
+      };
+
+      async function load() {
+        const r = await fetch("/admin-ext/api/share/settings");
+        if (!r.ok) return;
+        const s = await r.json();
+        document.getElementById("enabled").checked = s.enabled;
+        document.getElementById("heading").value = s.heading;
+        document.getElementById("position").value = s.position;
+        for (const [key, id] of Object.entries(map)) {
+          const el = document.getElementById(id);
+          if (el) el.checked = !!s.platforms[key];
+        }
+      }
+
+      document.getElementById("save").addEventListener("click", async () => {
+        const platforms: Record<string, boolean> = {};
+        for (const [key, id] of Object.entries(map)) {
+          const el = document.getElementById(id) as HTMLInputElement | null;
+          platforms[key] = el ? el.checked : false;
+        }
+        const payload = {
+          enabled: document.getElementById("enabled").checked,
+          heading: (document.getElementById("heading") as HTMLInputElement).value.trim(),
+          position: (document.getElementById("position") as HTMLSelectElement).value,
+          platforms,
+        };
+        const r = await fetch("/admin-ext/api/share/settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const d = await r.json();
+        msg.className = "msg " + (r.ok ? "ok" : "err");
+        msg.textContent = r.ok ? "已保存。" : (d.error || "保存失败");
+        setTimeout(() => (msg.textContent = ""), 3000);
+      });
+
+      load();
+    })();
+  </script>
+</AdminLayout>

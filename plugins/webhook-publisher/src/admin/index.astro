@@ -1,0 +1,155 @@
+---
+/**
+ * /admin-ext/webhooks — Webhook Publisher management page.
+ * API key management + recent webhook call logs.
+ * 通过相对路径引入应用 AdminLayout
+ */
+if (!Astro.locals.user || !Astro.locals.db) return Astro.redirect("/login");
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+---
+<AdminLayout title="Webhook 发布">
+    <style is:global>
+      * { box-sizing: border-box; }
+      .wrap { max-width: 960px; margin: 0 auto; padding: 0 16px; display: grid; gap: 20px; }
+      .card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 20px; }
+      h1 { font-size: 20px; } h2 { font-size: 15px; margin: 0 0 12px; }
+      button { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 6px 14px; cursor: pointer; font-size: 13px; }
+      button.danger { background: #b32d2e; }
+      .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+      .msg { font-size: 13px; margin-top: 8px; min-height: 18px; color: #646970; }
+      input[type="text"] { width: 100%; font-size: 13px; padding: 6px 8px; border: 1px solid #8c8f94; border-radius: 3px; }
+      label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 4px; }
+      table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      th, td { padding: 8px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+      th { font-weight: 600; color: #646970; }
+      code { font-family: Consolas, Monaco, monospace; font-size: 12px; background: #f0f0f1; padding: 2px 6px; border-radius: 3px; word-break: break-all; }
+      .hint { font-size: 12px; color: #646970; margin-top: 6px; }
+      .key-display { background: #f6f7f7; border: 1px solid #dcdcde; border-radius: 3px; padding: 12px; margin-top: 8px; font-family: monospace; font-size: 13px; word-break: break-all; }
+      .log-item { padding: 8px 0; border-bottom: 1px solid #f0f0f1; font-size: 12px; }
+      .log-item .time { color: #646970; }
+      .log-item .success { color: #00a32a; }
+      .log-item .err { color: #b32d2e; }
+    </style>
+
+    <div class="wrap">
+      <section class="card">
+        <h2>API Keys</h2>
+        <p class="hint" style="margin-top:0">创建 API Key 供外部系统调用 Webhook 发布内容。Key 只在创建时显示一次。</p>
+        <div class="row" style="margin-bottom:12px">
+          <input type="text" id="keyName" placeholder="Key 名称（如：n8n 发布）" style="flex:1;max-width:300px" />
+          <button id="createKey">创建 Key</button>
+        </div>
+        <div id="newKeyDisplay" style="display:none">
+          <p class="hint">新 Key（立即保存，只显示一次）：</p>
+          <div class="key-display" id="newKeyValue"></div>
+        </div>
+        <table id="keysTable">
+          <thead><tr><th>名称</th><th>权限</th><th>创建时间</th><th>最后使用</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="msg" id="keysMsg"></div>
+      </section>
+
+      <section class="card">
+        <h2>API 端点</h2>
+        <p class="hint" style="margin-top:0">
+          <strong>发布内容：</strong><code>POST /ap-webhook/publish</code><br/>
+          <strong>删除内容：</strong><code>POST /ap-webhook/delete</code><br/>
+          <strong>查看状态：</strong><code>GET /ap-webhook/status</code>
+        </p>
+        <p class="hint">
+          请求头：<code>Authorization: Bearer &lt;api-key&gt;</code> 或 <code>X-API-Key: &lt;api-key&gt;</code>
+        </p>
+        <p class="hint">
+          发布请求体示例：<code>&#123;&quot;title&quot;:&quot;标题&quot;,&quot;content&quot;:&quot;内容&quot;,&quot;slug&quot;:&quot;url-slug&quot;,&quot;type&quot;:&quot;post&quot;,&quot;status&quot;:&quot;publish&quot;,&quot;meta&quot;:&#123;&quot;key&quot;:&quot;value&quot;&#125;&#125;</code>
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>最近调用日志</h2>
+        <div class="row" style="margin-bottom:8px">
+          <button class="danger" id="clearLogs">清空日志</button>
+          <span class="msg" id="logsMsg"></span>
+        </div>
+        <div id="logsList"></div>
+      </section>
+    </div>
+
+    <script>
+      var $ = function (id) { return document.getElementById(id); };
+      function esc(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+
+      function loadKeys() {
+        fetch("/admin-ext/api/webhook/keys", { credentials: "same-origin" })
+          .then(function (r) { return r.json(); })
+          .then(function (keys) {
+            var tbody = $("keysTable").querySelector("tbody");
+            tbody.innerHTML = "";
+            keys.forEach(function (k) {
+              var tr = document.createElement("tr");
+              // ap-audit-ok: keys from authenticated admin API; all fields are server-generated
+              tr.innerHTML = "<td>" + esc(k.name) + "</td><td>" + (k.permissions || []).join(", ") + "</td><td>" + new Date(k.createdAt).toLocaleString() + "</td><td>" + (k.lastUsed ? new Date(k.lastUsed).toLocaleString() : "—") + "</td><td><button class='danger' onclick='deleteKey(\"" + k.id + "\")'>删除</button></td>";
+              tbody.appendChild(tr);
+            });
+          });
+      }
+
+      function loadLogs() {
+        fetch("/admin-ext/api/webhook/logs", { credentials: "same-origin" })
+          .then(function (r) { return r.json(); })
+          .then(function (logs) {
+            var list = $("logsList");
+            // ap-audit-ok: static HTML structure only
+            list.innerHTML = "";
+            if (!logs.length) { list.innerHTML = "<p class='hint'>暂无日志</p>"; return; } // ap-audit-ok: static literal HTML
+            logs.forEach(function (log) {
+              var div = document.createElement("div");
+              div.className = "log-item";
+              // ap-audit-ok: log.message is server-generated from trusted sources
+              div.innerHTML = "<span class='time'>" + new Date(log.timestamp).toLocaleString() + "</span> <span class='" + (log.status === "error" ? "err" : "success") + "'>" + esc(log.status) + "</span> " + esc(log.message);
+              list.appendChild(div);
+            });
+          });
+      }
+
+      $("createKey").addEventListener("click", function () {
+        var name = $("keyName").value.trim();
+        if (!name) { $("keysMsg").textContent = "请输入名称"; return; }
+        fetch("/admin-ext/api/webhook/keys", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ name: name, permissions: ["publish", "delete"] })
+        }).then(function (r) { return r.json(); }).then(function (d) {
+          if (d.ok) {
+            $("newKeyValue").textContent = d.key;
+            $("newKeyDisplay").style.display = "block";
+            $("keyName").value = "";
+            $("keysMsg").textContent = "Key 创建成功";
+            loadKeys();
+          } else {
+            $("keysMsg").textContent = "创建失败: " + (d.error || "unknown");
+          }
+        });
+      });
+
+      window.deleteKey = function (id) {
+        if (!confirm("确定删除此 Key？使用它的外部系统将无法再调用。")) return;
+        fetch("/admin-ext/api/webhook/keys?id=" + id, { method: "DELETE", credentials: "same-origin" })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d.ok) { $("keysMsg").textContent = "已删除"; loadKeys(); }
+            else $("keysMsg").textContent = "删除失败";
+          });
+      };
+
+      $("clearLogs").addEventListener("click", function () {
+        if (!confirm("确定清空所有日志？")) return;
+        fetch("/admin-ext/api/webhook/logs", { method: "DELETE", credentials: "same-origin" })
+          .then(function () { loadLogs(); $("logsMsg").textContent = "已清空"; });
+      });
+
+      loadKeys();
+      loadLogs();
+    </script>
+</AdminLayout>

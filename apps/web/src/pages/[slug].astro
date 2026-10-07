@@ -1,0 +1,70 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import BlockRenderer from "../components/BlockRenderer.astro";
+import { getPostBySlug } from "../lib/query";
+import { buildFormHtml, APF_STYLES, APF_SCRIPT } from "../lib/formRenderer";
+import { wpOptions } from "@astropress/core/schema";
+import { safeJsonParse } from "@astropress/core/db";
+import { eq } from "drizzle-orm";
+import { DEFAULT_THEME_TOKENS } from "@astropress/core/types/theme";
+import type { Block, ThemeTokens } from "@astropress/core/types/theme";
+
+const db = Astro.locals.db;
+const { slug } = Astro.params;
+if (!slug) return Astro.redirect("/");
+
+const page = db ? await getPostBySlug(db, slug, "page") : null;
+if (!page) return new Response(null, { status: 404 });
+
+let blocks: Block[] | null = null;
+let tokens: ThemeTokens = DEFAULT_THEME_TOKENS;
+let formsById: Record<string, any> = {};
+
+if (db) {
+  const [schemaRow] = await db.select({ value: wpOptions.optionValue }).from(wpOptions).where(eq(wpOptions.optionName, `astropress_page_schema_${slug}`)).limit(1);
+  if (schemaRow?.value) {
+    const schema = safeJsonParse<any>(schemaRow.value, null);
+    if (schema?.blocks?.length > 0) blocks = schema.blocks;
+  }
+
+  const [tokenRow] = await db.select({ value: wpOptions.optionValue }).from(wpOptions).where(eq(wpOptions.optionName, "astropress_theme_config")).limit(1);
+  if (tokenRow?.value) tokens = safeJsonParse<ThemeTokens>(tokenRow.value, DEFAULT_THEME_TOKENS);
+
+  const [formsRow] = await db.select({ value: wpOptions.optionValue }).from(wpOptions).where(eq(wpOptions.optionName, "astropress_forms")).limit(1);
+  if (formsRow?.value) {
+    const allForms: any[] = safeJsonParse<any[]>(formsRow.value, []);
+    for (const f of allForms) formsById[String(f.id)] = f;
+  }
+}
+
+function stripComments(raw: string) {
+  return raw.replace(/<!-- \/?wp:[^\-].*?-->/gs, "").trim();
+}
+
+async function renderContent(raw: string): Promise<{ html: string; hasForms: boolean }> {
+  const stripped = stripComments(raw);
+  const formIds = [...stripped.matchAll(/data-form-id="([^"]+)"/g)].map(m => m[1]);
+  if (formIds.length === 0) return { html: stripped, hasForms: false };
+  const html = stripped.replace(
+    /<div[^>]*class="wp-block-astropress-form"[^>]*data-form-id="([^"]+)"[^>]*>[\s\S]*?<\/div>/g,
+    (_, fid) => formsById[fid] ? buildFormHtml(formsById[fid]) : `<div style="padding:12px;border:1px solid #dcdcde;border-radius:4px;color:#646970;font-size:13px;">表单不存在。</div>`
+  );
+  return { html, hasForms: true };
+}
+
+const { html: contentHtml, hasForms } = blocks ? { html: "", hasForms: false } : await renderContent(page.content);
+---
+<BaseLayout title={page.title} fullWidth={!!blocks}>
+  {blocks ? (
+    <BlockRenderer blocks={blocks} tokens={tokens} formsById={formsById} />
+  ) : (
+    <>
+      {hasForms && <Fragment set:html={APF_STYLES} />}
+      <article>
+        <header class="post-header"><h1>{page.title}</h1></header>
+        <div class="post-content" set:html={contentHtml} />
+      </article>
+      {hasForms && <Fragment set:html={APF_SCRIPT} />}
+    </>
+  )}
+</BaseLayout>

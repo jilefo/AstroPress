@@ -1,0 +1,22 @@
+{
+    "name": "@astropress/plugin-image-mirror",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "exports": {
+        ".": "./src/index.ts",
+        "./integration.admin": "./src/integration.admin.ts"
+    },
+    "scripts": {
+        "typecheck": "tsc --noEmit"
+    },
+    "dependencies": {
+        "@astropress/core": "workspace:*",
+        "drizzle-orm": "^0.36.0"
+    },
+    "devDependencies": {
+        "astro": "^4.0.0",
+        "typescript": "^5.4.0",
+        "@cloudflare/workers-types": "^4.0.0"
+    }
+}

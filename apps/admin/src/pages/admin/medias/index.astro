@@ -1,0 +1,236 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { listMedia } from "../../../lib/media";
+
+const db = Astro.locals.db;
+if (!Astro.locals.user || !db) return Astro.redirect("/login");
+
+const page = Number(Astro.url.searchParams.get("page") ?? "1");
+const search = Astro.url.searchParams.get("search") ?? "";
+
+const { items, total } = await listMedia(db, { page, search, baseUrl: Astro.url.origin });
+
+const perPage = 40;
+const totalPages = Math.ceil(total / perPage);
+---
+<AdminLayout title="媒体库">
+
+  <h1 class="wp-heading-inline">媒体库</h1>
+  <label class="page-title-action" style="cursor:pointer">
+    添加新文件
+    <input id="upload-input" type="file" accept="image/*,video/*,application/pdf" multiple style="display:none" onchange="handleUpload(event)" />
+  </label>
+  <hr class="wp-header-end" />
+
+  <!-- Search bar -->
+  <form method="get" style="display:flex;gap:8px;align-items:center;margin-bottom:16px;max-width:400px">
+    <input
+      type="search"
+      name="search"
+      value={search}
+      placeholder="搜索媒体…"
+      class="regular-text"
+      style="flex:1"
+    />
+    <button type="submit" class="button">搜索</button>
+    {search && <a href="/admin/medias" class="button">清除</a>}
+  </form>
+
+  <!-- Drop zone -->
+  <div id="drop-zone" style="border:2px dashed #c3c4c7;border-radius:4px;padding:24px;text-align:center;margin-bottom:20px;color:#646970;font-size:13px;transition:all 0.15s;display:none">
+    将文件拖到此处上传
+  </div>
+
+  <div id="upload-progress" style="display:none;background:#fff;border:1px solid #dcdcde;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#646970;max-width:480px">
+    上传中…
+  </div>
+
+  {items.length === 0 ? (
+    <div class="ap-empty-state">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" style="color:#8c8f94;margin-bottom:12px">
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+        <circle cx="8.5" cy="8.5" r="1.5"/>
+        <polyline points="21 15 16 10 5 21"/>
+      </svg>
+      <h2 style="font-size:15px;font-weight:600;color:#1d2327;margin:0 0 8px">{search ? "无搜索结果" : "还没有媒体文件"}</h2>
+      <p style="font-size:13px;color:#646970;margin:0 0 20px;line-height:1.5">
+        {search ? `没有找到与“${search}”匹配的文件。` : "上传图片、视频和文档，以便在内容中使用。"}
+      </p>
+      {!search && (
+        <label class="button button-primary" style="cursor:pointer">
+          上传你的第一个文件
+          <input type="file" accept="image/*" style="display:none" onchange="handleUpload(event)" />
+        </label>
+      )}
+    </div>
+  ) : (
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px" id="media-grid">
+      {items.map((item) => (
+        <div
+          class="media-item"
+          data-id={item.id}
+          data-url={item.url}
+          data-title={item.title || item.filename}
+          data-mime={item.mimeType}
+          style="background:#fff;border:2px solid #dcdcde;border-radius:2px;overflow:hidden;cursor:pointer;transition:border-color 0.15s;position:relative"
+          onclick="selectItem(this)"
+        >
+          {item.mimeType.startsWith("image/") ? (
+            <img
+              src={item.url}
+              alt={item.title}
+              style="width:100%;height:120px;object-fit:cover;display:block"
+              loading="lazy"
+            />
+          ) : (
+            <div style="width:100%;height:120px;display:flex;align-items:center;justify-content:center;background:#f6f7f7">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#8c8f94" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+            </div>
+          )}
+          <div style="padding:8px">
+            <div style="font-size:11px;font-weight:600;color:#1d2327;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{item.title || item.filename}</div>
+            <div style="font-size:10px;color:#646970;margin-top:2px">{item.mimeType}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
+
+  <!-- Item details panel -->
+  <div id="item-details" style="display:none;position:fixed;top:0;right:0;width:300px;height:100vh;background:#fff;border-left:1px solid #dcdcde;padding:20px;overflow-y:auto;z-index:100;box-shadow:-4px 0 12px rgba(0,0,0,.08)">
+    <button onclick="closeDetails()" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:18px;cursor:pointer;color:#646970;line-height:1">&#x2715;</button>
+    <div id="details-content"></div>
+  </div>
+
+  {totalPages > 1 && (
+    <div class="tablenav bottom">
+      <div class="tablenav-pages">
+        {Array.from({length: totalPages}, (_, i) => i + 1).map((p) => (
+          <a
+            href={`/admin/medias?page=${p}${search ? `&search=${encodeURIComponent(search)}` : ""}`}
+            class={p === page ? "button button-disabled" : "button"}
+            style={p === page ? "font-weight:700" : ""}
+          >
+            {p}
+          </a>
+        ))}
+      </div>
+    </div>
+  )}
+
+  <script is:inline>
+    // ── Drop zone ──────────────────────────────────────────────────────────────
+    var dropZone = document.getElementById("drop-zone");
+    var dragCounter = 0;
+
+    document.addEventListener("dragenter", function(e) {
+      if (!e.dataTransfer || !e.dataTransfer.types.includes("Files")) return;
+      dragCounter++;
+      dropZone.style.display = "block";
+      dropZone.style.borderColor = "#2271b1";
+      dropZone.style.color = "#2271b1";
+      dropZone.style.background = "#f0f6fc";
+    });
+
+    document.addEventListener("dragleave", function() {
+      dragCounter--;
+      if (dragCounter <= 0) {
+        dragCounter = 0;
+        dropZone.style.display = "none";
+        dropZone.style.borderColor = "#c3c4c7";
+        dropZone.style.color = "#646970";
+        dropZone.style.background = "";
+      }
+    });
+
+    document.addEventListener("dragover", function(e) { e.preventDefault(); });
+
+    document.addEventListener("drop", function(e) {
+      e.preventDefault();
+      dragCounter = 0;
+      dropZone.style.display = "none";
+      dropZone.style.borderColor = "#c3c4c7";
+      dropZone.style.color = "#646970";
+      dropZone.style.background = "";
+      var files = Array.from(e.dataTransfer ? e.dataTransfer.files : []);
+      if (files.length) uploadFiles(files);
+    });
+
+    // ── Upload ─────────────────────────────────────────────────────────────────
+    function handleUpload(e) {
+      var files = Array.from(e.target.files || []);
+      if (files.length) uploadFiles(files);
+    }
+
+    async function uploadFiles(files) {
+      var progress = document.getElementById("upload-progress");
+      progress.style.display = "block";
+      for (var file of files) {
+        progress.textContent = "正在上传 " + file.name + "…";
+        var form = new FormData();
+        form.append("file", file);
+        await fetch("/api/media/upload", { method: "POST", body: form });
+      }
+      progress.textContent = "完成！正在刷新…";
+      setTimeout(function() { location.reload(); }, 600);
+    }
+
+    // ── Select / Details ───────────────────────────────────────────────────────
+    var selectedId = null;
+
+    function selectItem(el) {
+      document.querySelectorAll(".media-item").forEach(function(i) { i.style.borderColor = "#dcdcde"; });
+      el.style.borderColor = "#2271b1";
+      selectedId = el.dataset.id || null;
+      var url = el.dataset.url || "";
+      var title = el.dataset.title || "";
+      var mime = el.dataset.mime || "";
+      var isImg = mime.startsWith("image/");
+      var details = document.getElementById("details-content");
+      details.innerHTML =
+        (isImg ? '<img src="' + url + '" style="width:100%;border-radius:2px;margin-bottom:12px;display:block" />' : "") +
+        '<div style="font-size:13px;font-weight:600;margin-bottom:6px;word-break:break-all">' + title + "</div>" +
+        '<div style="font-size:11px;color:#646970;margin-bottom:12px">' + mime + "</div>" +
+        '<label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">URL</label>' +
+        '<input type="text" value="' + url + '" readonly style="width:100%;font-size:11px;padding:6px 8px;border:1px solid #dcdcde;border-radius:2px;box-sizing:border-box;margin-bottom:12px" onclick="this.select()" />' +
+        '<button id="copy-url-btn" onclick="copyUrl(\'' + url + '\')" style="width:100%;padding:7px;background:#f6f7f7;border:1px solid #dcdcde;border-radius:3px;cursor:pointer;font-size:12px;margin-bottom:8px">复制链接</button>' +
+        '<button id="delete-btn" onclick="deleteItem()" style="width:100%;padding:7px;background:#fff;border:1px solid #d63638;border-radius:3px;cursor:pointer;font-size:12px;color:#d63638">删除</button>';
+      document.getElementById("item-details").style.display = "block";
+    }
+
+    function copyUrl(url) {
+      navigator.clipboard.writeText(url);
+      var btn = document.getElementById("copy-url-btn");
+      btn.textContent = "已复制！";
+      setTimeout(function() { btn.textContent = "复制链接"; }, 1500);
+    }
+
+    async function deleteItem() {
+      if (!selectedId) return;
+      if (!confirm("确定删除此文件？此操作无法撤销。")) return;
+      var btn = document.getElementById("delete-btn");
+      btn.disabled = true;
+      btn.textContent = "删除中…";
+      var deletingId = selectedId;
+      var res = await fetch("/api/media/" + deletingId, { method: "DELETE" });
+      if (res.ok) {
+        closeDetails();
+        var el = document.querySelector('.media-item[data-id="' + deletingId + '"]');
+        if (el) el.remove();
+      } else {
+        btn.disabled = false;
+        btn.textContent = "删除失败";
+      }
+    }
+
+    function closeDetails() {
+      document.getElementById("item-details").style.display = "none";
+      document.querySelectorAll(".media-item").forEach(function(i) { i.style.borderColor = "#dcdcde"; });
+      selectedId = null;
+    }
+  </script>
+
+</AdminLayout>

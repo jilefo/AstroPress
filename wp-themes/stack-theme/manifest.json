@@ -1,0 +1,26 @@
+{
+  "name": "Stack",
+  "version": "4.0.3",
+  "description": "Card-style Hugo theme Stack ported to AstroPress — card layout, left-sidebar aesthetics, soft shadows",
+  "author": "Jimmy Cai (ported)",
+  "tokens": {
+    "fonts": {
+      "body": "'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif",
+      "heading": "'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif"
+    },
+    "spacing": {
+      "sectionY": "40px",
+      "borderRadius": "10px",
+      "containerMax": "1024px"
+    },
+    "colors": {
+      "textMuted": "#747474",
+      "surface": "#ffffff",
+      "background": "#f5f5fa",
+      "secondary": "#2c3e50",
+      "border": "rgba(218, 218, 218, 0.5)",
+      "text": "#1a1a1a",
+      "primary": "#34495e"
+    }
+  }
+}

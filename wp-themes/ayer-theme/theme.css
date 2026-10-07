@@ -1,0 +1,430 @@
+/* >>> ap-fonts >>> */
+/* 主题声明的 Web 字体。AstroPress 不会注入字体 <link>，只能由主题 CSS 自行 @import。
+   字体源为 fonts.loli.net（Google Fonts 国内镜像，海外同样可访问）；
+   如需官方源把域名改回 fonts.googleapis.com 即可；完全离线时删除本区块则回退系统字体。 */
+@import url("https://fonts.loli.net/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap");
+/* <<< ap-fonts <<< */
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Hexo Theme Ayer — AstroPress 移植版
+   设计语言来源：hexo-theme-ayer v1.9.6（source-src/css/_variables.styl
+   及编译产物 source/dist/main.css）
+     · 页面/内容区纯白（body-background = white），无卡片流
+     · 首页文章无卡片：4.5rem 上下间距 + 1px #ddd 分隔线；摘要 1px 虚线框；
+       标题 34px/700/#403e3e + 4px 深色左边框；阅读更多为深色底白字按钮
+     · 链接 sea-blue #0681d0（AA 适配值 #0678c1），water #cce5ff
+     · 正文 1.4rem(≈14px) / 1.7 行高，Helvetica Neue 字体栈，宽度 700px
+     · 全屏封面 + 左侧 8rem 深色固定侧栏（FSE 无对应块，取海色渐变首屏表达）
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --ayer-bg: #ffffff;
+  --ayer-card: #ffffff;
+  --ayer-accent: #0678c1;
+  --ayer-accent-hover: #0572b7;
+  --ayer-sea-blue: #3d85c6;
+  --ayer-text-main: #403e3e;
+  --ayer-text-secondary: #5c6b72;
+  --ayer-text-muted: #adb5bd;
+  --ayer-border: #dddddd;
+  --ayer-dashed: #dfdede;
+  --ayer-water: #cce5ff;
+  --ayer-footer-line: #f6f6f6;
+  --ayer-radius: 4px;
+  --ayer-tag-radius: 4px;
+  --ayer-code-bg: #eeeeee;
+  --ayer-code-text: #c7254e;
+  --ayer-pre-bg: #2d2d2d;
+  --ayer-table-border: #dddddd;
+  --ayer-tr-even: #f8f8f8;
+}
+
+/* ── 基础 ─────────────────────────────────────────────────────────── */
+html { scroll-behavior: smooth; }
+body { background: var(--ayer-bg) !important; font-size: 14px; }
+
+::selection { background: var(--ayer-accent); color: #fff; }
+
+.site-wrapper { max-width: 700px; }
+.site-main { padding: 30px 0; }
+
+/* ── 顶部导航（源为左侧深色侧栏；FSE 顶栏取最简白条 + footer 同款线） ── */
+.site-header {
+  background: var(--ayer-card);
+  border-bottom: 2px solid var(--ayer-footer-line);
+  box-shadow: none;
+  height: auto;
+  min-height: 60px;
+  position: sticky;
+  top: 0;
+  z-index: 90;
+}
+.site-header .site-wrapper { padding: 10px 20px; }
+.site-branding a {
+  color: var(--ayer-text-main) !important;
+  font-weight: 700;
+  font-size: 1.4rem;
+  letter-spacing: 0.02em;
+}
+.site-branding a:hover { opacity: 0.8; }
+.site-description { color: var(--ayer-text-muted); font-size: 0.85rem; }
+.site-nav a {
+  color: var(--ayer-text-secondary);
+  padding: 8px 14px;
+  border-radius: var(--ayer-tag-radius);
+  font-size: 0.92rem;
+  transition: color 0.3s ease, background-color 0.3s ease;
+}
+.site-nav a:hover { color: var(--ayer-accent); background: var(--ayer-bg); }
+
+/* ── 文章列表：无卡片，#ddd 分隔线（articles.styl .articles .article） */
+.post-list { display: flex; flex-direction: column; gap: 0; }
+.post-list-item {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--ayer-border);
+  border-radius: 0;
+  box-shadow: none;
+  padding: 45px 0;
+  transition: none;
+}
+.post-list-item:last-child { border-bottom: none; }
+.post-list-item:hover { box-shadow: none; }
+.post-list-item h2 {
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 0 0 1rem;
+}
+.post-list-item h2 a {
+  display: block;
+  color: var(--ayer-text-main) !important;
+  text-decoration: none;
+  padding-left: 2rem;
+  border-left: 4px solid var(--ayer-text-main);
+}
+.post-list-item h2 a:hover { color: var(--ayer-accent) !important; }
+.post-meta { color: var(--ayer-text-secondary); font-size: 0.8rem; }
+.post-excerpt {
+  color: var(--ayer-text-main);
+  font-size: 0.95rem;
+  line-height: 1.7;
+  margin-top: 1rem;
+  padding: 0 2rem 2rem;
+  border: 1px dashed var(--ayer-dashed);
+}
+/* 阅读更多：深色底白字按钮（.article-more-link） */
+.read-more {
+  display: inline-block;
+  float: right;
+  background: var(--ayer-text-main);
+  color: #fff !important;
+  text-decoration: none;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: var(--ayer-radius);
+  font-size: 0.9rem;
+  transition: background-color 0.3s ease;
+}
+.read-more:hover { background: var(--ayer-accent); color: #fff !important; }
+
+/* ── 单篇文章：白底无卡（正文页 .article padding 5rem 0 3rem） ────── */
+main .site-wrapper > article {
+  background: var(--ayer-card);
+  border-radius: 0;
+  box-shadow: none;
+  padding: 5rem 0 3rem;
+  overflow: visible;
+}
+.post-header h1 {
+  font-size: 34px;
+  font-weight: 700;
+  color: #000000;
+  line-height: 1.3;
+  text-align: center;
+  border: none;
+  padding-bottom: 0.2em;
+  margin-bottom: 3rem;
+}
+.post-header h1::after {
+  content: "";
+  display: block;
+  width: 100px;
+  height: 2px;
+  margin: 0.2em auto 0;
+  border-bottom: 2px dashed var(--ayer-water);
+}
+.post-header .post-meta { margin: 0; }
+
+.post-content {
+  font-size: 103%;
+  line-height: 1.7;
+  color: var(--ayer-text-main);
+}
+.post-content h1, .post-content h2, .post-content h3,
+.post-content h4, .post-content h5, .post-content h6 {
+  font-weight: 700;
+  color: var(--ayer-text-main);
+}
+.post-content a {
+  color: var(--ayer-accent);
+  text-decoration: none;
+  word-break: break-word;
+}
+.post-content a:hover { color: var(--ayer-accent-hover); }
+.post-content blockquote {
+  margin: 1.5rem 0;
+  padding: 0 1.5rem;
+  border-left: 0.3rem solid var(--ayer-water);
+  background: transparent;
+  color: var(--ayer-text-secondary);
+  border-radius: 0;
+}
+.post-content pre {
+  background: var(--ayer-pre-bg);
+  color: #f2f2f2;
+  border-radius: var(--ayer-radius);
+  padding: 10px;
+  overflow: hidden;
+  font-size: 0.875rem;
+}
+.post-content code {
+  background: var(--ayer-code-bg);
+  color: var(--ayer-code-text);
+  padding: 0 0.3em;
+  border: none;
+  border-radius: 0;
+  font-size: 0.875em;
+}
+.post-content pre code { background: none; color: inherit; padding: 0; }
+.post-content img { border-radius: var(--ayer-radius); }
+.post-content table { border-collapse: collapse; width: 100%; margin: 1.5rem 0; }
+.post-content th, .post-content td { border: 1px solid var(--ayer-table-border); padding: 8px 12px; }
+.post-content tr:nth-child(even) { background: var(--ayer-tr-even); }
+
+/* ── 分页：扁平描边页码 ───────────────────────────────────────────── */
+.pagination { gap: 8px; margin-top: 32px; }
+.pagination a, .pagination span {
+  background: var(--ayer-card);
+  border: 1px solid var(--ayer-border);
+  border-radius: var(--ayer-radius);
+  box-shadow: none;
+  color: var(--ayer-text-secondary);
+  padding: 6px 14px;
+  font-weight: 400;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+.pagination a:hover { border-color: var(--ayer-accent); color: var(--ayer-accent); }
+.pagination .current { background: var(--ayer-accent); color: #fff; border-color: var(--ayer-accent); }
+
+/* ── 页脚：2px solid #f6f6f6 顶边（footer.styl） ──────────────────── */
+.site-footer {
+  border-top: 2px solid var(--ayer-footer-line);
+  color: var(--ayer-text-muted);
+  font-size: 0.85rem;
+}
+.site-footer a { color: var(--ayer-accent); }
+
+/* ── 404 ──────────────────────────────────────────────────────────── */
+.not-found h1 { color: var(--ayer-border); }
+
+/* ── 返回链接 ─────────────────────────────────────────────────────── */
+main .site-wrapper > nav {
+  border-top: none !important;
+  background: var(--ayer-card);
+  border-radius: 0;
+  box-shadow: none;
+  padding: 14px 0 !important;
+  margin-top: 30px !important;
+}
+main .site-wrapper > nav a { color: var(--ayer-accent); text-decoration: none; }
+main .site-wrapper > nav a:hover { color: var(--ayer-accent-hover); }
+
+/* ── 响应式 ───────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .post-list { gap: 0; }
+  .post-list-item { padding: 32px 0; }
+  .site-main { padding: 20px 0; }
+}
+
+/* >>> ap-adapter >>> */
+/* ═══════════════════════════════════════════════════════════════════════
+   AstroPress 适配层：Ayer v1.9.6（source-src/css + dist/main.css）
+     · 白底无卡：文章 4.5rem 分隔、1px #ddd（_partial/articles.styl）
+     · 列表标题 34px/700/#403e3e + 4px 深色左边框（_partial/article.styl）
+     · 摘要 1px dashed #dfdede；阅读更多深色底白字 4px 按钮
+     · 链接 #0681d0（4.15:1，不足 AA）→ 功能色取 #0678c1（4.70:1），
+       hover 取加深 #0572b7（源 hover #19a1f8 仅 2.8:1，不可用于文字）
+     · 全屏封面（.cover-frame 100vh）：源为海景照片，FSE 用 sea 色系
+       渐变（#172d3e→#1e3e3f→#3d85c6）表达；blockquote 0.3rem water 边
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --ap-primary: #0678c1;
+  --ap-primary-hover: #0572b7;
+  --ap-bg: #ffffff;
+  --ap-surface: #ffffff;
+  --ap-border: #dddddd;
+  --ap-text: #403e3e;
+  --ap-muted: #5c6b72;
+  --ap-dark: #403e3e;
+  --ap-water: #cce5ff;
+  --ap-dashed: #dfdede;
+  --ap-radius: 4px;
+  --ap-footer-line: #f6f6f6;
+  --ap-hero-gradient: linear-gradient(150deg, #172d3e 0%, #1e3e3f 45%, #2c5d7a 75%, #3d85c6 100%);
+}
+
+/* ── 基础（html 62.5% → 正文 1.4rem ≈ 14px，行高 1.7） ───────────── */
+.ap-blocks {
+  font-family: var(--font-sans, 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif);
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--ap-text);
+  background: var(--ap-bg);
+}
+.ap-block h1, .ap-block h2, .ap-block h3, .ap-block h4 { color: var(--ap-text); font-weight: 700; }
+.ap-block a { color: var(--ap-primary); text-decoration: none; }
+.ap-block a:hover { color: var(--ap-primary-hover); }
+
+/* ── 导航：白底 + 2px #f6f6f6 底线（源无顶栏，取 footer 分隔语言） ── */
+body > .ap-blocks:has(> .ap-block-nav) { position: sticky; top: 0; z-index: 90; background: var(--ap-bg); }
+.ap-block-nav {
+  background: var(--ap-surface) !important;
+  border-bottom: 2px solid var(--ap-footer-line) !important;
+  box-shadow: none;
+}
+.ap-block-nav > a { color: var(--ap-text) !important; font-weight: 700; }
+.ap-block-nav nav ul li a {
+  color: var(--ap-muted) !important;
+  border-radius: 0;
+  transition: color 0.3s ease;
+}
+.ap-block-nav nav ul li a:hover { color: var(--ap-primary) !important; background: transparent !important; }
+
+/* ── 首屏：全屏海色封面（.cover-frame 100vh，标题 7rem 白字） ────── */
+.ap-block-hero {
+  min-height: 100vh !important;
+  background: var(--ap-hero-gradient) !important;
+}
+.ap-block-hero h1 {
+  color: #ffffff;
+  font-weight: 700;
+  font-size: clamp(2.6rem, 7vw, 4.6rem);
+  line-height: 1.15;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+}
+.ap-block-hero p { color: rgba(255, 255, 255, 0.9); }
+
+/* ── query-loop：无卡列表，#ddd 分隔线（.articles .article） ─────── */
+.ap-block-query-loop article {
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--ap-border) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 45px 0;
+}
+.ap-block-query-loop article:last-child { border-bottom: 0 !important; }
+.ap-block-query-loop article h3 {
+  color: var(--ap-text);
+  font-size: 34px !important;
+  font-weight: 700 !important;
+  line-height: 1.3;
+  margin: 0 0 1rem !important;
+  padding: 0 0 0 2rem !important;
+  border-left: 4px solid var(--ap-text);
+}
+.ap-block-query-loop article h3 a { color: var(--ap-text); }
+.ap-block-query-loop article h3 a:hover { color: var(--ap-primary); }
+/* 分类/日期：源为 #5c6b72 纯文本 meta */
+.ap-block-query-loop article span[style*="uppercase"] {
+  background: transparent !important;
+  border: 0 !important;
+  padding: 0 !important;
+  color: var(--ap-muted) !important;
+  text-transform: none;
+  letter-spacing: 0;
+}
+/* 摘要：1px dashed #dfdede 虚线框（.article-entry） */
+.ap-block-query-loop article p {
+  color: var(--ap-text);
+  line-height: 1.7;
+  margin-top: 1rem;
+  padding: 16px 32px 32px;
+  border: 1px solid var(--ap-dashed);
+}
+/* 阅读更多：深色底白字按钮（.article-more-link） */
+.ap-block-query-loop article a[style*="font-weight:600"] {
+  display: inline-block;
+  float: right;
+  margin-top: 10px;
+  background: var(--ap-dark) !important;
+  color: #fff !important;
+  padding: 8px 16px !important;
+  border-radius: var(--ap-radius);
+  font-weight: 400 !important;
+}
+.ap-block-query-loop article a[style*="font-weight:600"]:hover { background: var(--ap-primary) !important; }
+
+/* 分页：扁平页码，current 蓝底白字 */
+.ap-block-query-loop > div > div + div a {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  color: var(--ap-muted) !important;
+  font-weight: 400 !important;
+}
+.ap-block-query-loop > div > div + div a:hover { color: var(--ap-primary) !important; }
+.ap-block-query-loop > div > div + div a[style*="#0678c1"] {
+  background: var(--ap-primary) !important;
+  border: 0 !important;
+  color: #fff !important;
+  border-radius: var(--ap-radius);
+}
+
+/* ── 富文本块 ─────────────────────────────────────────────────────── */
+.ap-block-divider hr { border-top-color: var(--ap-border); }
+.ap-block-text blockquote, .ap-block-columns blockquote, .ap-block-html blockquote {
+  margin: 1.5rem 0;
+  padding: 0 1.5rem;
+  border-left: 0.3rem solid var(--ap-water);
+  background: transparent;
+  border-radius: 0;
+  color: var(--ap-muted);
+}
+.ap-block-text code, .ap-block-columns code, .ap-block-html code {
+  background: #eeeeee;
+  color: #c7254e;
+  padding: 0 0.3em;
+  font-size: 0.875em;
+}
+.ap-block-text pre, .ap-block-columns pre, .ap-block-html pre {
+  background: #2d2d2d;
+  color: #f2f2f2;
+  padding: 10px;
+  border-radius: var(--ap-radius);
+  overflow-x: auto;
+}
+.ap-block-text pre code, .ap-block-columns pre code, .ap-block-html pre code { background: none; color: inherit; padding: 0; }
+.ap-block-text th, .ap-block-text td, .ap-block-columns th, .ap-block-columns td {
+  border: 1px solid var(--ap-border);
+  padding: 8px 12px;
+}
+
+/* ── 响应式与动效降级 ─────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .ap-block-hero, .ap-block-text, .ap-block-query-loop { padding-left: 24px !important; padding-right: 24px !important; }
+  .ap-block-nav { padding-left: 20px !important; padding-right: 20px !important; }
+  .ap-block-query-loop article h3 { font-size: 1.6rem !important; }
+}
+@media (max-width: 640px) {
+  .ap-block-nav { height: auto !important; min-height: 56px; flex-wrap: wrap; row-gap: 4px; padding-top: 8px !important; padding-bottom: 8px !important; }
+  .ap-block-nav nav { width: 100%; }
+  .ap-block-nav nav ul { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ap-block a, .ap-block-nav nav ul li a { transition: none; }
+}
+/* <<< ap-adapter <<< */

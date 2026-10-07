@@ -1,0 +1,24 @@
+{
+  "name": "@astropress/plugin-maintenance-mode",
+  "version": "0.1.0",
+  "description": "维护模式：一键对未登录访客切换 503 维护页（Retry-After + 内联样式页面），支持自定义文案、预计恢复时间与 IP 白名单",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./integration.admin": "./src/integration.admin.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@astropress/core": "workspace:*",
+    "@astropress/auth": "workspace:*",
+    "drizzle-orm": "^0.36.0"
+  },
+  "devDependencies": {
+    "astro": "^4.0.0",
+    "typescript": "^5.4.0",
+    "@cloudflare/workers-types": "^4.0.0"
+  }
+}

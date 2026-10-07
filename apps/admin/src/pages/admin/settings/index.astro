@@ -1,0 +1,140 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { eq } from "drizzle-orm";
+import { wpOptions } from "@astropress/core/schema";
+
+const db = Astro.locals.db;
+if (!db || !Astro.locals.user) return Astro.redirect("/login");
+
+// Handle POST
+if (Astro.request.method === "POST") {
+  const body = await Astro.request.text();
+  const form = new URLSearchParams(body);
+  const updates: Record<string, string> = {
+    blogname:        form.get("blogname")?.trim()        ?? "",
+    blogdescription: form.get("blogdescription")?.trim() ?? "",
+    siteurl:         form.get("siteurl")?.trim()         ?? "",
+    admin_email:     form.get("admin_email")?.trim()     ?? "",
+    posts_per_page:  form.get("posts_per_page")?.trim()  ?? "10",
+  };
+
+  for (const [key, value] of Object.entries(updates)) {
+    await db
+      .insert(wpOptions)
+      .values({ optionName: key, optionValue: value })
+      .onConflictDoUpdate({
+        target: wpOptions.optionName,
+        set: { optionValue: value },
+      });
+  }
+
+  return Astro.redirect("/admin/settings?saved=1");
+}
+
+const saved = Astro.url.searchParams.get("saved") === "1";
+
+const rows = await db
+  .select({ name: wpOptions.optionName, value: wpOptions.optionValue })
+  .from(wpOptions);
+const opts = Object.fromEntries(rows.map((r: any) => [r.name, r.value]));
+---
+<AdminLayout title="设置 › 常规">
+  <div class="settings-wrap">
+
+    <!-- Page heading -->
+    <h1 class="wp-page-title">设置</h1>
+
+    <!-- Sub-nav tabs -->
+    <nav class="nav-tab-wrapper">
+      <a href="/admin/settings" class="nav-tab nav-tab-active">常规</a>
+      <a href="/admin/settings/ai" class="nav-tab">AI</a>
+    </nav>
+
+    {saved && (
+      <div class="notice notice-success" style="margin-bottom:20px">
+        设置已保存。
+      </div>
+    )}
+
+    <form method="POST" style="max-width:640px">
+      <table class="form-table">
+        <tbody>
+
+          <tr>
+            <th><label for="blogname">站点标题</label></th>
+            <td>
+              <input id="blogname" name="blogname" type="text"
+                value={opts.blogname ?? ""}
+                class="wp-input regular-text" />
+            </td>
+          </tr>
+
+          <tr>
+            <th><label for="blogdescription">副标题</label></th>
+            <td>
+              <input id="blogdescription" name="blogdescription" type="text"
+                value={opts.blogdescription ?? ""}
+                class="wp-input regular-text" />
+              <p class="description">用寥寥数语介绍这个站点是做什么的。</p>
+            </td>
+          </tr>
+
+          <tr>
+            <th><label for="siteurl">前端地址</label></th>
+            <td>
+              <input id="siteurl" name="siteurl" type="url"
+                value={opts.siteurl ?? ""}
+                placeholder="http://localhost:4322"
+                class="wp-input regular-text" />
+              <p class="description">你的 Web/前端应用地址（例如 <code>http://localhost:4322</code>）。后台中所有“查看”和“预览”链接都会使用它。</p>
+            </td>
+          </tr>
+
+          <tr>
+            <th><label for="admin_email">管理员邮箱</label></th>
+            <td>
+              <input id="admin_email" name="admin_email" type="email"
+                value={opts.admin_email ?? ""}
+                class="wp-input regular-text" />
+            </td>
+          </tr>
+
+          <tr>
+            <th><label for="posts_per_page">每页文章数</label></th>
+            <td>
+              <input id="posts_per_page" name="posts_per_page" type="number"
+                min="1" max="100"
+                value={opts.posts_per_page ?? "10"}
+                class="wp-input small-text" />
+              <span class="description"> 篇文章</span>
+            </td>
+          </tr>
+
+        </tbody>
+      </table>
+
+      <p class="submit">
+        <button type="submit" class="button-primary">保存更改</button>
+      </p>
+    </form>
+
+  </div>
+</AdminLayout>
+
+<style is:global>
+  .settings-wrap { max-width: 860px; }
+
+  /* ── WP-style form table ────────────────────────────────────────────── */
+  .form-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+  .form-table th {
+    width: 200px; padding: 16px 10px 16px 0;
+    vertical-align: top; text-align: left;
+    font-size: 13px; font-weight: 600;
+    color: var(--wp-gray-900);
+  }
+  .form-table td { padding: 12px 10px 12px 0; vertical-align: top; }
+  .form-table .description { font-size: 12px; color: var(--wp-gray-500); margin: 5px 0 0; display: block; }
+  .regular-text { width: 100%; max-width: 400px; }
+  .small-text   { width: 70px; }
+  .submit { margin: 4px 0 0; padding: 0; }
+</style>

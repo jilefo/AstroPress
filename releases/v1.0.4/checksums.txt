@@ -1,0 +1,3 @@
+# AstroPress v1.0.4 发布包 SHA256 校验和
+# 生成时间: 2026-10-07 16:37:04
+61de528ad84e079cdba2e7adcf0f62f191f0b80244e9982bb8ec0eaa7743eefd  astropress-v1.0.4-source.zip

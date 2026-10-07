@@ -1,0 +1,23 @@
+{
+  "name": "@astropress/plugin-customer-service",
+  "version": "0.1.0",
+  "description": "网站在线客服/联系组件：前台右下角浮动按钮，点击弹出联系方式面板（QQ/微信/邮箱/电话/工作时间），后台可配置，零核心修改。",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./integration.admin": "./src/integration.admin.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@astropress/core": "workspace:*",
+    "drizzle-orm": "^0.36.0"
+  },
+  "devDependencies": {
+    "astro": "^4.0.0",
+    "typescript": "^5.4.0",
+    "@cloudflare/workers-types": "^4.0.0"
+  }
+}

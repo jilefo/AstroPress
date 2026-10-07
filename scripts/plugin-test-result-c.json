@@ -1,0 +1,2525 @@
+{
+  "base": "http://localhost:4321",
+  "ts": 1790925654,
+  "results": [
+    {
+      "plugin": "setup",
+      "case": "管理员登录",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 151.7
+    },
+    {
+      "plugin": "core",
+      "case": "[基线] 管理员登录(form→302)",
+      "status": "pass",
+      "detail": "status=302",
+      "ms": 126.9
+    },
+    {
+      "plugin": "core",
+      "case": "[基线] 错误密码被拒(302→/login?error)",
+      "status": "pass",
+      "detail": "status=302 loc=/login?error=invalid",
+      "ms": 0
+    },
+    {
+      "plugin": "seo-tools",
+      "case": "[基线] RSS 订阅 /rss.xml",
+      "status": "pass",
+      "detail": "status=200 bytes=2105",
+      "ms": 9.0
+    },
+    {
+      "plugin": "seo-tools",
+      "case": "[基线] robots.txt",
+      "status": "pass",
+      "detail": "status=200 body='User-agent: *\\nAllow: /\\nDisallow: /admin\\nDisallow: /admin-ext\\nDisallow: /api\\nDisa'",
+      "ms": 2.7
+    },
+    {
+      "plugin": "seo-tools",
+      "case": "[基线] 设置 GET",
+      "status": "pass",
+      "detail": "status=200",
+      "ms": 0
+    },
+    {
+      "plugin": "seo-tools",
+      "case": "[基线] 设置 POST 回写往返",
+      "status": "pass",
+      "detail": "status=200 {\"ok\":true,\"settings\":{\"feedEnabled\":true,\"feedCount\":20,\"feedTitle\":\"\",\"feedDescription\":\"\",\"robotsExtra\":\"\"}}",
+      "ms": 0
+    },
+    {
+      "plugin": "seo-tools",
+      "case": "[基线] 设置回写后一致",
+      "status": "pass",
+      "detail": "设置发生漂移",
+      "ms": 0
+    },
+    {
+      "plugin": "seo-tools",
+      "case": "[基线] 后台页 /admin-ext/seo-tools",
+      "status": "pass",
+      "detail": "status=200 len=91786",
+      "ms": 17.9
+    },
+    {
+      "plugin": "seo-tools",
+      "case": "[基线] 匿名访问被拒 /admin-ext/api/seo-tools/settings",
+      "status": "pass",
+      "detail": "status=302 loc=/login",
+      "ms": 0
+    },
+    {
+      "plugin": "search",
+      "case": "[基线] 搜索页 /search?q=the",
+      "status": "pass",
+      "detail": "status=200",
+      "ms": 8.9
+    },
+    {
+      "plugin": "search",
+      "case": "[基线] q=100 字符边界接受",
+      "status": "pass",
+      "detail": "status=200",
+      "ms": 0
+    },
+    {
+      "plugin": "search",
+      "case": "[基线] q=101 字符被截断/不500",
+      "status": "pass",
+      "detail": "status=200",
+      "ms": 0
+    },
+    {
+      "plugin": "search",
+      "case": "[基线] 设置往返一致",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "search",
+      "case": "[基线] 后台页 /admin-ext/search",
+      "status": "pass",
+      "detail": "status=200 len=90873",
+      "ms": 15.7
+    },
+    {
+      "plugin": "related-posts",
+      "case": "[基线] 设置 GET",
+      "status": "pass",
+      "detail": "keys=['enabled', 'related', 'random', 'popular', 'heading', 'css']",
+      "ms": 0
+    },
+    {
+      "plugin": "related-posts",
+      "case": "[基线] 设置 POST 往返",
+      "status": "pass",
+      "detail": "status=200",
+      "ms": 0
+    },
+    {
+      "plugin": "related-posts",
+      "case": "[基线] 追踪像素容错(不存在文章不500)",
+      "status": "pass",
+      "detail": "status=200 ct=image/gif",
+      "ms": 0
+    },
+    {
+      "plugin": "related-posts",
+      "case": "[基线] 追踪像素缺参不500",
+      "status": "pass",
+      "detail": "status=200",
+      "ms": 0
+    },
+    {
+      "plugin": "related-posts",
+      "case": "[基线] 伪造 postId 不产生孤儿浏览量行",
+      "status": "pass",
+      "detail": "rows=[{'c': 0}]",
+      "ms": 0
+    },
+    {
+      "plugin": "related-posts",
+      "case": "[基线] 后台页 /admin-ext/related-posts",
+      "status": "pass",
+      "detail": "status=200 len=91316",
+      "ms": 15.4
+    },
+    {
+      "plugin": "redirect",
+      "case": "[基线] 新建 301 规则",
+      "status": "pass",
+      "detail": "200 {\"ok\":true,\"rule\":{\"id\":\"0267eb69-25e4-4647-8a9a-6fc2fb867919\",\"from\":\"/oldpage-1790925606-a\",\"to\":\"https://example.com/",
+      "ms": 0
+    },
+    {
+      "plugin": "redirect",
+      "case": "[基线] from 重复拒绝",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "redirect",
+      "case": "[基线] 非法 from 拒绝",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "redirect",
+      "case": "[基线] 非法 to 拒绝",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "redirect",
+      "case": "[基线] 非法 type 拒绝",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "redirect",
+      "case": "[基线] 保留前缀(/ap-)规则拒绝保存",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "redirect",
+      "case": "[基线] 超长 from(>2048)拒绝",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "redirect",
+      "case": "[基线] CRLF 注入 to 拒绝",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "redirect",
+      "case": "[基线] 协议相对 //evil 拒绝(防开放重定向)",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "redirect",
+      "case": "[基线] 反斜杠混淆 to 拒绝",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "redirect",
+      "case": "[基线] PUT 修改规则",
+      "status": "pass",
+      "detail": "200",
+      "ms": 0
+    },
+    {
+      "plugin": "redirect",
+      "case": "[基线] 多跳循环检测拒绝(c->a 成环)",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "redirect",
+      "case": "[基线] 禁用规则",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "redirect",
+      "case": "[基线] 禁用规则不跳转",
+      "status": "pass",
+      "detail": "status=404",
+      "ms": 0
+    },
+    {
+      "plugin": "redirect",
+      "case": "[基线] 启用规则",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "redirect",
+      "case": "[基线] 302/301 实际跳转生效",
+      "status": "pass",
+      "detail": "status=302 loc=https://example.com/final",
+      "ms": 0
+    },
+    {
+      "plugin": "redirect",
+      "case": "[基线] 匿名访问被拒 /admin-ext/api/redirects",
+      "status": "pass",
+      "detail": "status=302 loc=/login",
+      "ms": 0
+    },
+    {
+      "plugin": "redirect",
+      "case": "[基线] 跨域写被拒 /admin-ext/api/redirects",
+      "status": "pass",
+      "detail": "status=403",
+      "ms": 0
+    },
+    {
+      "plugin": "redirect",
+      "case": "[基线] 后台页 /admin-ext/redirects",
+      "status": "pass",
+      "detail": "status=200 len=91990",
+      "ms": 17.1
+    },
+    {
+      "plugin": "redirect",
+      "case": "[基线] DELETE 清理测试规则",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "comments",
+      "case": "[基线] 准备已发布且开放评论的文章",
+      "status": "pass",
+      "detail": "slug=pv-tips",
+      "ms": 0
+    },
+    {
+      "plugin": "comments",
+      "case": "[基线] 蜜罐评论静默 202",
+      "status": "pass",
+      "detail": "status=202",
+      "ms": 0
+    },
+    {
+      "plugin": "comments",
+      "case": "[基线] 字段校验拒绝(400)",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "comments",
+      "case": "[基线] 不存在文章拒绝",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "comments",
+      "case": "[基线] 提交合法评论→201 pending",
+      "status": "pass",
+      "detail": "201 {\"ok\":true,\"status\":\"pending\"}",
+      "ms": 0
+    },
+    {
+      "plugin": "comments",
+      "case": "[基线] 后台评论列表+搜索",
+      "status": "pass",
+      "detail": "total=1 counts={'pending': 4, 'approved': 0, 'spam': 0, 'trash': 2}",
+      "ms": 0
+    },
+    {
+      "plugin": "comments",
+      "case": "[基线] 审核通过",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "comments",
+      "case": "[基线] 管理员回复",
+      "status": "pass",
+      "detail": "200 {\"ok\":true,\"id\":111,\"status\":\"approved\"}",
+      "ms": 0
+    },
+    {
+      "plugin": "comments",
+      "case": "[基线] 标记垃圾",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "comments",
+      "case": "[基线] 移入回收站",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "comments",
+      "case": "[基线] 未知动作拒绝",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "comments",
+      "case": "[基线] 30秒3条频控(第4条 429)",
+      "status": "pass",
+      "detail": "codes=[201, 201, 429]",
+      "ms": 0
+    },
+    {
+      "plugin": "comments",
+      "case": "[基线] 伪造 XFF 不能绕过频控",
+      "status": "pass",
+      "detail": "status=429",
+      "ms": 0
+    },
+    {
+      "plugin": "comments",
+      "case": "[基线] 后台页 /admin-ext/comments",
+      "status": "pass",
+      "detail": "status=200 len=102690",
+      "ms": 22.1
+    },
+    {
+      "plugin": "comments",
+      "case": "[基线] 匿名访问被拒 /admin-ext/api/comments/list",
+      "status": "pass",
+      "detail": "status=302 loc=/login",
+      "ms": 0
+    },
+    {
+      "plugin": "comments",
+      "case": "[基线] 跨域写被拒 /admin-ext/api/comments/action",
+      "status": "pass",
+      "detail": "status=403",
+      "ms": 0
+    },
+    {
+      "plugin": "comments",
+      "case": "[基线] 清理测试评论",
+      "status": "pass",
+      "detail": "ids=[110, 111, 113, 112]",
+      "ms": 0
+    },
+    {
+      "plugin": "comments",
+      "case": "[基线] 评论设置还原",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "db-console",
+      "case": "[基线] 表列表 GET",
+      "status": "pass",
+      "detail": "count=14",
+      "ms": 0
+    },
+    {
+      "plugin": "db-console",
+      "case": "[基线] 表结构 structure",
+      "status": "pass",
+      "detail": "cols=23",
+      "ms": 0
+    },
+    {
+      "plugin": "db-console",
+      "case": "[基线] 数据浏览 browse",
+      "status": "pass",
+      "detail": "total=76 cols=['__rowid', 'ID', 'post_author', 'post_date']",
+      "ms": 0
+    },
+    {
+      "plugin": "db-console",
+      "case": "[基线] SELECT 查询",
+      "status": "pass",
+      "detail": "{'type': 'query', 'columns': ['one'], 'rows': [{'one': 1}], 'changes': None, 'durationMs': 0.07, 'error': None}",
+      "ms": 0
+    },
+    {
+      "plugin": "db-console",
+      "case": "[基线] 非法 SQL 返回 error(不崩)",
+      "status": "pass",
+      "detail": "SQLITE_ERROR: near \"FROM\": syntax error",
+      "ms": 0
+    },
+    {
+      "plugin": "db-console",
+      "case": "[基线] 无确认写被拒(403)",
+      "status": "pass",
+      "detail": "status=403",
+      "ms": 0
+    },
+    {
+      "plugin": "db-console",
+      "case": "[基线] 确认后建临时表",
+      "status": "pass",
+      "detail": "{\"type\":\"write\",\"columns\":[],\"rows\":[],\"changes\":0,\"durationMs\":39.77,\"error\":null}",
+      "ms": 0
+    },
+    {
+      "plugin": "db-console",
+      "case": "[基线] 确认后写入",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "db-console",
+      "case": "[基线] ATTACH 禁用",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "db-console",
+      "case": "[基线] 危险 PRAGMA(writable_schema)禁用",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "db-console",
+      "case": "[基线] 危险 PRAGMA(trusted_schema)禁用",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "db-console",
+      "case": "[基线] 多语句拒绝",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "db-console",
+      "case": "[基线] 行内编辑无确认拒绝",
+      "status": "pass",
+      "detail": "status=403",
+      "ms": 0
+    },
+    {
+      "plugin": "db-console",
+      "case": "[基线] 行内编辑保存",
+      "status": "pass",
+      "detail": "200 {\"ok\":true,\"changes\":1}",
+      "ms": 0
+    },
+    {
+      "plugin": "db-console",
+      "case": "[基线] 内部表禁止修改",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "db-console",
+      "case": "[基线] 非法表名拒绝",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "db-console",
+      "case": "[基线] 行内设 NULL",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "db-console",
+      "case": "[基线] 编辑结果落库校验",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "db-console",
+      "case": "[基线] CSV 导出",
+      "status": "pass",
+      "detail": "bytes=14",
+      "ms": 0
+    },
+    {
+      "plugin": "db-console",
+      "case": "[基线] SQL 导出(含CREATE/INSERT)",
+      "status": "pass",
+      "detail": "bytes=275",
+      "ms": 0
+    },
+    {
+      "plugin": "db-console",
+      "case": "[基线] 匿名访问被拒 /admin-ext/api/db-console/tables",
+      "status": "pass",
+      "detail": "status=302 loc=/login",
+      "ms": 0
+    },
+    {
+      "plugin": "db-console",
+      "case": "[基线] 跨域写被拒 /admin-ext/api/db-console/exec",
+      "status": "pass",
+      "detail": "status=403",
+      "ms": 0
+    },
+    {
+      "plugin": "db-console",
+      "case": "[基线] 后台页 /admin-ext/db-console",
+      "status": "pass",
+      "detail": "status=200 len=102894",
+      "ms": 19.5
+    },
+    {
+      "plugin": "db-console",
+      "case": "[基线] 临时表已清理",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "link-directory",
+      "case": "[基线] 新建分类",
+      "status": "pass",
+      "detail": "{\"ok\":true,\"cat\":{\"id\":20,\"name\":\"测试分类 1790925606\",\"slug\":\"ap-test-1790925606\",\"sort\":50,\"createdAt\"",
+      "ms": 0
+    },
+    {
+      "plugin": "link-directory",
+      "case": "[基线] 分类列表",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "link-directory",
+      "case": "[基线] 修改分类",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "link-directory",
+      "case": "[基线] 空分类名拒绝",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "link-directory",
+      "case": "[基线] 新建链接(pending)",
+      "status": "pass",
+      "detail": "{\"ok\":true,\"link\":{\"id\":20,\"catId\":20,\"name\":\"测试链接 1790925606\",\"url\":\"https://example.com/ap-test\",\"",
+      "ms": 0
+    },
+    {
+      "plugin": "link-directory",
+      "case": "[基线] 非法 URL 拒绝",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "link-directory",
+      "case": "[基线] 编辑链接+批准",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "link-directory",
+      "case": "[基线] 链接列表(按分类)",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "link-directory",
+      "case": "[基线] 公开目录页 /directory",
+      "status": "pass",
+      "detail": "status=200",
+      "ms": 0
+    },
+    {
+      "plugin": "link-directory",
+      "case": "[基线] 点击跳转 302",
+      "status": "pass",
+      "detail": "status=302 loc=https://example.com/ap-test",
+      "ms": 0
+    },
+    {
+      "plugin": "link-directory",
+      "case": "[基线] 点击不存在 ID 不500",
+      "status": "pass",
+      "detail": "status=404",
+      "ms": 0
+    },
+    {
+      "plugin": "link-directory",
+      "case": "[基线] 非空分类删除拒绝",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "link-directory",
+      "case": "[基线] 设置往返",
+      "status": "pass",
+      "detail": "status=200",
+      "ms": 0
+    },
+    {
+      "plugin": "link-directory",
+      "case": "[基线] 匿名访问被拒 /admin-ext/api/links",
+      "status": "pass",
+      "detail": "status=302 loc=/login",
+      "ms": 0
+    },
+    {
+      "plugin": "link-directory",
+      "case": "[基线] 后台页 /admin-ext/links",
+      "status": "pass",
+      "detail": "status=200 len=96876",
+      "ms": 16.0
+    },
+    {
+      "plugin": "link-directory",
+      "case": "[基线] 清理测试链接+分类",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "ads-manager",
+      "case": "[基线] 广告位 GET",
+      "status": "pass",
+      "detail": "n=2",
+      "ms": 0
+    },
+    {
+      "plugin": "ads-manager",
+      "case": "[基线] 新增测试广告位",
+      "status": "pass",
+      "detail": "{\"ok\":true}",
+      "ms": 0
+    },
+    {
+      "plugin": "ads-manager",
+      "case": "[基线] 广告位持久化",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "ads-manager",
+      "case": "[基线] 非法 key 拒绝",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "ads-manager",
+      "case": "[基线] 重复 key 拒绝",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "ads-manager",
+      "case": "[基线] loader.js 公开可访问",
+      "status": "pass",
+      "detail": "bytes=2348",
+      "ms": 0
+    },
+    {
+      "plugin": "ads-manager",
+      "case": "[基线] track 打点容错",
+      "status": "pass",
+      "detail": "status=200 {\"ok\":true}",
+      "ms": 0
+    },
+    {
+      "plugin": "ads-manager",
+      "case": "[基线] track 空批量拒绝",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "ads-manager",
+      "case": "[基线] 伪造 adId 不产生孤儿统计行",
+      "status": "pass",
+      "detail": "rows=[{'c': 0}]",
+      "ms": 0
+    },
+    {
+      "plugin": "ads-manager",
+      "case": "[基线] 匿名访问被拒 /admin-ext/api/ads/slots",
+      "status": "pass",
+      "detail": "status=302 loc=/login",
+      "ms": 0
+    },
+    {
+      "plugin": "ads-manager",
+      "case": "[基线] 后台页 /admin-ext/ads",
+      "status": "pass",
+      "detail": "status=200 len=95731",
+      "ms": 21.1
+    },
+    {
+      "plugin": "ads-manager",
+      "case": "[基线] 还原广告位",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "webhook-publisher",
+      "case": "[基线] 创建全权限 API Key",
+      "status": "pass",
+      "detail": "{\"ok\":true,\"id\":\"4f778541965acbe6\",\"key\":\"apwh_4cec4d2cd55ee441b32c2d950a9653d3a008fcfb997678ac\",\"wa",
+      "ms": 0
+    },
+    {
+      "plugin": "webhook-publisher",
+      "case": "[基线] 创建只读 API Key",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "webhook-publisher",
+      "case": "[基线] Key 列表不泄露密钥",
+      "status": "pass",
+      "detail": "sample={'id': '4f778541965acbe6', 'name': 'full-1790925606', 'permissions': ['publish', 'delete', 'status'], 'createdAt': 1790925609343, 'lastUsed': None}",
+      "ms": 0
+    },
+    {
+      "plugin": "webhook-publisher",
+      "case": "[基线] 发布文章(draft)",
+      "status": "pass",
+      "detail": "200 {\"ok\":true,\"action\":\"created\",\"postId\":113,\"slug\":\"ap-test-1790925606\",\"type\":\"post\",\"status\":\"draft\",\"url\":\"/blog/ap-te",
+      "ms": 0
+    },
+    {
+      "plugin": "webhook-publisher",
+      "case": "[基线] 同 slug 幂等 upsert",
+      "status": "pass",
+      "detail": "{\"ok\":true,\"action\":\"updated\",\"postId\":113,\"slug\":\"ap-test-1790925606\",\"type\":\"post\",\"status\":\"draft\",\"url\":\"/blog/ap-te",
+      "ms": 0
+    },
+    {
+      "plugin": "webhook-publisher",
+      "case": "[基线] 状态查询",
+      "status": "pass",
+      "detail": "200 {\"ok\":true,\"key\":{\"id\":\"4f778541965acbe6\",\"name\":\"full-1790925606\",\"permissions\":[\"publish\",\"delete\"",
+      "ms": 0
+    },
+    {
+      "plugin": "webhook-publisher",
+      "case": "[基线] 无 publish 权限→403",
+      "status": "pass",
+      "detail": "status=403",
+      "ms": 0
+    },
+    {
+      "plugin": "webhook-publisher",
+      "case": "[基线] 错误密钥被拒(401/403)",
+      "status": "pass",
+      "detail": "status=403",
+      "ms": 0
+    },
+    {
+      "plugin": "webhook-publisher",
+      "case": "[基线] 非法文章类型→400",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "webhook-publisher",
+      "case": "[基线] 删除文章(X-API-Key 头)",
+      "status": "pass",
+      "detail": "200 {\"ok\":true,\"deletedId\":113}",
+      "ms": 0
+    },
+    {
+      "plugin": "webhook-publisher",
+      "case": "[基线] 删除后状态查询(key 仍有效,返回日志)",
+      "status": "pass",
+      "detail": "status=200",
+      "ms": 0
+    },
+    {
+      "plugin": "webhook-publisher",
+      "case": "[基线] 调用日志 GET",
+      "status": "pass",
+      "detail": "status=200",
+      "ms": 0
+    },
+    {
+      "plugin": "webhook-publisher",
+      "case": "[基线] 匿名访问被拒 /admin-ext/api/webhook/keys",
+      "status": "pass",
+      "detail": "status=302 loc=/login",
+      "ms": 0
+    },
+    {
+      "plugin": "webhook-publisher",
+      "case": "[基线] 后台页 /admin-ext/webhooks",
+      "status": "pass",
+      "detail": "status=200 len=94758",
+      "ms": 19.4
+    },
+    {
+      "plugin": "webhook-publisher",
+      "case": "[基线] 清理测试 API Keys",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "config-io",
+      "case": "[基线] 全量导出",
+      "status": "pass",
+      "detail": "keys=['app', 'kind', 'version', 'exportedAt', 'sections']",
+      "ms": 0
+    },
+    {
+      "plugin": "config-io",
+      "case": "[基线] 导出物剥离 AUTH_SECRET",
+      "status": "pass",
+      "detail": "leaks=[] bytes=315971",
+      "ms": 0
+    },
+    {
+      "plugin": "config-io",
+      "case": "[基线] 导入 merge 往返",
+      "status": "pass",
+      "detail": "200 {\"ok\":true,\"mode\":\"merge\",\"importedSections\":[\"settings\",\"plugins\",\"themes\",\"content\"],\"summary\":{\"inserted\":0,\"updated\"",
+      "ms": 0
+    },
+    {
+      "plugin": "config-io",
+      "case": "[基线] 坏 JSON 拒绝",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "config-io",
+      "case": "[基线] 缺文件拒绝",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "config-io",
+      "case": "[基线] 匿名访问被拒 /admin-ext/api/config-io/export",
+      "status": "pass",
+      "detail": "status=302 loc=/login",
+      "ms": 0
+    },
+    {
+      "plugin": "config-io",
+      "case": "[基线] 后台页 /admin-ext/config-io",
+      "status": "pass",
+      "detail": "status=200 len=98584",
+      "ms": 24.5
+    },
+    {
+      "plugin": "backup",
+      "case": "[基线] 备份列表 GET",
+      "status": "pass",
+      "detail": "type=dict",
+      "ms": 0
+    },
+    {
+      "plugin": "backup",
+      "case": "[基线] 创建备份(不含媒体)",
+      "status": "pass",
+      "detail": "200 {\"ok\":true,\"entry\":{\"file\":\"backup-20261002-152031.apzip\",\"size\":133217,\"sizeMB\":0.13,\"createdAt\":\"2026-10-02T07:20:31.468Z\",\"mediaCount\":0,",
+      "ms": 0
+    },
+    {
+      "plugin": "backup",
+      "case": "[基线] 下载备份(zip magic PK)",
+      "status": "pass",
+      "detail": "status=200 bytes=133217",
+      "ms": 0
+    },
+    {
+      "plugin": "backup",
+      "case": "[基线] 下载路径穿越拒绝",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "backup",
+      "case": "[基线] restore 缺文件拒绝",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "backup",
+      "case": "[基线] 匿名访问被拒 /admin-ext/api/backup/list",
+      "status": "pass",
+      "detail": "status=302 loc=/login",
+      "ms": 0
+    },
+    {
+      "plugin": "backup",
+      "case": "[基线] 后台页 /admin-ext/backup",
+      "status": "pass",
+      "detail": "status=200 len=94890",
+      "ms": 21.7
+    },
+    {
+      "plugin": "file-manager",
+      "case": "[基线] 根目录列表",
+      "status": "pass",
+      "detail": "keys=['path', 'parent', 'items']",
+      "ms": 0
+    },
+    {
+      "plugin": "file-manager",
+      "case": "[基线] 路径穿越 ../../ 拒绝",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "file-manager",
+      "case": "[基线] 目录树 dirs",
+      "status": "pass",
+      "detail": "status=200",
+      "ms": 0
+    },
+    {
+      "plugin": "file-manager",
+      "case": "[基线] 读取文本文件",
+      "status": "pass",
+      "detail": "status=200",
+      "ms": 0
+    },
+    {
+      "plugin": "file-manager",
+      "case": "[基线] 二进制文件拒绝读取(415)",
+      "status": "pass",
+      "detail": "status=415",
+      "ms": 0
+    },
+    {
+      "plugin": "file-manager",
+      "case": "[基线] 匿名访问被拒 /admin-ext/api/files/list",
+      "status": "pass",
+      "detail": "status=302 loc=/login",
+      "ms": 0
+    },
+    {
+      "plugin": "file-manager",
+      "case": "[基线] 跨域写被拒 /admin-ext/api/files/mkdir",
+      "status": "pass",
+      "detail": "status=403",
+      "ms": 0
+    },
+    {
+      "plugin": "file-manager",
+      "case": "[基线] 后台页 /admin-ext/files",
+      "status": "pass",
+      "detail": "status=200 len=112616",
+      "ms": 20.6
+    },
+    {
+      "plugin": "plugin-manager",
+      "case": "[基线] 插件状态 GET",
+      "status": "pass",
+      "detail": "n=34",
+      "ms": 0
+    },
+    {
+      "plugin": "plugin-manager",
+      "case": "[基线] 非法 slug 拒绝",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "plugin-manager",
+      "case": "[基线] 系统插件 seo 不可禁用",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "plugin-manager",
+      "case": "[基线] 切换 wp-editor 状态",
+      "status": "pass",
+      "detail": "200 {\"ok\":true,\"slug\":\"wp-editor\",\"enabled\":false}",
+      "ms": 0
+    },
+    {
+      "plugin": "plugin-manager",
+      "case": "[基线] 切换后状态生效",
+      "status": "pass",
+      "detail": "True->False",
+      "ms": 0
+    },
+    {
+      "plugin": "plugin-manager",
+      "case": "[基线] 还原 wp-editor 状态",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "plugin-manager",
+      "case": "[基线] 匿名访问被拒 /admin-ext/api/plugin-manager/state",
+      "status": "pass",
+      "detail": "status=302 loc=/login",
+      "ms": 0
+    },
+    {
+      "plugin": "plugin-manager",
+      "case": "[基线] 后台页 /admin-ext/plugin-manager",
+      "status": "pass",
+      "detail": "status=200 len=89347",
+      "ms": 16.5
+    },
+    {
+      "plugin": "webdav",
+      "case": "[基线] token GET 仅掩码",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "webdav",
+      "case": "[基线] 生成 WebDAV token",
+      "status": "pass",
+      "detail": "{\"ok\":true,\"token\":\"964f9099b53ab0789465a28393fc8d4885b30e975d8d7ddf\"}",
+      "ms": 0
+    },
+    {
+      "plugin": "webdav",
+      "case": "[基线] PROPFIND 根目录 207",
+      "status": "pass",
+      "detail": "status=207",
+      "ms": 0
+    },
+    {
+      "plugin": "webdav",
+      "case": "[基线] PUT 上传文件",
+      "status": "pass",
+      "detail": "status=201",
+      "ms": 0
+    },
+    {
+      "plugin": "webdav",
+      "case": "[基线] GET 回读一致",
+      "status": "pass",
+      "detail": "status=200 match=True",
+      "ms": 0
+    },
+    {
+      "plugin": "webdav",
+      "case": "[基线] MKCOL 建目录",
+      "status": "pass",
+      "detail": "status=201",
+      "ms": 0
+    },
+    {
+      "plugin": "webdav",
+      "case": "[基线] OPTIONS 可应答(200/204)",
+      "status": "pass",
+      "detail": "status=204 allow=None",
+      "ms": 0
+    },
+    {
+      "plugin": "webdav",
+      "case": "[基线] 错误令牌 401",
+      "status": "pass",
+      "detail": "status=401",
+      "ms": 0
+    },
+    {
+      "plugin": "webdav",
+      "case": "[基线] 路径穿越不逃逸存储根",
+      "status": "pass",
+      "detail": "status=404",
+      "ms": 0
+    },
+    {
+      "plugin": "webdav",
+      "case": "[基线] DELETE 清理",
+      "status": "pass",
+      "detail": "status=204",
+      "ms": 0
+    },
+    {
+      "plugin": "webdav",
+      "case": "[基线] 统计 GET",
+      "status": "pass",
+      "detail": "status=200",
+      "ms": 0
+    },
+    {
+      "plugin": "webdav",
+      "case": "[基线] 后台页 /admin-ext/webdav",
+      "status": "pass",
+      "detail": "status=200 len=96276",
+      "ms": 16.0
+    },
+    {
+      "plugin": "gist-sync",
+      "case": "[基线] 设置 GET",
+      "status": "pass",
+      "detail": "status=200",
+      "ms": 0
+    },
+    {
+      "plugin": "gist-sync",
+      "case": "[基线] 未配置 token push 优雅报错",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "gist-sync",
+      "case": "[基线] 历史 GET 不500",
+      "status": "pass",
+      "detail": "status=200",
+      "ms": 0
+    },
+    {
+      "plugin": "gist-sync",
+      "case": "[基线] 后台页 /admin-ext/gist-sync",
+      "status": "pass",
+      "detail": "status=200 len=95736",
+      "ms": 23.6
+    },
+    {
+      "plugin": "git-sync",
+      "case": "[基线] 设置 GET",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "git-sync",
+      "case": "[基线] 未配置 remote sync 优雅报错",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "git-sync",
+      "case": "[基线] 历史 GET",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "git-sync",
+      "case": "[基线] 后台页 /admin-ext/git-sync",
+      "status": "pass",
+      "detail": "status=200 len=100902",
+      "ms": 20.9
+    },
+    {
+      "plugin": "multilingual",
+      "case": "[基线] GET settings",
+      "status": "pass",
+      "detail": "status=200",
+      "ms": 0
+    },
+    {
+      "plugin": "multilingual",
+      "case": "[基线] GET strings",
+      "status": "pass",
+      "detail": "status=200",
+      "ms": 0
+    },
+    {
+      "plugin": "multilingual",
+      "case": "[基线] GET links?postId=1",
+      "status": "pass",
+      "detail": "status=200",
+      "ms": 0
+    },
+    {
+      "plugin": "multilingual",
+      "case": "[基线] links 缺 postId 拒绝",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "multilingual",
+      "case": "[基线] 公开 config",
+      "status": "pass",
+      "detail": "status=200",
+      "ms": 0
+    },
+    {
+      "plugin": "multilingual",
+      "case": "[基线] 静态资源 /ml-asset/panel.js",
+      "status": "pass",
+      "detail": "bytes=9083",
+      "ms": 0
+    },
+    {
+      "plugin": "multilingual",
+      "case": "[基线] 静态资源 /ml-asset/switcher.js",
+      "status": "pass",
+      "detail": "bytes=3050",
+      "ms": 0
+    },
+    {
+      "plugin": "multilingual",
+      "case": "[基线] sitemap.xml",
+      "status": "pass",
+      "detail": "status=200",
+      "ms": 0
+    },
+    {
+      "plugin": "multilingual",
+      "case": "[基线] 多语言页 /ml/",
+      "status": "pass",
+      "detail": "status=200",
+      "ms": 0
+    },
+    {
+      "plugin": "multilingual",
+      "case": "[基线] 后台页 /admin-ext/multilingual",
+      "status": "pass",
+      "detail": "status=200 len=95323",
+      "ms": 19.5
+    },
+    {
+      "plugin": "admin-i18n",
+      "case": "[基线] script.js 可加载",
+      "status": "pass",
+      "detail": "bytes=14111",
+      "ms": 0
+    },
+    {
+      "plugin": "admin-i18n",
+      "case": "[基线] 设置 PUT 往返",
+      "status": "pass",
+      "detail": "status=200 {\"ok\":true}",
+      "ms": 0
+    },
+    {
+      "plugin": "admin-i18n",
+      "case": "[基线] 非法 target 语言拒绝",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "admin-i18n",
+      "case": "[基线] translate 空文本优雅处理",
+      "status": "pass",
+      "detail": "status=200",
+      "ms": 0
+    },
+    {
+      "plugin": "admin-i18n",
+      "case": "[基线] 后台页 /admin-ext/i18n",
+      "status": "pass",
+      "detail": "status=200 len=93695",
+      "ms": 13.8
+    },
+    {
+      "plugin": "editor-upload",
+      "case": "[基线] editor-upload.js 可加载",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "editor-upload",
+      "case": "[基线] 上传 PNG(201)",
+      "status": "pass",
+      "detail": "201 {\"id\":114,\"url\":\"http://localhost:4321/media/1790925632091-ap-test-1790925606.png\",\"filename\":\"1790925632091-ap-test-179",
+      "ms": 0
+    },
+    {
+      "plugin": "editor-upload",
+      "case": "[基线] 伪装内容上传拒绝",
+      "status": "pass",
+      "detail": "status=415",
+      "ms": 0
+    },
+    {
+      "plugin": "editor-upload",
+      "case": "[基线] SVG 上传有明确策略(2xx净化或4xx拒绝)",
+      "status": "pass",
+      "detail": "status=201",
+      "ms": 0
+    },
+    {
+      "plugin": "editor-upload",
+      "case": "[基线] 媒体 meta GET",
+      "status": "pass",
+      "detail": "status=404",
+      "ms": 0
+    },
+    {
+      "plugin": "editor-upload",
+      "case": "[基线] 清理上传文件",
+      "status": "pass",
+      "detail": "path=apps/admin/public/media/1790925632091-ap-test-1790925606.png status=200",
+      "ms": 0
+    },
+    {
+      "plugin": "media-av",
+      "case": "[基线] media-av.js 可加载",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "media-av",
+      "case": "[基线] 假音频 magic-byte 拒绝",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "media-av",
+      "case": "[基线] 非音视频拒绝",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "image-mirror",
+      "case": "[基线] 静态资源 image-mirror.js",
+      "status": "pass",
+      "detail": "status=200 bytes=14111",
+      "ms": 0
+    },
+    {
+      "plugin": "ai-autofill",
+      "case": "[基线] 静态资源 script.js",
+      "status": "pass",
+      "detail": "status=200 bytes=14111",
+      "ms": 0
+    },
+    {
+      "plugin": "wp-editor",
+      "case": "[基线] 静态资源 wp-editor.js",
+      "status": "pass",
+      "detail": "status=200 bytes=14111",
+      "ms": 0
+    },
+    {
+      "plugin": "editor-tools",
+      "case": "[基线] 静态资源 tools.js",
+      "status": "pass",
+      "detail": "status=200 bytes=14111",
+      "ms": 0
+    },
+    {
+      "plugin": "ai-autofill",
+      "case": "[基线] generate 缺参/未配置优雅返回",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "editor-tools",
+      "case": "[基线] translate 空文本优雅返回",
+      "status": "pass",
+      "detail": "status=400",
+      "ms": 0
+    },
+    {
+      "plugin": "ai-chat",
+      "case": "[基线] providers 列表",
+      "status": "pass",
+      "detail": "n=5",
+      "ms": 0
+    },
+    {
+      "plugin": "ai-chat",
+      "case": "[基线] sessions 状态 GET 不崩",
+      "status": "pass",
+      "detail": "status=200 body={\"viewport\":{\"width\":1280,\"height\":800},\"providers\":[{\"id\":\"deepseek\",\"name\":\"DeepSeek\",\"url\":\"https://chat.deepseek.com",
+      "ms": 0
+    },
+    {
+      "plugin": "ai-chat",
+      "case": "[基线] editor-panel.js",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "ai-chat",
+      "case": "[基线] 匿名访问被拒 /admin-ext/api/ai-chat/status",
+      "status": "pass",
+      "detail": "status=302 loc=/login",
+      "ms": 0
+    },
+    {
+      "plugin": "ai-chat",
+      "case": "[基线] 后台页 /admin-ext/ai-chat",
+      "status": "pass",
+      "detail": "status=200 len=100932",
+      "ms": 15.2
+    },
+    {
+      "plugin": "public-pages",
+      "case": "[基线] 页面 /",
+      "status": "pass",
+      "detail": "status=200 bytes=30381",
+      "ms": 46.8
+    },
+    {
+      "plugin": "public-pages",
+      "case": "[基线] 页面 /search?q=the",
+      "status": "pass",
+      "detail": "status=200 bytes=14509",
+      "ms": 7.8
+    },
+    {
+      "plugin": "public-pages",
+      "case": "[基线] 页面 /directory",
+      "status": "pass",
+      "detail": "status=200 bytes=16533",
+      "ms": 9.7
+    },
+    {
+      "plugin": "public-pages",
+      "case": "[基线] 页面 /rss.xml",
+      "status": "pass",
+      "detail": "status=200 bytes=2105",
+      "ms": 3.8
+    },
+    {
+      "plugin": "public-pages",
+      "case": "[基线] 页面 /sitemap.xml",
+      "status": "pass",
+      "detail": "status=200 bytes=1047",
+      "ms": 2.6
+    },
+    {
+      "plugin": "public-pages",
+      "case": "[基线] 页面 /robots.txt",
+      "status": "pass",
+      "detail": "bytes=136",
+      "ms": 0
+    },
+    {
+      "plugin": "public-pages",
+      "case": "[基线] 文章页 /blog/pv-tips",
+      "status": "pass",
+      "detail": "status=200",
+      "ms": 12.1
+    },
+    {
+      "plugin": "setup",
+      "case": "[基线] 管理员登录",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "permalink",
+      "case": "[基线] /pv-tips 无 /blog/ 前缀可访问",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 0
+    },
+    {
+      "plugin": "permalink",
+      "case": "[基线] 重写后页面含文章内容",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "permalink",
+      "case": "[基线] 不存在 slug 仍返回 404",
+      "status": "pass",
+      "detail": "HTTP 404",
+      "ms": 0
+    },
+    {
+      "plugin": "permalink",
+      "case": "[基线] 后台设置页可访问",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 0
+    },
+    {
+      "plugin": "permalink",
+      "case": "[基线] 未登录后台页重定向",
+      "status": "pass",
+      "detail": "HTTP 302",
+      "ms": 0
+    },
+    {
+      "plugin": "sitemap",
+      "case": "[基线] /sitemap.xml 200 + XML 头",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "sitemap",
+      "case": "[基线] 含 urlset 命名空间",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "sitemap",
+      "case": "[基线] 含首页条目",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "sitemap",
+      "case": "[基线] 含文章 /blog/ 条目",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "sitemap",
+      "case": "[基线] 含 lastmod 字段",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "sitemap",
+      "case": "[基线] Cache-Control 缓存头",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "sitemap",
+      "case": "[基线] 后台设置页可访问",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 0
+    },
+    {
+      "plugin": "sitemap",
+      "case": "[基线] 保存设置 maxPosts=500",
+      "status": "pass",
+      "detail": "HTTP 200 b'<!DOCTYPE html><html lang=\"en\"> <head><meta charset=\"UTF-8\"><meta name=\"viewport'",
+      "ms": 0
+    },
+    {
+      "plugin": "sitemap",
+      "case": "[基线] 恢复设置 maxPosts=1000",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 0
+    },
+    {
+      "plugin": "share",
+      "case": "[基线] POST 保存设置",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 0
+    },
+    {
+      "plugin": "share",
+      "case": "[基线] 文章页注入 ap-share-root",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "share",
+      "case": "[基线] 含微信分享",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "share",
+      "case": "[基线] 含微博分享",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "share",
+      "case": "[基线] 含复制链接",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "share",
+      "case": "[基线] 链接已 URL 编码",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "share",
+      "case": "[基线] 后台设置页可访问",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 0
+    },
+    {
+      "plugin": "share",
+      "case": "[基线] GET 设置 API",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 0
+    },
+    {
+      "plugin": "share",
+      "case": "[基线] 页面仅注入一次（ap-share-root 唯一）",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "customer-service",
+      "case": "[基线] POST 保存联系方式",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 0
+    },
+    {
+      "plugin": "customer-service",
+      "case": "[基线] 文章页注入 apcs-root",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "customer-service",
+      "case": "[基线] 右下角浮动样式",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "customer-service",
+      "case": "[基线] 后台设置页可访问",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 0
+    },
+    {
+      "plugin": "customer-service",
+      "case": "[基线] GET 设置 API",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 0
+    },
+    {
+      "plugin": "customer-service",
+      "case": "[基线] 配置后前台显示 QQ",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "customer-service",
+      "case": "[基线] 非法主题色被拒绝",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 0
+    },
+    {
+      "plugin": "footer",
+      "case": "[基线] 文章页注入页脚",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "footer",
+      "case": "[基线] Powered by 链接",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "footer",
+      "case": "[基线] 后台设置页可访问",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 0
+    },
+    {
+      "plugin": "footer",
+      "case": "[基线] GET 设置 API",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 0
+    },
+    {
+      "plugin": "footer",
+      "case": "[基线] POST 保存备案号",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 0
+    },
+    {
+      "plugin": "footer",
+      "case": "[基线] 前台显示备案号",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "footer",
+      "case": "[基线] 自定义 HTML 剥离 script",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "footer",
+      "case": "[基线] 自定义 HTML 保留安全标签",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "donation",
+      "case": "[基线] POST 保存二维码",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 0
+    },
+    {
+      "plugin": "donation",
+      "case": "[基线] 文章页注入 ap-donation",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "donation",
+      "case": "[基线] 打赏按钮存在",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "donation",
+      "case": "[基线] 模态框存在",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "donation",
+      "case": "[基线] 默认按钮文案",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "donation",
+      "case": "[基线] 后台设置页可访问",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 0
+    },
+    {
+      "plugin": "donation",
+      "case": "[基线] GET 设置 API",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 0
+    },
+    {
+      "plugin": "donation",
+      "case": "[基线] 前台显示微信二维码",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "donation",
+      "case": "[基线] 前台显示支付宝二维码",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "donation",
+      "case": "[基线] javascript: 协议二维码被拒绝",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 0
+    },
+    {
+      "plugin": "donation",
+      "case": "[基线] 前台无 javascript: 二维码",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "git-sync",
+      "case": "[基线] GET 设置含 scopes.site",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "git-sync",
+      "case": "[基线] 仅勾选整站源码可保存",
+      "status": "pass",
+      "detail": "HTTP 200 b'{\"ok\":true,\"settings\":{\"preset\":\"github\",\"baseUrl\":\"\",\"owner\":\"t\",\"repo\":\"t\",\"br'",
+      "ms": 0
+    },
+    {
+      "plugin": "git-sync",
+      "case": "[基线] 全部不勾选被拒绝",
+      "status": "pass",
+      "detail": "HTTP 400",
+      "ms": 0
+    },
+    {
+      "plugin": "baseline",
+      "case": "基线套件整体回归(270/270)",
+      "status": "pass",
+      "detail": "pass=270 fail=0 warn=0 耗时27.2s",
+      "ms": 27207.5
+    },
+    {
+      "plugin": "file-manager",
+      "case": "mkdir 新建根测试目录",
+      "status": "pass",
+      "detail": "{'ok': True, 'path': '_fmtest_c_3f2a7273'}",
+      "ms": 29.6
+    },
+    {
+      "plugin": "file-manager",
+      "case": "mkdir 新建子目录",
+      "status": "pass",
+      "detail": "{'ok': True, 'path': '_fmtest_c_3f2a7273/sub'}",
+      "ms": 27.6
+    },
+    {
+      "plugin": "file-manager",
+      "case": "mkdir 重复目录返回 409",
+      "status": "pass",
+      "detail": "HTTP 409",
+      "ms": 15.3
+    },
+    {
+      "plugin": "file-manager",
+      "case": "write 新建文本文件(created=true)",
+      "status": "pass",
+      "detail": "HTTP 200 {'ok': True, 'path': '_fmtest_c_3f2a7273/new.txt', 'size': 49, 'created': True}",
+      "ms": 16.0
+    },
+    {
+      "plugin": "file-manager",
+      "case": "upload 上传 upload.txt",
+      "status": "pass",
+      "detail": "b'{\"ok\":true,\"file\":\"upload.txt\",\"path\":\"_fmtest_c_3f2a7273/upload.txt\",\"size\":27,\"renamed\":false}'",
+      "ms": 16.1
+    },
+    {
+      "plugin": "file-manager",
+      "case": "write 编辑已有文件并保存",
+      "status": "pass",
+      "detail": "{'ok': True, 'path': '_fmtest_c_3f2a7273/new.txt', 'size': 71, 'created': False}",
+      "ms": 18.1
+    },
+    {
+      "plugin": "file-manager",
+      "case": "write 缺 confirm 被拒(403)",
+      "status": "pass",
+      "detail": "HTTP 403",
+      "ms": 27.8
+    },
+    {
+      "plugin": "file-manager",
+      "case": "read 查看内容一致(含中文/Tab/特殊符号)",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 16.0
+    },
+    {
+      "plugin": "file-manager",
+      "case": "read 不存在文件 404",
+      "status": "pass",
+      "detail": "HTTP 404",
+      "ms": 14.7
+    },
+    {
+      "plugin": "file-manager",
+      "case": "list 浏览目录含 new.txt/upload.txt/sub",
+      "status": "pass",
+      "detail": "['sub', 'new.txt', 'upload.txt']",
+      "ms": 16.6
+    },
+    {
+      "plugin": "file-manager",
+      "case": "rename 重命名 new.txt→renamed.txt",
+      "status": "pass",
+      "detail": "{'ok': True, 'from': '_fmtest_c_3f2a7273/new.txt', 'to': 'renamed.txt'}",
+      "ms": 31.7
+    },
+    {
+      "plugin": "file-manager",
+      "case": "rename 后内容保持不变",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 5.2
+    },
+    {
+      "plugin": "file-manager",
+      "case": "rename 含分隔符被拒(400)",
+      "status": "pass",
+      "detail": "HTTP 400",
+      "ms": 20.4
+    },
+    {
+      "plugin": "file-manager",
+      "case": "copy 复制 renamed.txt → sub/",
+      "status": "pass",
+      "detail": "{'ok': True, 'mode': 'copy', 'done': 1, 'failed': 0, 'results': [{'src': '_fmtest_c_3f2a7273/renamed.txt', 'ok': True, 'dest': '_fmtest_c_3f2a7273/sub",
+      "ms": 18.0
+    },
+    {
+      "plugin": "file-manager",
+      "case": "copy 重名自动加后缀(renamed-1.txt)",
+      "status": "pass",
+      "detail": "['_fmtest_c_3f2a7273/sub/renamed-1.txt']",
+      "ms": 14.8
+    },
+    {
+      "plugin": "file-manager",
+      "case": "copy 后缀副本内容一致",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 14.2
+    },
+    {
+      "plugin": "file-manager",
+      "case": "copy 后源文件仍存在",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 15.3
+    },
+    {
+      "plugin": "file-manager",
+      "case": "copy 缺 confirm 被拒(403)",
+      "status": "pass",
+      "detail": "HTTP 403",
+      "ms": 3.3
+    },
+    {
+      "plugin": "file-manager",
+      "case": "move 移动 upload.txt → sub/",
+      "status": "pass",
+      "detail": "{'ok': True, 'mode': 'move', 'done': 1, 'failed': 0, 'results': [{'src': '_fmtest_c_3f2a7273/upload.txt', 'ok': True, 'dest': '_fmtest_c_3f2a7273/sub/",
+      "ms": 4.4
+    },
+    {
+      "plugin": "file-manager",
+      "case": "move 后新位置存在/旧位置消失",
+      "status": "pass",
+      "detail": "200/404",
+      "ms": 5.5
+    },
+    {
+      "plugin": "file-manager",
+      "case": "pack 打包 sub → zip",
+      "status": "pass",
+      "detail": "{'ok': True, 'file': 'sub.zip', 'path': '_fmtest_c_3f2a7273/sub.zip', 'size': 511, 'count': 3}",
+      "ms": 5.1
+    },
+    {
+      "plugin": "file-manager",
+      "case": "pack zip 真实落盘",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "file-manager",
+      "case": "unpack 解压 zip",
+      "status": "pass",
+      "detail": "{'ok': True, 'dir': 'sub-extracted', 'count': 3}",
+      "ms": 26.9
+    },
+    {
+      "plugin": "file-manager",
+      "case": "unpack 产物内容正确",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 28.3
+    },
+    {
+      "plugin": "file-manager",
+      "case": "unpack 非 zip 路径被拒(400)",
+      "status": "pass",
+      "detail": "HTTP 400",
+      "ms": 3.4
+    },
+    {
+      "plugin": "file-manager",
+      "case": "download 下载字节一致",
+      "status": "pass",
+      "detail": "HTTP 200 27B",
+      "ms": 27.3
+    },
+    {
+      "plugin": "file-manager",
+      "case": "download 含 Content-Disposition 附件头",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "file-manager",
+      "case": "dirs 目录树 API 200",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 37.1
+    },
+    {
+      "plugin": "file-manager",
+      "case": "写入 .git 保护目录被拒",
+      "status": "pass",
+      "detail": "HTTP 400",
+      "ms": 3.5
+    },
+    {
+      "plugin": "file-manager",
+      "case": "node_modules 建目录被拒",
+      "status": "pass",
+      "detail": "HTTP 400",
+      "ms": 3.9
+    },
+    {
+      "plugin": "file-manager",
+      "case": ".astro 建目录被拒",
+      "status": "pass",
+      "detail": "HTTP 400",
+      "ms": 15.9
+    },
+    {
+      "plugin": "file-manager",
+      "case": "write 路径穿越 ../../ 被拒",
+      "status": "pass",
+      "detail": "HTTP 400",
+      "ms": 15.2
+    },
+    {
+      "plugin": "file-manager",
+      "case": "read 路径穿越出站点根被拒",
+      "status": "pass",
+      "detail": "HTTP 400",
+      "ms": 16.9
+    },
+    {
+      "plugin": "file-manager",
+      "case": "匿名 list 被拒(401/403/302)",
+      "status": "pass",
+      "detail": "302",
+      "ms": 0
+    },
+    {
+      "plugin": "file-manager",
+      "case": "delete 缺 confirm 被拒(403)",
+      "status": "pass",
+      "detail": "HTTP 403",
+      "ms": 3.9
+    },
+    {
+      "plugin": "file-manager",
+      "case": "delete 删除单文件",
+      "status": "pass",
+      "detail": "{'ok': True, 'deleted': ['_fmtest_c_3f2a7273/sub/upload.txt'], 'errors': []}",
+      "ms": 28.0
+    },
+    {
+      "plugin": "file-manager",
+      "case": "delete 后文件 404",
+      "status": "pass",
+      "detail": "HTTP 404",
+      "ms": 16.6
+    },
+    {
+      "plugin": "file-manager",
+      "case": "递归删除沙箱目录",
+      "status": "pass",
+      "detail": "{'ok': True, 'deleted': ['_fmtest_c_3f2a7273'], 'errors': []}",
+      "ms": 18.9
+    },
+    {
+      "plugin": "file-manager",
+      "case": "沙箱删除后 list 404",
+      "status": "pass",
+      "detail": "HTTP 404",
+      "ms": 27.1
+    },
+    {
+      "plugin": "gitalk-comment",
+      "case": "管理页 /admin-ext/gitalk 200",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 24.9
+    },
+    {
+      "plugin": "gitalk-comment",
+      "case": "GET 设置 200 且 clientSecret 已掩码",
+      "status": "pass",
+      "detail": "HTTP 200 keys=['enabled', 'clientID', 'clientSecret', 'repo', 'owner', 'admin']",
+      "ms": 15.2
+    },
+    {
+      "plugin": "gitalk-comment",
+      "case": "POST 设置保存，响应 clientSecret 掩码",
+      "status": "pass",
+      "detail": "HTTP 200 {'ok': True, 'settings': {'enabled': True, 'clientID': 'c-round-client-id', 'clientSecret': '••••••••', 'repo': 'blog-comments', 'owner': 'o",
+      "ms": 56.2
+    },
+    {
+      "plugin": "gitalk-comment",
+      "case": "设置往返一致(clientID/repo/owner)",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 20.6
+    },
+    {
+      "plugin": "gitalk-comment",
+      "case": "掩码 secret 提交返回 200",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 15.5
+    },
+    {
+      "plugin": "gitalk-comment",
+      "case": "启用后文章页注入 gitalk-container",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 28.3
+    },
+    {
+      "plugin": "gitalk-comment",
+      "case": "注入配置含 clientID 与 gitalk@1 CDN",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "gitalk-comment",
+      "case": "注入配置含原 secret(证明掩码未覆盖旧值)",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "gitalk-comment",
+      "case": "跨域 Origin POST 被拒(403)",
+      "status": "pass",
+      "detail": "HTTP 403",
+      "ms": 4.6
+    },
+    {
+      "plugin": "gitalk-comment",
+      "case": "匿名 GET 设置被拒(401/302)",
+      "status": "pass",
+      "detail": "302",
+      "ms": 0
+    },
+    {
+      "plugin": "gitalk-comment",
+      "case": "禁用后文章页不注入 gitalk-container",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 35.6
+    },
+    {
+      "plugin": "gitalk-comment",
+      "case": "还原原始设置(含 secret)",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 0
+    },
+    {
+      "plugin": "static-html",
+      "case": "管理页 /admin-ext/static-html 200",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 50.6
+    },
+    {
+      "plugin": "static-html",
+      "case": "GET status 200 含 state/runs",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 29.6
+    },
+    {
+      "plugin": "static-html",
+      "case": "GET settings 200 含 outputDir/schedule",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 5.9
+    },
+    {
+      "plugin": "static-html",
+      "case": "匿名 GET status 被拒",
+      "status": "pass",
+      "detail": "302",
+      "ms": 0
+    },
+    {
+      "plugin": "security",
+      "case": "file-manager write 畸形 JSON 返回 400",
+      "status": "pass",
+      "detail": "HTTP 400",
+      "ms": 4.2
+    },
+    {
+      "plugin": "security",
+      "case": "gitalk settings 畸形 JSON 返回 400",
+      "status": "pass",
+      "detail": "HTTP 400",
+      "ms": 5.3
+    },
+    {
+      "plugin": "security",
+      "case": "file-manager XSS 文件名被拒(400/415)",
+      "status": "pass",
+      "detail": "HTTP 400",
+      "ms": 15.4
+    },
+    {
+      "plugin": "security",
+      "case": "mkdir 路径穿越 ../../../ 返回 400",
+      "status": "pass",
+      "detail": "HTTP 400",
+      "ms": 6.8
+    },
+    {
+      "plugin": "security",
+      "case": "未登录访问插件管理 API 被拒(401/302)",
+      "status": "pass",
+      "detail": "302",
+      "ms": 0
+    },
+    {
+      "plugin": "security",
+      "case": "未登录访问主题列表 API 被拒(401/302)",
+      "status": "pass",
+      "detail": "302",
+      "ms": 0
+    },
+    {
+      "plugin": "security",
+      "case": "评论提交畸形 JSON 不 5xx(400/422)",
+      "status": "pass",
+      "detail": "HTTP 400",
+      "ms": 4.1
+    },
+    {
+      "plugin": "themes",
+      "case": "GET /api/themes 200 返回主题列表",
+      "status": "pass",
+      "detail": "HTTP 200 count=11",
+      "ms": 8.1
+    },
+    {
+      "plugin": "themes",
+      "case": "列表含 10 个移植主题",
+      "status": "pass",
+      "detail": "[]",
+      "ms": 0
+    },
+    {
+      "plugin": "themes",
+      "case": "base-theme 存在(供还原)",
+      "status": "pass",
+      "detail": "",
+      "ms": 0
+    },
+    {
+      "plugin": "themes",
+      "case": "激活 Stack",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 420.9
+    },
+    {
+      "plugin": "themes",
+      "case": "Stack 页面渲染(/ 与 /pv-tips 200 + primary 色 + article/post-content)",
+      "status": "pass",
+      "detail": "/:http=200,color=True; /pv-tips:http=200,color=True; article=True",
+      "ms": 0
+    },
+    {
+      "plugin": "themes",
+      "case": "激活 Ayer",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 339.4
+    },
+    {
+      "plugin": "themes",
+      "case": "Ayer 页面渲染(/ 与 /pv-tips 200 + primary 色 + article/post-content)",
+      "status": "pass",
+      "detail": "/:http=200,color=True; /pv-tips:http=200,color=True; article=True",
+      "ms": 0
+    },
+    {
+      "plugin": "themes",
+      "case": "激活 Butterfly",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 162.3
+    },
+    {
+      "plugin": "themes",
+      "case": "Butterfly 页面渲染(/ 与 /pv-tips 200 + primary 色 + article/post-content)",
+      "status": "pass",
+      "detail": "/:http=200,color=True; /pv-tips:http=200,color=True; article=True",
+      "ms": 0
+    },
+    {
+      "plugin": "themes",
+      "case": "激活 Fluid",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 120.4
+    },
+    {
+      "plugin": "themes",
+      "case": "Fluid 页面渲染(/ 与 /pv-tips 200 + primary 色 + article/post-content)",
+      "status": "pass",
+      "detail": "/:http=200,color=True; /pv-tips:http=200,color=True; article=True",
+      "ms": 0
+    },
+    {
+      "plugin": "themes",
+      "case": "激活 Icarus",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 177.5
+    },
+    {
+      "plugin": "themes",
+      "case": "Icarus 页面渲染(/ 与 /pv-tips 200 + primary 色 + article/post-content)",
+      "status": "pass",
+      "detail": "/:http=200,color=True; /pv-tips:http=200,color=True; article=True",
+      "ms": 0
+    },
+    {
+      "plugin": "themes",
+      "case": "激活 Keep",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 150.0
+    },
+    {
+      "plugin": "themes",
+      "case": "Keep 页面渲染(/ 与 /pv-tips 200 + primary 色 + article/post-content)",
+      "status": "pass",
+      "detail": "/:http=200,color=True; /pv-tips:http=200,color=True; article=True",
+      "ms": 0
+    },
+    {
+      "plugin": "themes",
+      "case": "激活 MengD",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 922.5
+    },
+    {
+      "plugin": "themes",
+      "case": "MengD 页面渲染(/ 与 /pv-tips 200 + primary 色 + article/post-content)",
+      "status": "pass",
+      "detail": "/:http=200,color=True; /pv-tips:http=200,color=True; article=True",
+      "ms": 0
+    },
+    {
+      "plugin": "themes",
+      "case": "激活 NexT",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 491.2
+    },
+    {
+      "plugin": "themes",
+      "case": "NexT 页面渲染(/ 与 /pv-tips 200 + primary 色 + article/post-content)",
+      "status": "pass",
+      "detail": "/:http=200,color=True; /pv-tips:http=200,color=True; article=True",
+      "ms": 0
+    },
+    {
+      "plugin": "themes",
+      "case": "激活 Redefine",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 154.3
+    },
+    {
+      "plugin": "themes",
+      "case": "Redefine 页面渲染(/ 与 /pv-tips 200 + primary 色 + article/post-content)",
+      "status": "pass",
+      "detail": "/:http=200,color=True; /pv-tips:http=200,color=True; article=True",
+      "ms": 0
+    },
+    {
+      "plugin": "themes",
+      "case": "激活 Volantis",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 61.3
+    },
+    {
+      "plugin": "themes",
+      "case": "Volantis 页面渲染(/ 与 /pv-tips 200 + primary 色 + article/post-content)",
+      "status": "pass",
+      "detail": "/:http=200,color=True; /pv-tips:http=200,color=True; article=True",
+      "ms": 0
+    },
+    {
+      "plugin": "themes",
+      "case": "还原激活 base-theme",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "ms": 89.7
+    },
+    {
+      "plugin": "themes",
+      "case": "base-theme 还原后页面渲染正常",
+      "status": "pass",
+      "detail": "/:http=200,color=True; /pv-tips:http=200,color=True; article=True",
+      "ms": 0
+    }
+  ],
+  "summary": {
+    "total": 359,
+    "pass": 359,
+    "fail": 0,
+    "warn": 0
+  }
+}

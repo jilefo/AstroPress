@@ -1,0 +1,26 @@
+{
+  "name": "Redefine",
+  "version": "2.9.0",
+  "description": "Hexo theme Redefine ported to AstroPress — modern cards, large radius, soft shadows, Geist font",
+  "author": "Evan (ported)",
+  "tokens": {
+    "fonts": {
+      "body": "'Geist Variable', 'Geist', 'Noto Sans SC', -apple-system, system-ui, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif",
+      "heading": "'Geist Variable', 'Geist', 'Noto Sans SC', -apple-system, system-ui, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif"
+    },
+    "spacing": {
+      "sectionY": "38px",
+      "borderRadius": "18px",
+      "containerMax": "1000px"
+    },
+    "colors": {
+      "textMuted": "#667275",
+      "surface": "#ffffff",
+      "background": "#ffffff",
+      "secondary": "#a31f34",
+      "border": "rgba(0,0,0,0.08)",
+      "text": "#373d3f",
+      "primary": "#a31f34"
+    }
+  }
+}

@@ -1,0 +1,234 @@
+/* >>> ap-fonts >>> */
+/* 主题声明的 Web 字体。AstroPress 不会注入字体 <link>，只能由主题 CSS 自行 @import。
+   字体源为 fonts.loli.net（Google Fonts 国内镜像，海外同样可访问）；
+   如需官方源把域名改回 fonts.googleapis.com 即可；完全离线时删除本区块则回退系统字体。 */
+@import url("https://fonts.loli.net/css2?family=Geist:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap");
+/* <<< ap-fonts <<< */
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Hexo Theme Redefine — AstroPress 移植版
+   设计语言来源：hexo-theme-redefine v2.9.0（source/css/common/variables.styl）
+     · 页面底色 #ffffff（源码 background 纯白；#fafafa/#f7f7f7 为次级/三级底），白色卡片 + 18px 大圆角
+     · 主题色 #a31f34（源码 _config.yml 定制 Crimson；代码默认 #0066cc），柔和阴影（0px 6px 24px）
+     · 正文 16px / 1.5 行高，Geist Variable + Noto Sans SC 字体栈（variables.styl $default-font-family）
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --redefine-bg: #ffffff;
+  --redefine-card: #ffffff;
+  --redefine-accent: #a31f34;
+  --redefine-accent-darker: #781726;
+  --redefine-text: #373d3f;
+  --redefine-text-secondary: #373d3f;
+  --redefine-text-muted: #667275;
+  --redefine-border: rgba(0, 0, 0, 0.08);
+  --redefine-radius: 18px;
+  --redefine-radius-medium: 14px;
+  --redefine-radius-small: 9px;
+  --redefine-shadow: 0 6px 24px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.08);
+  --redefine-shadow-hover: 0 6px 24px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.12);
+  --redefine-blockquote-bg: #f7f7f7;
+  --redefine-code-color: #24292e;
+  --redefine-code-bg: #f1f1f1;
+  --redefine-pre-bg: #f8f8f8;
+  --redefine-table-border: #e8e8e8;
+  --redefine-tr-even: #fafafa;
+}
+
+/* ── 基础 ─────────────────────────────────────────────────────────── */
+html { scroll-behavior: smooth; }
+body { background: var(--redefine-bg) !important; font-size: 16px; }
+
+::selection { background: var(--redefine-accent); color: #fff; }
+
+.site-wrapper { max-width: 1000px; }
+.site-main { padding: 38px 0; }
+
+/* ── 顶部导航 ─────────────────────────────────────────────────────── */
+.site-header {
+  background: var(--redefine-card);
+  border-bottom: none;
+  box-shadow: var(--redefine-shadow);
+  height: auto;
+  min-height: 70px;
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  border-radius: 0 0 var(--redefine-radius) var(--redefine-radius);
+}
+.site-header .site-wrapper { padding: 14px 24px; }
+.site-branding a {
+  color: var(--redefine-text) !important;
+  font-weight: 700;
+  font-size: 1.5rem;
+  letter-spacing: 0.01em;
+}
+.site-branding a:hover { opacity: 0.8; }
+.site-description { color: var(--redefine-text-muted); font-size: 0.85rem; }
+.site-nav a {
+  color: var(--redefine-text-secondary);
+  padding: 8px 14px;
+  border-radius: var(--redefine-radius-small);
+  font-size: 0.95rem;
+  transition: color 0.3s ease, background-color 0.3s ease;
+}
+.site-nav a:hover { color: var(--redefine-accent); background: rgba(163, 31, 52, 0.06); }
+
+/* ── 文章列表：大圆角卡片 ─────────────────────────────────────────── */
+.post-list { display: flex; flex-direction: column; gap: 30px; }
+.post-list-item {
+  background: var(--redefine-card);
+  border: none;
+  border-radius: var(--redefine-radius);
+  box-shadow: var(--redefine-shadow);
+  padding: 30px;
+  transition: box-shadow 0.3s ease;
+}
+.post-list-item:first-child { padding-top: 30px; }
+.post-list-item:hover { box-shadow: var(--redefine-shadow-hover); }
+.post-list-item h2 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.post-list-item h2 a { color: var(--redefine-text) !important; text-decoration: none; }
+.post-list-item h2 a:hover { color: var(--redefine-accent) !important; }
+.post-meta { color: var(--redefine-text-muted); font-size: 0.85rem; }
+.post-excerpt { color: var(--redefine-text-secondary); font-size: 1rem; line-height: 1.5; }
+.read-more {
+  color: var(--redefine-accent);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+.read-more:hover { color: var(--redefine-accent-darker); }
+
+/* ── 单篇文章：整页白卡 ───────────────────────────────────────────── */
+main .site-wrapper > article {
+  background: var(--redefine-card);
+  border-radius: var(--redefine-radius);
+  box-shadow: var(--redefine-shadow);
+  padding: 36px;
+  overflow: hidden;
+}
+.post-header h1 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: var(--redefine-text);
+  line-height: 1.4;
+}
+.post-header .post-meta { margin: 0; }
+
+.post-content {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--redefine-text);
+}
+.post-content h1, .post-content h2, .post-content h3,
+.post-content h4, .post-content h5, .post-content h6 {
+  font-weight: 600;
+  color: var(--redefine-text);
+}
+.post-content a {
+  color: var(--redefine-accent);
+  text-decoration: none;
+  transition: color 0.3s ease;
+  word-break: break-word;
+}
+.post-content a:hover { color: var(--redefine-accent-darker); text-decoration: underline; }
+.post-content blockquote {
+  margin: 1.5rem 0;
+  padding: 14px 18px;
+  border-left: 5px solid var(--redefine-text);
+  background: var(--redefine-blockquote-bg);
+  color: var(--redefine-text-secondary);
+  border-radius: 0 var(--redefine-radius-medium) var(--redefine-radius-medium) 0;
+}
+.post-content pre {
+  background: var(--redefine-pre-bg);
+  border-radius: var(--redefine-radius-small);
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  font-size: 0.875rem;
+}
+.post-content code {
+  background: var(--redefine-code-bg);
+  color: var(--redefine-code-color);
+  padding: 3px 4px;
+  border-radius: 4px;
+  font-size: 0.875em;
+}
+.post-content pre code { background: none; color: inherit; padding: 0; }
+.post-content img { border-radius: var(--redefine-radius-medium); }
+.post-content table { border-collapse: collapse; width: 100%; margin: 1.5rem 0; }
+.post-content th, .post-content td { border: 1px solid var(--redefine-table-border); padding: 8px 12px; }
+.post-content tr:nth-child(even) { background: var(--redefine-tr-even); }
+
+/* ── 分页：大圆角卡片 ─────────────────────────────────────────────── */
+.pagination { gap: 8px; margin-top: 36px; }
+.pagination a, .pagination span {
+  background: var(--redefine-card);
+  border: none;
+  border-radius: var(--redefine-radius-small);
+  box-shadow: var(--redefine-shadow);
+  color: var(--redefine-text-secondary);
+  padding: 8px 16px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+.pagination a:hover { box-shadow: var(--redefine-shadow-hover); color: var(--redefine-accent); }
+.pagination .current { background: var(--redefine-accent); color: #fff; }
+
+/* ── 页脚 ─────────────────────────────────────────────────────────── */
+.site-footer {
+  border-top: none;
+  color: var(--redefine-text-muted);
+  font-size: 0.85rem;
+}
+.site-footer a { color: var(--redefine-accent); }
+
+/* ── 404 ──────────────────────────────────────────────────────────── */
+.not-found h1 { color: var(--redefine-border); }
+
+/* ── 返回链接 ─────────────────────────────────────────────────────── */
+main .site-wrapper > nav {
+  border-top: none !important;
+  background: var(--redefine-card);
+  border-radius: var(--redefine-radius);
+  box-shadow: var(--redefine-shadow);
+  padding: 16px 30px !important;
+  margin-top: 36px !important;
+}
+main .site-wrapper > nav a { color: var(--redefine-accent); text-decoration: none; }
+main .site-wrapper > nav a:hover { color: var(--redefine-accent-darker); }
+
+/* ── 响应式 ───────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .post-list { gap: 20px; }
+  .post-list-item { padding: 22px; }
+  .site-main { padding: 24px 0; }
+}
+
+/* >>> ap-adapter >>> */
+/* 块渲染页头适配：当模板槽位输出 .ap-block-nav 时套用本主题设计语言 */
+.ap-block-nav {
+  position: sticky; top: 0; z-index: 90;
+  border-bottom: none !important;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+}
+.ap-block-nav > a { color: #373d3f !important; }
+.ap-block-nav nav ul li a {
+  border-radius: 18px;
+  transition: color 0.3s ease, background-color 0.3s ease;
+}
+.ap-block-nav nav ul li a:hover {
+  color: #a31f34 !important;
+  background: #ffffff;
+}
+@media (max-width: 640px) {
+  .ap-block-nav { height: auto !important; min-height: 56px; flex-wrap: wrap; padding: 8px 20px !important; row-gap: 4px; }
+  .ap-block-nav nav { width: 100%; }
+  .ap-block-nav nav ul { flex-wrap: wrap; }
+}
+/* <<< ap-adapter <<< */

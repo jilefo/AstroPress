@@ -1,0 +1,26 @@
+{
+  "name": "Argon Modern",
+  "version": "1.0.0",
+  "description": "Modern dual-column blog theme with Argon design system",
+  "author": "solstice23",
+  "tokens": {
+    "fonts": {
+      "body": "'Open Sans', -apple-system, sans-serif",
+      "heading": "'Open Sans', -apple-system, sans-serif"
+    },
+    "spacing": {
+      "sectionY": "48px",
+      "borderRadius": "8px",
+      "containerMax": "1200px"
+    },
+    "colors": {
+      "textMuted": "#607286",
+      "surface": "#f4f5f7",
+      "background": "#ffffff",
+      "secondary": "#e30000",
+      "border": "#e8e8e8",
+      "text": "#32325d",
+      "primary": "#4e64e1"
+    }
+  }
+}

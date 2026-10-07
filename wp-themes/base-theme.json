@@ -1,0 +1,83 @@
+{
+  "format": "astropress-theme",
+  "version": "1.0",
+  "name": "Base Theme",
+  "description": "A clean, minimal starter theme — edit to make it yours",
+  "author": "AstroPress",
+  "tokens": {
+    "colors": {
+      "primary": "#2271b1",
+      "secondary": "#7c3aed",
+      "background": "#ffffff",
+      "surface": "#f8f9fa",
+      "text": "#212529",
+      "textMuted": "#6c757d",
+      "border": "#e9ecef"
+    },
+    "fonts": {
+      "heading": "system-ui, -apple-system, sans-serif",
+      "body": "system-ui, -apple-system, sans-serif"
+    },
+    "spacing": {
+      "sectionY": "5rem",
+      "containerMax": "1200px",
+      "borderRadius": "0.5rem"
+    }
+  },
+  "templates": [
+    {
+      "id": "5l0xpvkwe93qekqc",
+      "name": "Header 1",
+      "type": "header",
+      "conditions": [
+        {
+          "rule": "entire_site"
+        }
+      ],
+      "schemaSlug": "__header_5l0xpvkwe93qekqc__",
+      "createdAt": "2026-09-10T02:08:33.151Z",
+      "updatedAt": "2026-09-10T02:08:33.151Z"
+    },
+    {
+      "id": "jez2v8octeo3xpeh",
+      "name": "Footer 1",
+      "type": "footer",
+      "conditions": [
+        {
+          "rule": "entire_site"
+        }
+      ],
+      "schemaSlug": "__footer_jez2v8octeo3xpeh__",
+      "createdAt": "2026-09-10T02:08:33.151Z",
+      "updatedAt": "2026-09-10T02:08:33.151Z"
+    }
+  ],
+  "schemas": {
+    "__header_5l0xpvkwe93qekqc__": {
+      "version": 1,
+      "blocks": [
+        {
+          "id": "yk4xq6dorwnmwu3y",
+          "type": "nav",
+          "props": {
+            "logoText": "AstroPress",
+            "align": "right"
+          }
+        }
+      ]
+    },
+    "__footer_jez2v8octeo3xpeh__": {
+      "version": 1,
+      "blocks": [
+        {
+          "id": "n2fue9sly129mhhb",
+          "type": "html",
+          "props": {
+            "content": "<footer style=\"background:#1d2327;color:#a7aaad;padding:48px 24px;text-align:center\"><div style=\"max-width:1200px;margin:0 auto\"><div style=\"display:flex;justify-content:center;gap:24px;flex-wrap:wrap;margin-bottom:24px\"><a href=\"/\" style=\"color:#a7aaad;text-decoration:none\">Home</a><a href=\"/blog\" style=\"color:#a7aaad;text-decoration:none\">Blog</a><a href=\"/about\" style=\"color:#a7aaad;text-decoration:none\">About</a><a href=\"/contact\" style=\"color:#a7aaad;text-decoration:none\">Contact</a></div><p style=\"margin:0;font-size:13px\">© 2026 Your Site. Built with AstroPress.</p></div></footer>"
+          }
+        }
+      ]
+    }
+  },
+  "exportedAt": "2026-09-10T02:08:35.049Z"
+}

@@ -1,0 +1,236 @@
+/* >>> ap-fonts >>> */
+/* 主题声明的 Web 字体。AstroPress 不会注入字体 <link>，只能由主题 CSS 自行 @import。
+   字体源为 fonts.loli.net（Google Fonts 国内镜像，海外同样可访问）；
+   如需官方源把域名改回 fonts.googleapis.com 即可；完全离线时删除本区块则回退系统字体。 */
+@import url("https://fonts.loli.net/css2?family=Lato:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap");
+/* <<< ap-fonts <<< */
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Hugo Theme Stack — AstroPress 移植版
+   设计语言来源：hugo-theme-stack v4.0.3（assets/scss/variables.scss）
+     · 页面底色 #f5f5fa，白色卡片 + 10px 圆角 + 双层柔和阴影
+     · 强调色 #34495e（深石灰蓝），链接带浅灰底色高亮下划线
+     · 正文 1.05rem / 1.85 行高，标题 600 字重
+     · 标签/分类为强调色胶囊
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --stack-bg: #f5f5fa;
+  --stack-card: #ffffff;
+  --stack-card-selected: #eaeaea;
+  --stack-accent: #34495e;
+  --stack-accent-darker: #2c3e50;
+  --stack-text-main: #000000;
+  --stack-text-secondary: #747474;
+  --stack-text-tertiary: #767676;
+  --stack-body-text: #707070;
+  --stack-separator: rgba(218, 218, 218, 0.5);
+  --stack-radius: 10px;
+  --stack-tag-radius: 4px;
+  --stack-shadow-l1: 0px 4px 8px rgba(0, 0, 0, 0.04), 0px 0px 2px rgba(0, 0, 0, 0.06), 0px 0px 1px rgba(0, 0, 0, 0.04);
+  --stack-shadow-l2: 0px 10px 20px rgba(0, 0, 0, 0.04), 0px 2px 6px rgba(0, 0, 0, 0.04), 0px 0px 1px rgba(0, 0, 0, 0.04);
+  --stack-link-bg: rgba(189, 195, 199, 0.5);
+  --stack-link-bg-hover: rgba(189, 195, 199, 0.7);
+  --stack-blockquote-bg: rgb(248, 248, 248);
+  --stack-code-bg: rgba(0, 0, 0, 0.12);
+  --stack-pre-bg: #fafafa;
+  --stack-table-border: #dadada;
+  --stack-tr-even: #efefee;
+}
+
+/* ── 基础 ─────────────────────────────────────────────────────────── */
+html { scroll-behavior: smooth; }
+body { background: var(--stack-bg) !important; }
+
+::selection { background: var(--stack-accent); color: #fff; }
+
+.site-wrapper { max-width: 1024px; }
+.site-main { padding: 35px 0; }
+
+/* ── 顶部导航（对应 Stack 左侧栏在窄屏下的顶部折叠形态） ───────────── */
+.site-header {
+  background: var(--stack-card);
+  border-bottom: none;
+  box-shadow: var(--stack-shadow-l1);
+  height: auto;
+  min-height: 60px;
+  position: sticky;
+  top: 0;
+  z-index: 90;
+}
+.site-header .site-wrapper { padding: 10px 20px; }
+.site-branding a {
+  color: var(--stack-text-main) !important;
+  font-weight: 700;
+  font-size: 1.5rem;
+  letter-spacing: 0.01em;
+}
+.site-branding a:hover { opacity: 0.8; }
+.site-description { color: var(--stack-text-secondary); font-size: 0.85rem; }
+.site-nav a {
+  color: var(--stack-body-text);
+  padding: 8px 16px;
+  border-radius: var(--stack-tag-radius);
+  font-size: 0.95rem;
+  transition: color 0.3s ease, background-color 0.3s ease;
+}
+.site-nav a:hover { color: var(--stack-accent); background: var(--stack-bg); }
+
+/* ── 文章列表：白色卡片流（.article-list） ────────────────────────── */
+.post-list { display: flex; flex-direction: column; gap: 40px; }
+.post-list-item {
+  background: var(--stack-card);
+  border: none;
+  border-radius: var(--stack-radius);
+  box-shadow: var(--stack-shadow-l1);
+  padding: 30px;
+  transition: box-shadow 0.3s ease;
+}
+.post-list-item:first-child { padding-top: 30px; }
+.post-list-item:hover { box-shadow: var(--stack-shadow-l2); }
+.post-list-item h2 {
+  font-size: clamp(1.4rem, 3vw, 1.9rem);
+  font-weight: 600;
+  line-height: 1.3;
+}
+.post-list-item h2 a { color: var(--stack-text-main) !important; text-decoration: none; }
+.post-list-item h2 a:hover { color: var(--stack-text-main) !important; opacity: 0.8; }
+.post-meta { color: var(--stack-text-tertiary); font-size: 0.875rem; }
+.post-excerpt { color: var(--stack-text-secondary); font-size: 1rem; line-height: 1.6; }
+.read-more {
+  color: var(--stack-accent);
+  text-decoration: none;
+  box-shadow: 0px -2px 0px var(--stack-link-bg) inset;
+  transition: box-shadow 0.3s ease;
+}
+.read-more:hover { color: var(--stack-accent-darker); box-shadow: 0px -1.1em 0px var(--stack-link-bg-hover) inset; }
+
+/* ── 单篇文章：整页白卡 ───────────────────────────────────────────── */
+main .site-wrapper > article {
+  background: var(--stack-card);
+  border-radius: var(--stack-radius);
+  box-shadow: var(--stack-shadow-l1);
+  padding: clamp(20px, 5vw, 40px);
+  overflow: hidden;
+}
+.post-header h1 {
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+  font-weight: 600;
+  color: var(--stack-text-main);
+  line-height: 1.3;
+}
+.post-header .post-meta { margin: 0; }
+
+.post-content {
+  font-size: 1.05rem;
+  line-height: 1.85;
+  color: var(--stack-text-main);
+}
+.post-content h1, .post-content h2, .post-content h3,
+.post-content h4, .post-content h5, .post-content h6 {
+  font-weight: 600;
+  color: var(--stack-text-main);
+}
+.post-content a {
+  color: var(--stack-accent);
+  text-decoration: none;
+  box-shadow: 0px -2px 0px var(--stack-link-bg) inset;
+  transition: box-shadow 0.3s ease;
+  word-break: break-word;
+}
+.post-content a:hover { color: var(--stack-accent-darker); box-shadow: 0px -1.1em 0px var(--stack-link-bg-hover) inset; }
+.post-content blockquote {
+  margin: 1.5rem 0;
+  padding: 1rem 1.25rem;
+  border-left: 4px solid var(--stack-separator);
+  background: var(--stack-blockquote-bg);
+  color: var(--stack-text-secondary);
+  border-radius: 0 var(--stack-tag-radius) var(--stack-tag-radius) 0;
+}
+.post-content pre {
+  background: var(--stack-pre-bg);
+  border-radius: var(--stack-radius);
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  font-size: 0.875rem;
+}
+.post-content code {
+  background: var(--stack-code-bg);
+  color: #808080;
+  padding: 2px 6px;
+  border-radius: var(--stack-tag-radius);
+  font-size: 0.875em;
+}
+.post-content pre code { background: none; color: inherit; padding: 0; }
+.post-content img { border-radius: var(--stack-radius); }
+.post-content table { border-collapse: collapse; width: 100%; margin: 1.5rem 0; }
+.post-content th, .post-content td { border: 1px solid var(--stack-table-border); padding: 8px 12px; }
+.post-content tr:nth-child(even) { background: var(--stack-tr-even); }
+
+/* ── 分页：白色卡片胶囊 ───────────────────────────────────────────── */
+.pagination { gap: 10px; margin-top: 40px; }
+.pagination a, .pagination span {
+  background: var(--stack-card);
+  border: none;
+  border-radius: var(--stack-radius);
+  box-shadow: var(--stack-shadow-l1);
+  color: var(--stack-body-text);
+  padding: 8px 16px;
+  font-weight: 600;
+  transition: box-shadow 0.3s ease, color 0.3s ease;
+}
+.pagination a:hover { box-shadow: var(--stack-shadow-l2); color: var(--stack-accent); }
+.pagination .current { background: var(--stack-accent); color: #fff; }
+
+/* ── 页脚 ─────────────────────────────────────────────────────────── */
+.site-footer {
+  border-top: none;
+  color: var(--stack-body-text);
+  font-size: 0.85rem;
+}
+.site-footer a { color: var(--stack-accent); }
+
+/* ── 404 ──────────────────────────────────────────────────────────── */
+.not-found h1 { color: var(--stack-separator); }
+
+/* ── 返回链接（blog/[slug].astro 底部 nav） ───────────────────────── */
+main .site-wrapper > nav {
+  border-top: none !important;
+  background: var(--stack-card);
+  border-radius: var(--stack-radius);
+  box-shadow: var(--stack-shadow-l1);
+  padding: 16px 30px !important;
+  margin-top: 40px !important;
+}
+main .site-wrapper > nav a { color: var(--stack-accent); text-decoration: none; }
+main .site-wrapper > nav a:hover { color: var(--stack-accent-darker); }
+
+/* ── 响应式 ───────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .post-list { gap: 24px; }
+  .post-list-item { padding: 20px; }
+  .site-main { padding: 20px 0; }
+}
+
+/* >>> ap-adapter >>> */
+/* 块渲染页头适配：当模板槽位输出 .ap-block-nav 时套用本主题设计语言 */
+.ap-block-nav {
+  position: sticky; top: 0; z-index: 90;
+  border-bottom: none !important;
+  box-shadow: 0px 4px 8px rgba(0,0,0,0.04), 0px 0px 2px rgba(0,0,0,0.06);
+}
+.ap-block-nav > a { color: #1a1a1a !important; }
+.ap-block-nav nav ul li a {
+  border-radius: 10px;
+  transition: color 0.3s ease, background-color 0.3s ease;
+}
+.ap-block-nav nav ul li a:hover {
+  color: #34495e !important;
+  background: #ffffff;
+}
+@media (max-width: 640px) {
+  .ap-block-nav { height: auto !important; min-height: 56px; flex-wrap: wrap; padding: 8px 20px !important; row-gap: 4px; }
+  .ap-block-nav nav { width: 100%; }
+  .ap-block-nav nav ul { flex-wrap: wrap; }
+}
+/* <<< ap-adapter <<< */

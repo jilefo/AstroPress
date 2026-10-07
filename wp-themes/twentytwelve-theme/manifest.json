@@ -1,0 +1,26 @@
+{
+  "name": "Twenty Twelve",
+  "version": "3.0.0",
+  "description": "Classic WordPress blog theme with Open Sans typography",
+  "author": "WordPress Team",
+  "tokens": {
+    "fonts": {
+      "body": "'Open Sans', -apple-system, sans-serif",
+      "heading": "'Open Sans', -apple-system, sans-serif"
+    },
+    "spacing": {
+      "sectionY": "48px",
+      "borderRadius": "0px",
+      "containerMax": "960px"
+    },
+    "colors": {
+      "textMuted": "#6e6e6e",
+      "surface": "#f1f1f1",
+      "background": "#ffffff",
+      "secondary": "#40748d",
+      "border": "#e0e0e0",
+      "text": "#444444",
+      "primary": "#21759b"
+    }
+  }
+}

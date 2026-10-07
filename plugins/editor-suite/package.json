@@ -1,0 +1,27 @@
+{
+    "name":  "@astropress/plugin-editor-suite",
+    "version":  "1.0.0",
+    "private":  true,
+    "type":  "module",
+    "description":  "合并套件：编辑器上传增强 · 排版与中英互译 · 外链图片镜像 · 音视频上传插入 · WordPress风格编辑器",
+    "exports":  {
+                    ".":  "./src/index.ts",
+                    "./integration":  "./src/integration.ts"
+                },
+    "scripts":  {
+                    "typecheck":  "tsc --noEmit"
+                },
+    "dependencies":  {
+                         "@astropress/core":  "workspace:*",
+                         "@astropress/plugin-editor-upload":  "workspace:*",
+                         "@astropress/plugin-editor-tools":  "workspace:*",
+                         "@astropress/plugin-image-mirror":  "workspace:*",
+                         "@astropress/plugin-media-av":  "workspace:*",
+                         "@astropress/plugin-wp-editor":  "workspace:*"
+                     },
+    "devDependencies":  {
+                            "astro":  "^4.0.0",
+                            "typescript":  "^5.4.0",
+                            "@cloudflare/workers-types":  "^4.0.0"
+                        }
+}

@@ -1,0 +1,83 @@
+---
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+---
+<AdminLayout title="两步验证">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+    <h1 class="wp-heading-inline">两步验证 (2FA)</h1>
+  </div>
+  <hr class="wp-header-end" />
+
+  <div id="2fa-status" class="postbox" style="max-width:600px">
+    <div class="postbox-inside" style="padding:16px 20px">
+      <p style="margin:0 0 12px;font-size:13px">加载中...</p>
+    </div>
+  </div>
+
+  <div id="2fa-setup" class="postbox" style="max-width:600px;margin-top:16px;display:none">
+    <div class="postbox-header"><h2 class="postbox-title">设置两步验证</h2></div>
+    <div class="postbox-inside">
+      <p style="font-size:13px;margin:0 0 12px">
+        1. 点击下方按钮生成密钥<br/>
+        2. 使用身份验证器应用（Google Authenticator / Microsoft Authenticator）扫描二维码<br/>
+        3. 输入验证器显示的 6 位数字确认
+      </p>
+      <button id="2fa-generate" class="button">生成密钥</button>
+      <div id="2fa-qr" style="margin-top:16px;display:none">
+        <div id="2fa-qr-img" style="margin-bottom:12px"></div>
+        <p style="font-size:12px;color:#646970;margin:0 0 8px">
+          密钥：<code id="2fa-secret" style="font-size:13px;background:#f0f0f1;padding:2px 6px;border-radius:2px"></code>
+        </p>
+        <input id="2fa-code" type="text" class="wp-input" placeholder="输入 6 位验证码" maxlength="6" style="width:200px;margin-bottom:8px" />
+        <button id="2fa-confirm" class="button-primary">确认启用</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function loadStatus() {
+      fetch('/admin-ext/api/2fa/status')
+        .then(r => r.json())
+        .then(d => {
+          const el = document.getElementById('2fa-status');
+          if (d.enabled) {
+            el.innerHTML = '<div class="postbox-inside" style="padding:16px 20px"><p style="margin:0 0 12px;font-size:13px;color:#00a32a"><strong>&#10003; 两步验证已启用</strong></p><button id="2fa-disable" class="button-link-delete">禁用两步验证</button></div>';
+            document.getElementById('2fa-disable').addEventListener('click', () => {
+              if (!confirm('确定禁用两步验证？')) return;
+              fetch('/admin-ext/api/2fa/disable', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirm: true }) })
+                .then(r => r.json())
+                .then(d => { if (d.ok) loadStatus(); });
+            });
+          } else {
+            el.innerHTML = '<div class="postbox-inside" style="padding:16px 20px"><p style="margin:0;font-size:13px;color:#dba617"><strong>&#9888; 两步验证未启用</strong></p><p style="font-size:12px;color:#646970;margin:8px 0 0">建议启用两步验证以增强账户安全</p></div>';
+            document.getElementById('2fa-setup').style.display = '';
+          }
+        });
+    }
+
+    document.getElementById('2fa-generate').addEventListener('click', () => {
+      fetch('/admin-ext/api/2fa/setup', { method: 'POST' })
+        .then(r => r.json())
+        .then(d => {
+          if (!d.ok) return;
+          document.getElementById('2fa-secret').textContent = d.secret;
+          document.getElementById('2fa-qr-img').innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(d.uri) + '" alt="QR Code" />';
+          document.getElementById('2fa-qr').style.display = '';
+          window._2faSecret = d.secret;
+        });
+    });
+
+    document.getElementById('2fa-confirm').addEventListener('click', () => {
+      const code = document.getElementById('2fa-code').value.trim();
+      if (!code || code.length !== 6) { alert('请输入 6 位验证码'); return; }
+      fetch('/admin-ext/api/2fa/verify', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret: window._2faSecret, code })
+      }).then(r => r.json()).then(d => {
+        if (d.ok) { alert('两步验证已启用！'); loadStatus(); }
+        else { alert('验证码错误，请重试'); }
+      });
+    });
+
+    loadStatus();
+  </script>
+</AdminLayout>

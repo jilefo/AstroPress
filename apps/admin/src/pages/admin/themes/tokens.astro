@@ -1,0 +1,129 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { wpOptions } from "@astropress/core/schema";
+import { eq } from "drizzle-orm";
+import { DEFAULT_THEME_TOKENS } from "@astropress/core/types/theme";
+
+const db = Astro.locals.db;
+if (!Astro.locals.user || !db) return Astro.redirect("/login");
+
+const [row] = await db
+  .select({ value: wpOptions.optionValue })
+  .from(wpOptions)
+  .where(eq(wpOptions.optionName, "astropress_theme_config"))
+  .limit(1);
+
+const tokens = row?.value ? JSON.parse(row.value) : DEFAULT_THEME_TOKENS;
+
+let saved = false;
+if (Astro.request.method === "POST") {
+  const form = await Astro.request.formData();
+  const updated = {
+    colors: {
+      primary: form.get("colors.primary") as string,
+      secondary: form.get("colors.secondary") as string,
+      background: form.get("colors.background") as string,
+      surface: form.get("colors.surface") as string,
+      text: form.get("colors.text") as string,
+      textMuted: form.get("colors.textMuted") as string,
+      border: form.get("colors.border") as string,
+    },
+    fonts: {
+      heading: form.get("fonts.heading") as string,
+      body: form.get("fonts.body") as string,
+    },
+    spacing: {
+      sectionY: form.get("spacing.sectionY") as string,
+      containerMax: form.get("spacing.containerMax") as string,
+      borderRadius: form.get("spacing.borderRadius") as string,
+    },
+  };
+
+  const existing = await db.select({ id: wpOptions.optionId }).from(wpOptions).where(eq(wpOptions.optionName, "astropress_theme_config")).limit(1);
+  if (existing.length > 0) {
+    await db.update(wpOptions).set({ optionValue: JSON.stringify(updated) }).where(eq(wpOptions.optionName, "astropress_theme_config"));
+  } else {
+    await db.insert(wpOptions).values({ optionName: "astropress_theme_config", optionValue: JSON.stringify(updated), autoload: "yes" });
+  }
+  saved = true;
+}
+
+const colorLabels: Record<string, string> = {
+  primary: "主色",
+  secondary: "辅助色",
+  background: "背景色",
+  surface: "表面色",
+  text: "文字色",
+  textMuted: "弱化文字",
+  border: "边框色",
+};
+---
+<AdminLayout title="主题令牌">
+  <h1 class="wp-heading-inline">主题令牌</h1>
+  <a href="/admin/themes" class="page-title-action">← 返回主题列表</a>
+  <hr class="wp-header-end" />
+
+  {saved && <div class="notice notice-success"><p>主题令牌已保存。</p></div>}
+
+  <form method="POST">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+
+      <!-- Colors -->
+      <div class="postbox">
+        <div class="postbox-header"><h3 class="postbox-title">颜色</h3></div>
+        <div class="postbox-inside">
+          {Object.entries(tokens.colors).map(([key, val]) => (
+            <div style="margin-bottom:14px">
+              <label class="wp-form-label" for={`color-${key}`}>{colorLabels[key] ?? key}</label>
+              <div style="display:flex;gap:8px;align-items:center">
+                <input type="color" value={String(val)} style="width:40px;height:32px;border:1px solid #dcdcde;border-radius:3px;padding:1px;cursor:pointer" oninput={`this.nextElementSibling.value=this.value`} />
+                <input type="text" id={`color-${key}`} name={`colors.${key}`} value={String(val)} class="wp-input" style="width:120px;font-family:monospace" oninput={`this.previousElementSibling.value=this.value`} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:24px">
+        <!-- Fonts -->
+        <div class="postbox">
+          <div class="postbox-header"><h3 class="postbox-title">字体排版</h3></div>
+          <div class="postbox-inside">
+            <div style="margin-bottom:14px">
+              <label class="wp-form-label">标题字体</label>
+              <input type="text" name="fonts.heading" value={tokens.fonts.heading} class="wp-input" style="width:100%" />
+              <p class="description" style="font-size:12px;color:#646970;margin-top:4px">CSS font-family 值，例如 <code>Inter, system-ui, sans-serif</code></p>
+            </div>
+            <div>
+              <label class="wp-form-label">正文字体</label>
+              <input type="text" name="fonts.body" value={tokens.fonts.body} class="wp-input" style="width:100%" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Spacing -->
+        <div class="postbox">
+          <div class="postbox-header"><h3 class="postbox-title">间距与布局</h3></div>
+          <div class="postbox-inside">
+            <div style="margin-bottom:14px">
+              <label class="wp-form-label">区块纵向内边距</label>
+              <input type="text" name="spacing.sectionY" value={tokens.spacing.sectionY} class="wp-input" style="width:120px" placeholder="5rem" />
+            </div>
+            <div style="margin-bottom:14px">
+              <label class="wp-form-label">容器最大宽度</label>
+              <input type="text" name="spacing.containerMax" value={tokens.spacing.containerMax} class="wp-input" style="width:120px" placeholder="1200px" />
+            </div>
+            <div>
+              <label class="wp-form-label">圆角</label>
+              <input type="text" name="spacing.borderRadius" value={tokens.spacing.borderRadius} class="wp-input" style="width:120px" placeholder="0.5rem" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:20px">
+      <button type="submit" class="button button-primary">保存主题令牌</button>
+    </div>
+  </form>
+</AdminLayout>

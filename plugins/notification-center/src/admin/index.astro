@@ -1,0 +1,84 @@
+---
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+---
+<AdminLayout title="通知中心">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+    <h1 class="wp-heading-inline">通知中心</h1>
+    <button id="nc-read-all" class="button" style="font-size:12px">全部标记已读</button>
+  </div>
+  <hr class="wp-header-end" />
+
+  <div style="display:flex;gap:8px;margin-bottom:16px">
+    <button class="button nc-filter active" data-filter="all">全部</button>
+    <button class="button nc-filter" data-filter="unread">未读</button>
+    <button class="button nc-filter" data-filter="read">已读</button>
+  </div>
+
+  <div id="nc-list" class="postbox">
+    <div class="postbox-inside" style="padding:0">
+      <div style="padding:20px;text-align:center;color:#646970">加载中...</div>
+    </div>
+  </div>
+
+  <script>
+    let currentFilter = 'all';
+    let currentPage = 1;
+
+    function loadNotifications() {
+      fetch(`/admin-ext/api/notifications/list?page=${currentPage}&perPage=20&filter=${currentFilter}`)
+        .then(r => r.json())
+        .then(d => {
+          const el = document.getElementById('nc-list');
+          if (!d.items || !d.items.length) {
+            el.innerHTML = '<div class="postbox-inside" style="padding:20px;text-align:center;color:#646970">暂无通知</div>';
+            return;
+          }
+          let html = '<table class="wp-list-table widefat fixed striped"><thead><tr><th style="width:5%"></th><th style="width:15%">类型</th><th style="width:25%">标题</th><th style="width:35%">内容</th><th style="width:12%">时间</th><th style="width:8%">操作</th></tr></thead><tbody>';
+          d.items.forEach(n => {
+            const dot = n.is_read ? '' : '<span style="display:inline-block;width:8px;height:8px;background:#2271b1;border-radius:50%"></span>';
+            const typeLabel = {comment:'评论',form:'表单',info:'系统',error:'错误'}[n.type] || n.type;
+            html += `<tr style="${n.is_read ? '' : 'font-weight:600'}">
+              <td>${dot}</td>
+              <td style="font-size:12px">${typeLabel}</td>
+              <td>${n.link ? `<a href="${n.link}" style="color:#2271b1;text-decoration:none">${n.title}</a>` : n.title}</td>
+              <td style="font-size:12px;color:#646970">${n.message || ''}</td>
+              <td style="font-size:11px;color:#646970">${(n.created_at || '').slice(0, 16)}</td>
+              <td><button class="button-link-delete nc-del" data-id="${n.id}" style="font-size:11px">删除</button></td>
+            </tr>`;
+          });
+          html += '</tbody></table>';
+          el.innerHTML = '<div class="postbox-inside" style="padding:0">' + html + '</div>';
+
+          // 删除按钮
+          el.querySelectorAll('.nc-del').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const id = Number(btn.dataset.id);
+              fetch('/admin-ext/api/notifications/delete', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: [id], confirm: true })
+              }).then(() => loadNotifications());
+            });
+          });
+        });
+    }
+
+    // 过滤器
+    document.querySelectorAll('.nc-filter').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.nc-filter').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.dataset.filter;
+        currentPage = 1;
+        loadNotifications();
+      });
+    });
+
+    // 全部标记已读
+    document.getElementById('nc-read-all').addEventListener('click', () => {
+      fetch('/admin-ext/api/notifications/read-all', { method: 'POST' })
+        .then(() => loadNotifications());
+    });
+
+    loadNotifications();
+  </script>
+</AdminLayout>

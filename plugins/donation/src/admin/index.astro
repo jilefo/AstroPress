@@ -1,0 +1,234 @@
+---
+/**
+ * /admin-ext/donation — 文章打赏插件设置页
+ */
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+if (!Astro.locals.user || !Astro.locals.db) return Astro.redirect("/login");
+---
+<AdminLayout title="文章打赏">
+    <style is:global>
+      * { box-sizing: border-box; }
+      .wrap { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+      .card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 20px; }
+      h1 { font-size: 20px; margin: 0 0 16px; }
+      label { display: block; font-size: 13px; font-weight: 600; margin: 16px 0 4px; }
+      input[type="text"], textarea { width: 100%; font-size: 13px; padding: 6px 8px; border: 1px solid #8c8f94; border-radius: 3px; }
+      textarea { resize: vertical; }
+      button { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 8px 16px; cursor: pointer; font-size: 13px; margin-top: 20px; }
+      .msg { font-size: 13px; margin-top: 10px; min-height: 18px; }
+      .ok { color: #00a32a; }
+      .err { color: #b32d2e; }
+      .hint { font-size: 12px; color: #646970; margin-top: 4px; }
+      .check { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+      .qr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      .qr-preview { margin-top: 8px; min-height: 40px; }
+      .qr-preview img { max-width: 160px; width: 100%; height: auto; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8fafc; }
+      .qr-preview .empty { font-size: 12px; color: #94a3b8; }
+      .qr-actions { margin-top: 6px; }
+      .up-btn { background: #f0f0f1; color: #2c3338; border: 1px solid #8c8f94; border-radius: 3px; padding: 4px 10px; cursor: pointer; font-size: 12px; margin-top: 0; }
+      .up-btn:hover:not(:disabled) { background: #e0e0e2; }
+      .up-btn:disabled { opacity: .6; cursor: default; }
+      .section-title { font-size: 14px; font-weight: 700; margin: 24px 0 4px; padding-top: 16px; border-top: 1px solid #dcdcde; }
+    </style>
+
+    <div class="wrap">
+      <div class="card">
+        <h1>文章打赏设置</h1>
+        <div class="check">
+          <input type="checkbox" id="enabled" checked />
+          <label for="enabled" style="margin:0">在文章页显示打赏按钮</label>
+        </div>
+
+        <label for="buttonText">按钮文案</label>
+        <input type="text" id="buttonText" value="☕ 打赏支持" />
+
+        <label for="heading">弹窗标题</label>
+        <input type="text" id="heading" value="打赏支持" />
+
+        <label for="message">说明文案（留空则不显示）</label>
+        <textarea id="message" rows="2" placeholder="如果这篇文章对您有帮助，请作者喝杯咖啡"></textarea>
+
+        <div class="section-title">二维码收款（图片）</div>
+        <div class="qr-grid">
+          <div>
+            <label for="wechatQr">微信收款码</label>
+            <input type="text" id="wechatQr" placeholder="/media/wechat-qr.png 或 https://..." />
+            <div class="qr-actions"><button type="button" class="up-btn" data-target="wechatQr">上传图片</button></div>
+            <div class="qr-preview" id="wechatQrPreview"><span class="empty">暂无预览</span></div>
+          </div>
+          <div>
+            <label for="alipayQr">支付宝收款码</label>
+            <input type="text" id="alipayQr" placeholder="/media/alipay-qr.png 或 https://..." />
+            <div class="qr-actions"><button type="button" class="up-btn" data-target="alipayQr">上传图片</button></div>
+            <div class="qr-preview" id="alipayQrPreview"><span class="empty">暂无预览</span></div>
+          </div>
+          <div>
+            <label for="applePayQr">Apple Pay 收款码</label>
+            <input type="text" id="applePayQr" placeholder="/media/applepay-qr.png 或 https://..." />
+            <div class="qr-actions"><button type="button" class="up-btn" data-target="applePayQr">上传图片</button></div>
+            <div class="qr-preview" id="applePayQrPreview"><span class="empty">暂无预览</span></div>
+          </div>
+          <div>
+            <label for="googlePayQr">Google Pay 收款码</label>
+            <input type="text" id="googlePayQr" placeholder="/media/googlepay-qr.png 或 https://..." />
+            <div class="qr-actions"><button type="button" class="up-btn" data-target="googlePayQr">上传图片</button></div>
+            <div class="qr-preview" id="googlePayQrPreview"><span class="empty">暂无预览</span></div>
+          </div>
+        </div>
+        <div class="hint">支持站内 /media/... 路径或 http(s) 外链；「上传图片」会上传到媒体库并自动填入地址（≤5MB，png/jpg/webp/gif）。</div>
+
+        <div class="section-title">链接收款（跳转）</div>
+        <div class="qr-grid">
+          <div>
+            <label for="paypalLink">PayPal 收款链接</label>
+            <input type="text" id="paypalLink" placeholder="https://paypal.me/yourname" />
+          </div>
+          <div>
+            <label for="afdianLink">爱发电主页链接</label>
+            <input type="text" id="afdianLink" placeholder="https://afdian.com/a/yourname" />
+          </div>
+        </div>
+        <div class="hint">访客点击后在新窗口打开对应收款页面。</div>
+
+        <label for="position">注入位置</label>
+        <input type="text" id="position" value="文章内容之后" disabled />
+        <div class="hint">当前版本固定注入在文章内容之后。</div>
+
+        <button id="save">保存设置</button>
+        <div class="msg" id="msg"></div>
+      </div>
+    </div>
+
+    <script>
+      (async () => {
+        const msg = document.getElementById("msg");
+        const QR_FIELDS = ["wechatQr", "alipayQr", "applePayQr", "googlePayQr"];
+        const LINK_FIELDS = ["paypalLink", "afdianLink"];
+
+        function showMsg(ok, text) {
+          msg.className = "msg " + (ok ? "ok" : "err");
+          msg.textContent = text;
+          setTimeout(() => (msg.textContent = ""), 3000);
+        }
+
+        function updatePreview(inputId, previewId, alt) {
+          const url = document.getElementById(inputId).value.trim();
+          const box = document.getElementById(previewId);
+          box.innerHTML = "";
+          if (!url) {
+            const span = document.createElement("span");
+            span.className = "empty";
+            span.textContent = "暂无预览";
+            box.appendChild(span);
+            return;
+          }
+          const img = document.createElement("img");
+          img.src = url;
+          img.alt = alt;
+          img.onerror = () => {
+            box.innerHTML = "";
+            const span = document.createElement("span");
+            span.className = "empty";
+            span.textContent = "图片加载失败";
+            box.appendChild(span);
+          };
+          box.appendChild(img);
+        }
+
+        async function load() {
+          const r = await fetch("/admin-ext/api/donation/settings");
+          if (!r.ok) return;
+          const s = await r.json();
+          document.getElementById("enabled").checked = s.enabled;
+          document.getElementById("buttonText").value = s.buttonText;
+          document.getElementById("heading").value = s.heading;
+          document.getElementById("message").value = s.message;
+          for (const f of QR_FIELDS) {
+            document.getElementById(f).value = s[f] || "";
+            updatePreview(f, f + "Preview", "收款码预览");
+          }
+          for (const f of LINK_FIELDS) {
+            document.getElementById(f).value = s[f] || "";
+          }
+        }
+
+        for (const f of QR_FIELDS) {
+          document.getElementById(f).addEventListener("input", () =>
+            updatePreview(f, f + "Preview", "收款码预览"));
+        }
+
+        // 收款码上传：共用一个动态 file input，POST 到媒体库后回填地址
+        const fileInput = document.createElement("input");
+        fileInput.type = "file";
+        fileInput.accept = "image/png,image/jpeg,image/webp,image/gif";
+        fileInput.hidden = true;
+        document.body.appendChild(fileInput);
+        let uploadTarget = null;
+        let uploadBtn = null;
+
+        document.querySelectorAll(".up-btn").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            uploadTarget = btn.getAttribute("data-target");
+            uploadBtn = btn;
+            fileInput.value = "";
+            fileInput.click();
+          });
+        });
+
+        fileInput.addEventListener("change", async () => {
+          const f = fileInput.files && fileInput.files[0];
+          if (!f || !uploadTarget) return;
+          if (f.size > 5 * 1024 * 1024) {
+            showMsg(false, "图片不能超过 5MB");
+            return;
+          }
+          uploadBtn.disabled = true;
+          uploadBtn.textContent = "上传中…";
+          try {
+            const fd = new FormData();
+            fd.append("file", f);
+            const r = await fetch("/api/media/upload", { method: "POST", body: fd });
+            const d = await r.json().catch(() => ({}));
+            if (r.ok && d.url) {
+              // 同源绝对地址转为站内相对路径，便于迁移/导入导出
+              let url = d.url;
+              try {
+                const u = new URL(url, location.origin);
+                if (u.origin === location.origin) url = u.pathname;
+              } catch {}
+              document.getElementById(uploadTarget).value = url;
+              updatePreview(uploadTarget, uploadTarget + "Preview", "收款码预览");
+              showMsg(true, "图片已上传并填入地址。");
+            } else {
+              showMsg(false, d.error || "上传失败");
+            }
+          } catch {
+            showMsg(false, "上传失败：网络错误");
+          }
+          uploadBtn.disabled = false;
+          uploadBtn.textContent = "上传图片";
+        });
+
+        document.getElementById("save").addEventListener("click", async () => {
+          const payload = {
+            enabled: document.getElementById("enabled").checked,
+            buttonText: document.getElementById("buttonText").value.trim(),
+            heading: document.getElementById("heading").value.trim(),
+            message: document.getElementById("message").value.trim(),
+          };
+          for (const f of QR_FIELDS.concat(LINK_FIELDS)) {
+            payload[f] = document.getElementById(f).value.trim();
+          }
+          const r = await fetch("/admin-ext/api/donation/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const d = await r.json();
+          showMsg(r.ok, r.ok ? "已保存。" : (d.error || "保存失败"));
+        });
+
+        load();
+      })();
+    </script>
+</AdminLayout>

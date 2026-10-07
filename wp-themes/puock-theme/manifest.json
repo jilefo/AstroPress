@@ -1,0 +1,26 @@
+{
+  "name": "Puock",
+  "version": "1.0.0",
+  "description": "Multi-style adaptive blog theme with blue accent",
+  "author": "Puock",
+  "tokens": {
+    "fonts": {
+      "body": "'Segoe UI', -apple-system, sans-serif",
+      "heading": "'Segoe UI', -apple-system, sans-serif"
+    },
+    "spacing": {
+      "sectionY": "48px",
+      "borderRadius": "8px",
+      "containerMax": "1200px"
+    },
+    "colors": {
+      "textMuted": "#6e7178",
+      "surface": "#f5f7fa",
+      "background": "#ffffff",
+      "secondary": "#e50000",
+      "border": "#e4e7ed",
+      "text": "#303133",
+      "primary": "#1c60f3"
+    }
+  }
+}

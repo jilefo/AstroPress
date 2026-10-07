@@ -1,0 +1,23 @@
+{
+  "name": "@astropress/plugin-activity-log",
+  "version": "0.1.0",
+  "description": "操作审计：记录后台全部 API 写操作（时间/用户/方法/路径/状态码/IP/UA），自建表 ap_activity_log，支持分页过滤与清空",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./integration.admin": "./src/integration.admin.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@astropress/core": "workspace:*",
+    "drizzle-orm": "^0.36.0"
+  },
+  "devDependencies": {
+    "astro": "^4.0.0",
+    "typescript": "^5.4.0",
+    "@cloudflare/workers-types": "^4.0.0"
+  }
+}

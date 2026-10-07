@@ -1,0 +1,67 @@
+---
+import FormRenderer from "../../islands/FormRenderer";
+
+const { id } = Astro.params;
+const db = Astro.locals.db;
+
+// Load form metadata for the page title
+let formName = "Form";
+if (db) {
+  try {
+    const { wpOptions } = await import("@astropress/core/schema");
+    const { eq } = await import("drizzle-orm");
+    const [row] = await db.select({ value: wpOptions.optionValue }).from(wpOptions)
+      .where(eq(wpOptions.optionName, "astropress_forms")).limit(1);
+    const forms = row?.value ? JSON.parse(row.value) : [];
+    const form = forms.find((f: any) => f.id === id);
+    if (!form) return new Response("表单不存在或已删除", { status: 404 });
+    formName = form.title ?? form.name;
+  } catch {
+    return new Response("服务器开小差了，请稍后再试", { status: 500 });
+  }
+}
+
+const pageUrl = Astro.request.url;
+---
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{formName}</title>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, sans-serif;
+        background: #f6f7f7;
+        color: #1d2327;
+        min-height: 100vh;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding: 40px 16px;
+      }
+      .form-card {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        padding: 36px 40px;
+        width: 100%;
+        max-width: 620px;
+      }
+      .form-title {
+        font-size: 22px;
+        font-weight: 700;
+        margin: 0 0 24px;
+        color: #1d2327;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="form-card">
+      <h1 class="form-title">{formName}</h1>
+      <FormRenderer client:only="react" formId={id!} pageUrl={pageUrl} />
+    </div>
+  </body>
+</html>

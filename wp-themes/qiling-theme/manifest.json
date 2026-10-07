@@ -1,0 +1,26 @@
+{
+  "name": "Qiling",
+  "version": "1.0.0",
+  "description": "Enterprise-grade presentation theme with blue header",
+  "author": "Qiling",
+  "tokens": {
+    "fonts": {
+      "body": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      "heading": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    },
+    "spacing": {
+      "sectionY": "48px",
+      "borderRadius": "8px",
+      "containerMax": "1200px"
+    },
+    "colors": {
+      "textMuted": "#64748b",
+      "surface": "#f8fafc",
+      "background": "#ffffff",
+      "secondary": "#a06707",
+      "border": "#e2e8f0",
+      "text": "#1e293b",
+      "primary": "#2563eb"
+    }
+  }
+}

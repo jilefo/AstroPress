@@ -1,0 +1,23 @@
+{
+  "name": "@astropress/plugin-html-opt",
+  "version": "0.1.0",
+  "description": "HTML 优化：移除 HTML 注释、折叠标签间换行空白、注入 dns-prefetch/preconnect 资源提示",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./integration.admin": "./src/integration.admin.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@astropress/core": "workspace:*",
+    "drizzle-orm": "^0.36.0"
+  },
+  "devDependencies": {
+    "astro": "^4.0.0",
+    "typescript": "^5.4.0",
+    "@cloudflare/workers-types": "^4.0.0"
+  }
+}

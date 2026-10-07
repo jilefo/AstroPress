@@ -1,0 +1,194 @@
+---
+/**
+ * Translation renderer for the subdirectory URL strategy: /ml/{lang}/{baseSlug}
+ * Resolves the translation-group member for {lang} and renders it with a
+ * self-contained layout (full head: canonical/hreflang/OG) — the core web
+ * app's BaseLayout is intentionally untouched.
+ */
+import { wpPosts, wpPostmeta, wpOptions } from "@astropress/core/schema";
+import { getCustomPostTypes } from "@astropress/core/registry";
+import { and, eq, inArray } from "drizzle-orm";
+import { getSiteInfo } from "@astropress/core/query";
+import { loadSettings } from "../../lib/settings";
+import { buildHeadTags } from "../../lib/head";
+
+const db = Astro.locals.db;
+const lang = (Astro.params.path ?? "").split("/")[0] ?? "";
+let baseSlug = (Astro.params.path ?? "").split("/").slice(1).join("/");
+// 文章固定 permalink 前缀 /blog/：/zh/blog/foo rewrite 后 rest 为 /blog/foo，
+// 而 wp_posts.post_name 存的是 foo——去掉此前缀，否则译文文章一律 404。
+if (/^blog\//.test(baseSlug)) baseSlug = baseSlug.slice(5);
+
+if (!db) return Astro.redirect("/");
+const settings = await loadSettings(db);
+const langCfg = settings.languages.find((l) => l.code === lang && l.enabled);
+if (!langCfg) return Astro.redirect("/");
+
+let member: any = null;
+let baseSlugResolved = "";
+if (baseSlug) {
+  // Public types the renderer understands: built-in post/page plus every
+  // public custom post type registered by plugins (media/menus excluded).
+  const publicTypes = ["page", "post", ...getCustomPostTypes().filter((t) => t.config.public).map((t) => t.slug)];
+  const [base] = await db
+    .select({ id: wpPosts.id, name: wpPosts.postName })
+    .from(wpPosts)
+    .where(and(eq(wpPosts.postName, baseSlug), eq(wpPosts.postStatus, "publish"), inArray(wpPosts.postType, publicTypes)))
+    .limit(1);
+  if (base) {
+    baseSlugResolved = base.name;
+    const [groupRow] = await db
+      .select({ val: wpPostmeta.metaValue })
+      .from(wpPostmeta)
+      .where(and(eq(wpPostmeta.postId, base.id), eq(wpPostmeta.metaKey, "_ml_group")))
+      .limit(1);
+    if (groupRow?.val) {
+      const members = await db
+        .select({ postId: wpPostmeta.postId })
+        .from(wpPostmeta)
+        .where(and(eq(wpPostmeta.metaKey, "_ml_group"), eq(wpPostmeta.metaValue, groupRow.val)));
+      const ids = members.map((m: any) => m.postId);
+      if (ids.length) {
+        const langRows = await db
+          .select({ postId: wpPostmeta.postId, val: wpPostmeta.metaValue })
+          .from(wpPostmeta)
+          .where(and(inArray(wpPostmeta.postId, ids), eq(wpPostmeta.metaKey, "_ml_lang")));
+        const target = langRows.find((l: any) => l.val === lang)?.postId;
+        if (target) {
+          [member] = await db.select().from(wpPosts).where(eq(wpPosts.id, target)).limit(1);
+        }
+      }
+    }
+  }
+} else {
+  const site = await getSiteInfo(db);
+  member = { postTitle: site.name, postContent: site.description, postName: "" };
+}
+
+if (!member) return new Response("页面不存在", { status: 404 });
+
+// Theme tokens for visual consistency with the default-language site
+let tokens: any = null;
+const [tokenRow] = await db
+  .select({ value: wpOptions.optionValue })
+  .from(wpOptions)
+  .where(eq(wpOptions.optionName, "astropress_theme_config"))
+  .limit(1);
+if (tokenRow?.value) {
+  try { tokens = JSON.parse(tokenRow.value); } catch { /* defaults */ }
+}
+const primary = tokens?.colors?.primary ?? "#0f6bdf";
+const bg = tokens?.colors?.background ?? "#ffffff";
+const text = tokens?.colors?.text ?? "#1d2327";
+const font = tokens?.fonts?.body ?? "system-ui, sans-serif";
+
+// Render: block schema (simplified) when present, else classic HTML
+let contentHtml = "";
+const schemaKey = member.postName ? `astropress_page_schema_${member.postName}` : "";
+let blocks: any[] | null = null;
+if (schemaKey) {
+  const [schemaRow] = await db
+    .select({ value: wpOptions.optionValue })
+    .from(wpOptions)
+    .where(eq(wpOptions.optionName, schemaKey))
+    .limit(1);
+  if (schemaRow?.value) {
+    try {
+      const parsed = JSON.parse(schemaRow.value);
+      if (Array.isArray(parsed?.blocks) && parsed.blocks.length) blocks = parsed.blocks;
+    } catch { /* fall through to classic */ }
+  }
+}
+if (blocks) {
+  contentHtml = blocks.map(renderBlock).join("\n");
+} else {
+  contentHtml = String(member.postContent ?? "");
+}
+
+function esc(s: unknown): string {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+/** Simplified block renderer — visual pages rendered here are a subset of
+ *  BlockRenderer. For pixel-perfect output use the classic editor for
+ *  translations (documented limitation). */
+function renderBlock(b: any): string {
+  const p = b.props ?? {};
+  switch (b.type) {
+    case "hero":
+      return `<section class="ml-hero" style="background:${esc(p.bgColor ?? "#f5f7fa")};padding:64px 24px;text-align:center;">
+        <h1 style="font-size:2.4em;margin:0 0 12px;">${esc(p.heading ?? "")}</h1>
+        <p style="font-size:1.15em;opacity:.8;">${esc(p.subheading ?? "")}</p>
+        ${p.buttonText ? `<a class="ml-btn" href="${esc(p.buttonLink ?? "#")}">${esc(p.buttonText)}</a>` : ""}</section>`;
+    case "text":
+      return `<section class="ml-text" style="padding:8px 0;">${p.html ?? ""}</section>`;
+    case "html":
+      return p.html ?? "";
+    case "image":
+      return `<figure style="text-align:center;margin:24px 0;"><img src="${esc(p.src)}" alt="${esc(p.alt ?? "")}" loading="lazy" style="max-width:100%;border-radius:8px;" /></figure>`;
+    case "columns":
+      return `<div class="ml-columns" style="display:grid;gap:24px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin:24px 0;">
+        ${(p.columns ?? []).map((c: any) => `<div><h3>${esc(c.heading ?? "")}</h3><div>${c.text ?? ""}</div></div>`).join("")}</div>`;
+    case "features":
+      return `<div class="ml-columns" style="display:grid;gap:24px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));margin:24px 0;">
+        ${(p.features ?? []).map((f: any) => `<div><h3>${esc(f.title ?? "")}</h3><p>${esc(f.text ?? "")}</p></div>`).join("")}</div>`;
+    case "cta":
+      return `<section style="background:${esc(p.bgColor ?? primary)};color:#fff;padding:48px 24px;border-radius:12px;text-align:center;margin:32px 0;">
+        <h2 style="margin:0 0 8px;">${esc(p.heading ?? "")}</h2><p>${esc(p.text ?? "")}</p>
+        ${p.buttonText ? `<a class="ml-btn ml-btn--light" href="${esc(p.buttonLink ?? "#")}">${esc(p.buttonText)}</a>` : ""}</section>`;
+    case "spacer":
+      return `<div style="height:${esc(p.height ?? 40)}px"></div>`;
+    case "divider":
+      return `<hr style="border:0;border-top:1px solid #e2e8f0;margin:32px 0;" />`;
+    default:
+      return "";
+  }
+}
+
+const site = await getSiteInfo(db);
+const base = site.url.replace(/\/+$/, "");
+const pathForGroup = baseSlugResolved ? `/${baseSlugResolved}` : "/";
+const group = baseSlugResolved
+  ? { members: Object.fromEntries([[lang, member.id]]), baseId: member.id, baseSlug: baseSlugResolved, groupId: "" }
+  : null;
+const headTags = buildHeadTags({
+  settings, group, path: pathForGroup, lang, siteUrl: base,
+  seoTitle: String(member.postTitle ?? ""), seoDescription: String(member.postExcerpt ?? ""),
+});
+const switcherUrl = "/ml-asset/config";
+---
+
+<!DOCTYPE html>
+<html lang={lang}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{member.postTitle} — {site.name}</title>
+    {member.postExcerpt && <meta name="description" content={member.postExcerpt} />}
+    <Fragment set:html={headTags} />
+    <style is:global>
+      :root { --ml-primary: {primary}; --ml-bg: {bg}; --ml-text: {text}; --ml-font: {font}; }
+      body { margin: 0; font-family: var(--ml-font); background: var(--ml-bg); color: var(--ml-text); }
+      .ml-wrap { max-width: 880px; margin: 0 auto; padding: 24px; }
+      .ml-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid #e5e7eb; }
+      .ml-header a { color: inherit; text-decoration: none; font-weight: 700; }
+      .ml-btn { display: inline-block; margin-top: 16px; padding: 10px 20px; border-radius: 8px; background: var(--ml-primary); color: #fff; text-decoration: none; }
+      .ml-btn--light { background: rgba(255,255,255,.18); }
+      img { max-width: 100%; height: auto; }
+      pre { overflow-x: auto; background: #f6f7f7; padding: 12px 16px; border-radius: 6px; }
+    </style>
+  </head>
+  <body>
+    <header class="ml-header">
+      <a href="/">{site.name}</a>
+      <nav id="ml-switcher" data-ml-switcher data-ml-current={lang}></nav>
+    </header>
+    <main class="ml-wrap">
+      <article>
+        <h1>{member.postTitle}</h1>
+        <div set:html={contentHtml} />
+      </article>
+    </main>
+    <script type="application/json" id="ml-cfg" set:html={JSON.stringify({ switcherUrl })} />
+  </body>
+</html>

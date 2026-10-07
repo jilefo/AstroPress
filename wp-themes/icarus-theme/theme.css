@@ -1,0 +1,229 @@
+/* >>> ap-fonts >>> */
+/* 主题声明的 Web 字体。AstroPress 不会注入字体 <link>，只能由主题 CSS 自行 @import。
+   字体源为 fonts.loli.net（Google Fonts 国内镜像，海外同样可访问）；
+   如需官方源把域名改回 fonts.googleapis.com 即可；完全离线时删除本区块则回退系统字体。 */
+@import url("https://fonts.loli.net/css2?family=Source+Code+Pro:wght@400&family=Ubuntu:wght@400;600&display=swap");
+/* <<< ap-fonts <<< */
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Hexo Theme Icarus — AstroPress 移植版
+   设计语言来源：hexo-theme-icarus v6.1.1（include/style/base.styl）
+     · 页面底色 #f7f7f7，白色卡片 + 4px 圆角 + Bulma 阴影
+     · 主题色 #3273dc（Bulma Blue）
+     · 正文 14px / 1.5 行高，Ubuntu 优先字体栈（head.jsx 仅加载 Ubuntu + Source Code Pro）
+     · 卡片间 20px 间距，简洁现代
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --icarus-bg: #f7f7f7;
+  --icarus-card: #ffffff;
+  --icarus-accent: #3273dc;
+  --icarus-accent-darker: #2366d1;
+  --icarus-text: #363636;
+  --icarus-text-secondary: #4a4a4a;
+  --icarus-text-muted: #6f6f6f;
+  --icarus-border: #dbdbdb;
+  --icarus-radius: 4px;
+  --icarus-shadow: 0 4px 10px rgba(0, 0, 0, 0.05), 0 0 1px rgba(0, 0, 0, 0.1);
+  --icarus-blockquote-bg: #f5f5f5;
+  --icarus-code: #f14668;
+  --icarus-code-bg: #f5f5f5;
+  --icarus-pre-bg: #f5f5f5;
+  --icarus-table-border: #dbdbdb;
+}
+
+/* ── 基础 ─────────────────────────────────────────────────────────── */
+html { scroll-behavior: smooth; }
+body { background: var(--icarus-bg) !important; font-size: 14px; }
+
+::selection { background: var(--icarus-accent); color: #fff; }
+
+.site-wrapper { max-width: 1080px; }
+.site-main { padding: 32px 0; }
+
+/* ── 顶部导航 ─────────────────────────────────────────────────────── */
+.site-header {
+  background: var(--icarus-card);
+  border-bottom: 1px solid var(--icarus-border);
+  box-shadow: none;
+  height: auto;
+  min-height: 64px;
+  position: sticky;
+  top: 0;
+  z-index: 90;
+}
+.site-header .site-wrapper { padding: 12px 20px; }
+.site-branding a {
+  color: var(--icarus-text) !important;
+  font-weight: 700;
+  font-size: 1.4rem;
+  letter-spacing: 0.02em;
+}
+.site-branding a:hover { opacity: 0.8; }
+.site-description { color: var(--icarus-text-muted); font-size: 0.85rem; }
+.site-nav a {
+  color: var(--icarus-text-secondary);
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  transition: color 0.3s ease;
+}
+.site-nav a:hover { color: var(--icarus-accent); }
+
+/* ── 文章列表：白色卡片流 ─────────────────────────────────────────── */
+.post-list { display: flex; flex-direction: column; gap: 24px; }
+.post-list-item {
+  background: var(--icarus-card);
+  border: none;
+  border-radius: var(--icarus-radius);
+  box-shadow: var(--icarus-shadow);
+  padding: 24px;
+  transition: box-shadow 0.3s ease;
+}
+.post-list-item:first-child { padding-top: 24px; }
+.post-list-item:hover { box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.12); }
+.post-list-item h2 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.post-list-item h2 a { color: var(--icarus-text) !important; text-decoration: none; }
+.post-list-item h2 a:hover { color: var(--icarus-accent) !important; }
+.post-meta { color: var(--icarus-text-muted); font-size: 0.8rem; }
+.post-excerpt { color: var(--icarus-text-secondary); font-size: 0.95rem; line-height: 1.6; }
+.read-more {
+  color: var(--icarus-accent);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+.read-more:hover { color: var(--icarus-accent-darker); }
+
+/* ── 单篇文章：整页白卡 ───────────────────────────────────────────── */
+main .site-wrapper > article {
+  background: var(--icarus-card);
+  border-radius: var(--icarus-radius);
+  box-shadow: var(--icarus-shadow);
+  padding: 28px 32px;
+  overflow: hidden;
+}
+.post-header h1 {
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: var(--icarus-text);
+  line-height: 1.4;
+}
+.post-header .post-meta { margin: 0; }
+
+.post-content {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--icarus-text);
+}
+.post-content h1, .post-content h2, .post-content h3,
+.post-content h4, .post-content h5, .post-content h6 {
+  font-weight: 600;
+  color: var(--icarus-text);
+}
+.post-content a {
+  color: var(--icarus-accent);
+  text-decoration: none;
+  transition: color 0.3s ease;
+  word-break: break-word;
+}
+.post-content a:hover { color: var(--icarus-accent-darker); text-decoration: underline; }
+.post-content blockquote {
+  margin: 1em 0;
+  padding: 1.25em 1.5em;
+  border-left: 5px solid var(--icarus-border);
+  background: var(--icarus-blockquote-bg);
+  color: var(--icarus-text-secondary);
+}
+.post-content pre {
+  background: var(--icarus-pre-bg);
+  padding: 1.25rem 1.5rem;
+  overflow-x: auto;
+  font-size: 0.875rem;
+}
+.post-content code {
+  background: var(--icarus-code-bg);
+  color: var(--icarus-code);
+  font-weight: 600;
+  padding: 0.25em 0.5em 0.4em;
+  border-radius: var(--icarus-radius);
+  font-size: 0.875em;
+  font-family: 'Source Code Pro', monospace;
+}
+.post-content pre code { background: none; color: inherit; padding: 0; font-weight: 400; border-radius: 0; }
+.post-content pre { font-family: 'Source Code Pro', monospace; }
+.post-content img { border-radius: var(--icarus-radius); }
+.post-content table { border-collapse: collapse; width: 100%; margin: 1.5rem 0; }
+.post-content th, .post-content td { border: 1px solid var(--icarus-table-border); padding: 8px 12px; }
+
+/* ── 分页：简洁胶囊 ───────────────────────────────────────────────── */
+.pagination { gap: 8px; margin-top: 32px; }
+.pagination a, .pagination span {
+  background: var(--icarus-card);
+  border: none;
+  border-radius: var(--icarus-radius);
+  box-shadow: var(--icarus-shadow);
+  color: var(--icarus-text-secondary);
+  padding: 6px 14px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: box-shadow 0.3s ease, color 0.3s ease;
+}
+.pagination a:hover { color: var(--icarus-accent); box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08); }
+.pagination .current { background: var(--icarus-accent); color: #fff; }
+
+/* ── 页脚 ─────────────────────────────────────────────────────────── */
+.site-footer {
+  border-top: 1px solid var(--icarus-border);
+  color: var(--icarus-text-muted);
+  font-size: 0.85rem;
+}
+.site-footer a { color: var(--icarus-accent); }
+
+/* ── 404 ──────────────────────────────────────────────────────────── */
+.not-found h1 { color: var(--icarus-border); }
+
+/* ── 返回链接 ─────────────────────────────────────────────────────── */
+main .site-wrapper > nav {
+  border-top: none !important;
+  background: var(--icarus-card);
+  border-radius: var(--icarus-radius);
+  box-shadow: var(--icarus-shadow);
+  padding: 14px 28px !important;
+  margin-top: 32px !important;
+}
+main .site-wrapper > nav a { color: var(--icarus-accent); text-decoration: none; }
+main .site-wrapper > nav a:hover { color: var(--icarus-accent-darker); }
+
+/* ── 响应式 ───────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .post-list { gap: 16px; }
+  .post-list-item { padding: 18px 20px; }
+  .site-main { padding: 20px 0; }
+}
+
+/* >>> ap-adapter >>> */
+/* 块渲染页头适配：当模板槽位输出 .ap-block-nav 时套用本主题设计语言 */
+.ap-block-nav {
+  position: sticky; top: 0; z-index: 90;
+  border-bottom: none !important;
+  box-shadow: 0 2px 3px rgba(10,10,10,0.1);
+}
+.ap-block-nav > a { color: #363636 !important; }
+.ap-block-nav nav ul li a {
+  border-radius: 4px;
+  transition: color 0.3s ease, background-color 0.3s ease;
+}
+.ap-block-nav nav ul li a:hover {
+  color: #3273dc !important;
+  background: #ffffff;
+}
+@media (max-width: 640px) {
+  .ap-block-nav { height: auto !important; min-height: 56px; flex-wrap: wrap; padding: 8px 20px !important; row-gap: 4px; }
+  .ap-block-nav nav { width: 100%; }
+  .ap-block-nav nav ul { flex-wrap: wrap; }
+}
+/* <<< ap-adapter <<< */

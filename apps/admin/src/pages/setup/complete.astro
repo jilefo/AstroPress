@@ -1,0 +1,54 @@
+---
+// If not set up yet, redirect back
+import { eq } from "drizzle-orm";
+import { wpOptions } from "@astropress/core/schema";
+
+const db = Astro.locals.db;
+if (db) {
+  const [row] = await db
+    .select({ value: wpOptions.optionValue })
+    .from(wpOptions)
+    .where(eq(wpOptions.optionName, "astropress_setup_complete"))
+    .limit(1);
+  if (row?.value !== "1") return Astro.redirect("/setup");
+}
+---
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>安装完成 — AstroPress</title>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; }
+      body {
+        margin: 0; font-family: system-ui, sans-serif; background: #f0f0f1;
+        min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      }
+      .card {
+        background: #fff; border: 1px solid #dcdcde; border-radius: 6px;
+        padding: 48px; width: 100%; max-width: 420px; text-align: center;
+        box-shadow: 0 4px 16px rgba(0,0,0,.08);
+      }
+      .checkmark { font-size: 56px; margin-bottom: 16px; }
+      h1 { font-size: 22px; font-weight: 700; margin: 0 0 10px; }
+      p { color: #646970; font-size: 14px; margin: 0 0 28px; }
+      .btn {
+        display: inline-block; padding: 10px 24px; background: #2271b1;
+        color: #fff; text-decoration: none; border-radius: 3px; font-weight: 600; font-size: 14px;
+        margin: 4px;
+      }
+      .btn-secondary {
+        background: #f6f7f7; color: #1d2327; border: 1px solid #dcdcde;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="checkmark">🎉</div>
+      <h1>AstroPress 安装完成！</h1>
+      <p>站点已就绪，登录后即可开始创作内容。</p>
+      <a href="/login" class="btn">前往登录 →</a>
+    </div>
+  </body>
+</html>

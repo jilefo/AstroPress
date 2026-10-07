@@ -1,0 +1,328 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Hexo Theme NexT (Muse) — AstroPress 移植版
+   设计语言来源：hexo-theme-next v8.29.0（Muse scheme）
+     · source/css/_variables/base.styl
+         正文 $black-light #555，标题/链接 hover $black-deep #222
+         链接下划线 $grey-dark #999，blockquote #666 / 左边框 $grey-lighter #ddd
+         表格边框 #ddd、奇数行 #f9f9f9；行高 $line-height-base = 2
+         内容宽 $content-desktop = 700px；圆角 0、无卡片
+     · source/css/_common/scaffolding/base.styl
+         a { border-bottom:1px solid #999 }；blockquote 无底色 padding 0 15px；
+         hr 为 #ddd 45° 虚线渐变条
+     · source/css/_common/components/post/post-header.styl
+         文章大标题 font-weight normal、居中、.post-header margin-bottom 60px
+     · source/css/_common/scaffolding/highlight/index.styl
+         行内 code 取 --highlight-*（默认主题 default：底 #f3f3f3），圆角 3px
+     · font.enable=false：不加载任何 Web 字体，字体栈仅 PingFang SC /
+       Microsoft YaHei / sans-serif（全部系统字体，故本文件无 @import）。
+   注：注入块（.ap-block-*）使用适配层 AA 快照色（见文件末尾说明）。
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --next-bg: #ffffff;
+  --next-card: #ffffff;
+  --next-accent: #222222;
+  --next-text: #555555;
+  --next-text-heading: #222222;
+  --next-text-muted: var(--ap-muted, #767676);
+  --next-text-quote: #666666;
+  --next-border: #dddddd;
+  --next-radius: 0;
+  --next-shadow: none;
+  --next-code-bg: #f3f3f3;
+  --next-table-border: #dddddd;
+  --next-tr-odd: #f9f9f9;
+}
+
+/* ── 基础 ─────────────────────────────────────────────────────────── */
+html { scroll-behavior: smooth; }
+body { background: var(--next-bg) !important; font-size: 16px; line-height: 2; }
+
+::selection { background: var(--next-accent); color: #fff; }
+
+.site-wrapper { max-width: 700px; }
+.site-main { padding: 40px 0; }
+
+/* ── 顶部导航：白底、发丝线，链接 hover #222 + 下划线（Muse menu）────── */
+.site-header {
+  background: var(--next-card);
+  border-bottom: 1px solid var(--next-border);
+  box-shadow: none;
+  height: auto;
+  min-height: 60px;
+  position: sticky;
+  top: 0;
+  z-index: 90;
+}
+.site-header .site-wrapper { padding: 16px 20px; }
+.site-branding a {
+  color: var(--next-text-heading) !important;
+  font-weight: 700;
+  font-size: 1.5rem;
+  letter-spacing: 0.02em;
+}
+.site-branding a:hover { color: var(--next-text) !important; }
+.site-description { color: var(--next-text-muted); font-size: 0.85rem; }
+.site-nav a {
+  color: var(--next-text);
+  padding: 6px 12px;
+  font-size: 0.9rem;
+  border-bottom: 1px solid transparent;
+  transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+.site-nav a:hover { color: var(--next-text-heading); border-bottom-color: var(--next-text-heading); background: #f5f5f5; }
+
+/* ── 文章列表：极简文字流，条目间发丝线，无卡片 ─────────────────────── */
+.post-list { display: flex; flex-direction: column; gap: 0; }
+.post-list-item {
+  background: var(--next-card);
+  border: none;
+  border-bottom: 1px solid var(--next-border);
+  border-radius: var(--next-radius);
+  box-shadow: var(--next-shadow);
+  padding: 30px 0;
+}
+.post-list-item:first-child { padding-top: 30px; }
+.post-list-item h2 {
+  font-size: 1.5rem;
+  font-weight: normal;
+  line-height: 1.5;
+}
+.post-list-item h2 a { color: var(--next-text) !important; text-decoration: none; }
+.post-list-item h2 a:hover { color: var(--next-text-heading) !important; }
+.post-meta { color: var(--next-text-muted); font-size: 0.75rem; }
+.post-excerpt { color: var(--next-text); font-size: 1rem; line-height: 2; }
+.read-more {
+  color: var(--next-text);
+  text-decoration: none;
+  border-bottom: 1px solid var(--next-text-muted);
+  padding-bottom: 1px;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+.read-more:hover { color: var(--next-text-heading); border-bottom-color: var(--next-text-heading); }
+
+/* ── 单篇文章：纯文字流；标题 normal 居中，下间距 60px ──────────────── */
+main .site-wrapper > article {
+  background: var(--next-card);
+  border-radius: var(--next-radius);
+  box-shadow: var(--next-shadow);
+  padding: 0;
+  overflow: visible;
+}
+.post-header { margin-bottom: 60px; text-align: center; }
+.post-header h1 {
+  font-size: 1.5rem;
+  font-weight: normal;
+  color: var(--next-text-heading);
+  line-height: 1.5;
+}
+.post-header .post-meta { margin: 0; }
+
+.post-content {
+  font-size: 1rem;
+  line-height: 2;
+  color: var(--next-text);
+}
+/* 全局 h1-h6 bold（scaffolding/base.styl） */
+.post-content h1, .post-content h2, .post-content h3,
+.post-content h4, .post-content h5, .post-content h6 {
+  font-weight: 700;
+  color: var(--next-text-heading);
+  line-height: 1.5;
+}
+.post-content a {
+  color: var(--next-text);
+  text-decoration: none;
+  border-bottom: 1px solid var(--next-text-muted);
+  padding-bottom: 1px;
+  transition: color 0.2s ease, border-color 0.2s ease;
+  word-break: break-word;
+}
+.post-content a:hover { color: var(--next-text-heading); border-bottom-color: var(--next-text-heading); }
+/* base.styl blockquote：4px #ddd 左竖线、#666 文字、无底色 */
+.post-content blockquote {
+  margin: 0;
+  padding: 0 15px;
+  border-left: 4px solid var(--next-border);
+  background: none;
+  color: var(--next-text-quote);
+  border-radius: 0;
+}
+.post-content pre {
+  background: var(--next-code-bg);
+  border-radius: var(--next-radius);
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+/* highlight/index.styl：行内 code 取高亮配色，3px 圆角，无专门文字色（继承） */
+.post-content code {
+  background: var(--next-code-bg);
+  color: inherit;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.875em;
+}
+.post-content pre code { background: none; color: inherit; padding: 0; border-radius: 0; }
+.post-content img { border-radius: 0; }
+/* base.styl hr：#ddd 45° 虚线渐变，高 3px */
+.post-content hr {
+  border: 0;
+  height: 3px;
+  margin: 40px 0;
+  background-image: repeating-linear-gradient(-45deg, var(--next-border), var(--next-border) 4px, transparent 4px, transparent 8px);
+}
+.post-content table { border-collapse: collapse; width: 100%; margin: 1.5rem 0; font-size: 0.875em; }
+.post-content th, .post-content td { border: 1px solid var(--next-table-border); padding: 8px 12px; }
+.post-content tr:nth-child(odd) { background: var(--next-tr-odd); }
+
+/* ── 分页：极简文字链接，当前页加粗下划线 ──────────────────────────── */
+.pagination { gap: 12px; margin-top: 40px; }
+.pagination a, .pagination span {
+  background: none;
+  border: none;
+  border-bottom: 1px solid transparent;
+  color: var(--next-text);
+  padding: 4px 8px;
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+.pagination a:hover { color: var(--next-text-heading); border-bottom-color: var(--next-text-heading); }
+.pagination .current { color: var(--next-text-heading); border-bottom-color: var(--next-text-heading); font-weight: 700; }
+
+/* ── 页脚 ─────────────────────────────────────────────────────────── */
+.site-footer {
+  border-top: 1px solid var(--next-border);
+  color: var(--next-text-muted);
+  font-size: 0.85rem;
+}
+.site-footer a { color: var(--next-text); border-bottom: 1px solid var(--next-text-muted); }
+.site-footer a:hover { color: var(--next-text-heading); border-bottom-color: var(--next-text-heading); }
+
+/* ── 404 ──────────────────────────────────────────────────────────── */
+.not-found h1 { color: var(--next-border); }
+
+/* ── 返回链接 ─────────────────────────────────────────────────────── */
+main .site-wrapper > nav {
+  border-top: 1px solid var(--next-border) !important;
+  background: none;
+  border-radius: 0;
+  padding: 20px 0 !important;
+  margin-top: 40px !important;
+}
+main .site-wrapper > nav a { color: var(--next-text); text-decoration: none; border-bottom: 1px solid var(--next-text-muted); }
+main .site-wrapper > nav a:hover { color: var(--next-text-heading); border-bottom-color: var(--next-text-heading); }
+
+/* ── 响应式 ───────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .post-list { gap: 0; }
+  .post-list-item { padding: 24px 0; }
+  .site-main { padding: 24px 0; }
+}
+
+/* >>> ap-adapter >>> */
+/* ═══════════════════════════════════════════════════════════════════════
+   AstroPress 适配层：把 NexT (Muse) 设计语言映射到 BlockRenderer 的 DOM。
+   下方 :root 为注入块配色快照。源码弱化灰 #999 在白底上仅 2.85:1，
+   不满足正文 WCAG AA 4.5:1（源码中仅用于 meta/下划线等装饰），
+   故快照弱化文字取中性灰 #767676（4.54:1）；主 CSS 的 --next-text-muted
+   统一引用 var(--ap-muted)，不再保留 #999。
+   主色 #222（15.91:1）、hover #000（21:1）、#ddd 发丝线、圆角 0 均与源码一致。
+   ═══════════════════════════════════════════════════════════════════════ */
+:root {
+  --ap-primary: #222222;
+  --ap-primary-hover: #000000;
+  --ap-bg: #ffffff;
+  --ap-surface: #ffffff;
+  --ap-border: #dddddd;
+  --ap-text: #555555;
+  --ap-muted: #767676;
+  --ap-radius: 0px;
+}
+
+body { background: var(--ap-bg) !important; }
+.ap-blocks { color: var(--ap-text); }
+.ap-block h1, .ap-block h2, .ap-block h3, .ap-block h4,
+.post-header h1 { color: #222222; }
+
+/* 链接 #555 + #999 下划线，hover #222 */
+.ap-block-text a, .ap-block-columns a, .ap-block-html a,
+.post-content a, .read-more {
+  color: var(--ap-primary);
+  text-decoration: none;
+  border-bottom: 1px solid var(--next-text-muted);
+}
+.ap-block a:hover, .post-content a:hover, .read-more:hover {
+  color: var(--ap-primary-hover);
+  border-bottom-color: var(--ap-primary-hover);
+}
+
+/* 弱化信息（快照达标灰） */
+.post-meta, .post-list-item-meta,
+.ap-block-image figcaption, .ap-block .ap-muted { color: var(--ap-muted); }
+
+/* 导航：白底发丝线，Muse menu hover 白烟雾底 + #222 */
+.ap-block-nav {
+  position: sticky; top: 0; z-index: 90;
+  background: var(--ap-bg) !important;
+  border-bottom: 1px solid var(--ap-border) !important;
+  box-shadow: none;
+}
+.ap-block-nav > a { color: var(--ap-primary) !important; }
+.ap-block-nav nav ul li a {
+  color: var(--ap-text) !important;
+  border-bottom: 1px solid transparent;
+  border-radius: var(--ap-radius);
+  transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+.ap-block-nav nav ul li a:hover {
+  color: var(--ap-primary) !important;
+  background: #f5f5f5;
+  border-bottom-color: var(--ap-primary);
+}
+
+/* query-loop 纯文字流：白底无卡、发丝线分隔、圆角 0 */
+.ap-block-query-loop article {
+  background: var(--ap-surface) !important;
+  border-color: var(--ap-border) !important;
+  border-radius: var(--ap-radius) !important;
+  box-shadow: none;
+}
+.ap-block-query-loop article a { text-decoration: none; }
+.ap-block img { border-radius: var(--ap-radius); }
+
+/* hr 虚线渐变（与主 CSS 一致） */
+.ap-block-divider hr, .ap-block-text hr {
+  border: 0 !important;
+  height: 3px;
+  background-image: repeating-linear-gradient(-45deg, var(--ap-border), var(--ap-border) 4px, transparent 4px, transparent 8px);
+}
+
+/* blockquote：4px #ddd 左竖线、无底色、#666 文字 */
+.ap-block-text blockquote, .ap-block-columns blockquote, .ap-block-html blockquote {
+  border-left: 4px solid var(--ap-border);
+  background: none;
+  border-radius: var(--ap-radius);
+  color: #666666;
+}
+
+/* 行内 code：#f3f3f3 底、继承文字、3px 圆角 */
+.ap-block-text code, .ap-block-columns code, .ap-block-html code {
+  background: #f3f3f3;
+  color: inherit;
+  border-radius: 3px;
+  padding: 2px 6px;
+}
+.ap-block-text pre, .ap-block-columns pre, .ap-block-html pre {
+  background: #f3f3f3;
+  border-radius: var(--ap-radius);
+}
+
+@media (max-width: 640px) {
+  .ap-block-nav { height: auto !important; min-height: 56px; flex-wrap: wrap; padding: 8px 20px !important; row-gap: 4px; }
+  .ap-block-nav nav { width: 100%; }
+  .ap-block-nav nav ul { flex-wrap: wrap; }
+}
+/* <<< ap-adapter <<< */

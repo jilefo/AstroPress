@@ -1,0 +1,160 @@
+---
+/**
+ * /directory — 网站目录公开页（SSR，自包含）
+ *
+ * - enabled=false 时返回 404
+ * - 仅展示 status=approved 的链接，按分类分组卡片网格
+ * - 顶部搜索框纯客户端过滤（名称 + 描述），无命中的分类整组隐藏
+ * - 所有链接走 /ap-links/click?id= 跳转计数
+ * 注意：Astro 模板 {} 插值自动转义，本文件不再做手动 HTML 转义（避免双重转义）
+ */
+export const prerender = false;
+
+import { asc, eq } from "drizzle-orm";
+import { getSiteInfo } from "@astropress/core/query";
+import { ensureSchema, apLinkCats, apLinks } from "../lib/schema";
+import { loadSettings } from "../lib/settings";
+
+const db = (Astro.locals as any).db;
+if (!db) return new Response("服务器开小差了，请稍后再试", { status: 500 });
+
+const settings = await loadSettings(db);
+// 未启用时按 404 处理（不暴露插件存在）
+if (!settings.enabled) {
+  return new Response("页面不存在", { status: 404, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+}
+
+await ensureSchema(db);
+const site = await getSiteInfo(db).catch(() => ({ name: "AstroPress" }));
+
+const [cats, links] = await Promise.all([
+  db.select().from(apLinkCats).orderBy(asc(apLinkCats.sort), asc(apLinkCats.id)),
+  db
+    .select()
+    .from(apLinks)
+    .where(eq(apLinks.status, "approved"))
+    .orderBy(asc(apLinks.catId), asc(apLinks.id)),
+]);
+
+// 按分类分组（无已审核链接的分类不展示）
+const groups = cats
+  .map((c: any) => ({
+    id: c.id,
+    name: c.name,
+    slug: c.slug,
+    links: links.filter((l: any) => l.catId === c.id),
+  }))
+  .filter((g: any) => g.links.length > 0);
+
+const totalLinks = groups.reduce((n: number, g: any) => n + g.links.length, 0);
+---
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{settings.pageTitle} - {site.name || "AstroPress"}</title>
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f6f7f9; color: #1d2327; }
+      #ap-directory { max-width: 1080px; margin: 0 auto; padding: 40px 16px 64px; }
+      #ap-directory .ap-dir-head { text-align: center; margin-bottom: 28px; }
+      #ap-directory .ap-dir-head h1 { font-size: 28px; font-weight: 700; margin: 0 0 8px; }
+      #ap-directory .ap-dir-head p { font-size: 14px; color: #646970; margin: 0 0 20px; }
+      #ap-directory .ap-dir-search { max-width: 480px; width: 100%; margin: 0 auto; display: block; font-size: 15px; padding: 11px 16px; border: 1px solid #c3c4c7; border-radius: 8px; background: #fff; }
+      #ap-directory .ap-dir-search:focus { outline: none; border-color: #2271b1; box-shadow: 0 0 0 2px rgba(34,113,177,.15); }
+      #ap-directory .ap-dir-meta { font-size: 13px; color: #8c8f94; margin: 14px 2px 22px; }
+      #ap-directory .ap-dir-cat { margin-bottom: 32px; }
+      #ap-directory .ap-dir-cat-title { font-size: 17px; font-weight: 600; margin: 0 0 14px; padding-left: 10px; border-left: 4px solid #2271b1; }
+      #ap-directory .ap-dir-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+      #ap-directory .ap-dir-card { display: flex; flex-direction: column; gap: 8px; background: #fff; border: 1px solid #e2e4e7; border-radius: 10px; padding: 16px 18px; text-decoration: none; color: inherit; transition: box-shadow .18s ease, transform .18s ease, border-color .18s ease; }
+      #ap-directory .ap-dir-card:hover { border-color: #2271b1; box-shadow: 0 6px 18px rgba(0,0,0,.08); transform: translateY(-2px); }
+      #ap-directory .ap-dir-card-name { font-size: 15px; font-weight: 600; color: #135e96; display: flex; align-items: center; gap: 6px; word-break: break-all; }
+      #ap-directory .ap-dir-card-desc { font-size: 13px; line-height: 1.6; color: #50575e; margin: 0; flex: 1; word-break: break-word; }
+      #ap-directory .ap-dir-card-url { font-size: 12px; color: #8c8f94; word-break: break-all; }
+      #ap-directory .ap-dir-card-clicks { font-size: 12px; color: #a7aaad; }
+      #ap-directory .ap-dir-empty { background: #fff; border: 1px solid #e2e4e7; border-radius: 10px; padding: 40px 20px; text-align: center; color: #646970; font-size: 14px; }
+      @media (max-width: 600px) {
+        #ap-directory { padding: 28px 12px 48px; }
+        #ap-directory .ap-dir-head h1 { font-size: 23px; }
+        #ap-directory .ap-dir-grid { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="ap-directory">
+      <header class="ap-dir-head">
+        <h1>{settings.pageTitle}</h1>
+        {settings.subtitle && <p>{settings.subtitle}</p>}
+        <input
+          type="search"
+          class="ap-dir-search"
+          id="ap-dir-search"
+          placeholder="搜索网站名称或描述…"
+          autocomplete="off"
+        />
+      </header>
+
+      <div class="ap-dir-meta" id="ap-dir-meta">共 {totalLinks} 个网站 · {groups.length} 个分类</div>
+
+      {groups.length === 0 ? (
+        <div class="ap-dir-empty">目录还没有收录任何网站，稍后再来看看吧。</div>
+      ) : (
+        groups.map((g: any) => (
+          <section class="ap-dir-cat" data-cat={g.slug}>
+            <h2 class="ap-dir-cat-title">{g.name}</h2>
+            <div class="ap-dir-grid">
+              {g.links.map((l: any) => (
+                <a
+                  class="ap-dir-card"
+                  href={`/ap-links/click?id=${l.id}`}
+                  data-keywords={`${l.name} ${l.description}`.toLowerCase()}
+                  target={settings.newTab ? "_blank" : undefined}
+                  rel={settings.newTab ? "noopener noreferrer" : undefined}
+                >
+                  <span class="ap-dir-card-name">{l.name}</span>
+                  {l.description && <p class="ap-dir-card-desc">{l.description}</p>}
+                  <span class="ap-dir-card-url">{new URL(l.url).host}</span>
+                  {settings.showClicks && (
+                    <span class="ap-dir-card-clicks">{l.clicks} 次点击</span>
+                  )}
+                </a>
+              ))}
+            </div>
+          </section>
+        ))
+      )}
+    </div>
+
+    <script>
+      // 纯客户端过滤：按名称/描述匹配卡片，无可见卡片的分类整组隐藏
+      (function () {
+        var input = document.getElementById("ap-dir-search");
+        var meta = document.getElementById("ap-dir-meta");
+        var root = document.getElementById("ap-directory");
+        if (!input || !root) return;
+        var cats = Array.prototype.slice.call(root.querySelectorAll(".ap-dir-cat"));
+        var total = root.querySelectorAll(".ap-dir-card").length;
+
+        input.addEventListener("input", function () {
+          var q = input.value.trim().toLowerCase();
+          var visible = 0;
+          cats.forEach(function (catEl) {
+            var cards = Array.prototype.slice.call(catEl.querySelectorAll(".ap-dir-card"));
+            var shownInCat = 0;
+            cards.forEach(function (card) {
+              var kw = card.getAttribute("data-keywords") || "";
+              var hit = !q || kw.indexOf(q) !== -1;
+              card.style.display = hit ? "" : "none";
+              if (hit) { shownInCat++; visible++; }
+            });
+            catEl.style.display = shownInCat ? "" : "none";
+          });
+          if (meta) meta.textContent = q
+            ? "找到 " + visible + " / " + total + " 个网站"
+            : "共 " + total + " 个网站 · " + cats.length + " 个分类";
+        });
+      })();
+    </script>
+  </body>
+</html>

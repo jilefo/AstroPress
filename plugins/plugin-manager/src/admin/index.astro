@@ -1,0 +1,169 @@
+---
+/**
+ * /admin-ext/plugin-manager — 插件管理器
+ * 卡片式列出全部插件：启用/禁用、设置入口、清除数据。
+ */
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+if (!Astro.locals.user || !Astro.locals.db) return Astro.redirect("/login");
+---
+<AdminLayout title="插件管理">
+    <style is:global>
+      * { box-sizing: border-box; }
+      .wrap { max-width: 1100px; margin: 0 auto; }
+      .stats { display: flex; gap: 16px; margin-bottom: 20px; font-size: 13px; color: #646970; }
+      .stats b { color: #1d2327; font-size: 18px; margin-right: 4px; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+      .card { background: #fff; border: 1px solid #c3c4c7; border-radius: 6px; padding: 16px; display: flex; flex-direction: column; gap: 8px; transition: box-shadow .15s; }
+      .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+      .card.off { opacity: .72; background: #fafafa; }
+      .head { display: flex; align-items: center; gap: 10px; }
+      .avatar { width: 36px; height: 36px; border-radius: 8px; background: #3858e9; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; flex-shrink: 0; }
+      .card.off .avatar { background: #949494; }
+      .name { font-weight: 600; font-size: 14px; }
+      .ver { font-size: 11px; color: #646970; background: #f0f0f1; border-radius: 3px; padding: 1px 6px; margin-left: 6px; }
+      .desc { font-size: 12px; color: #50575e; line-height: 1.5; flex: 1; min-height: 34px; }
+      .pill { font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 600; }
+      .pill.on { background: #e7f6ec; color: #00a32a; }
+      .pill.off { background: #f0f0f1; color: #646970; }
+      .pill.sys { background: #e8edfb; color: #3858e9; }
+      .kind { font-size: 11px; color: #949494; }
+      .actions { display: flex; gap: 8px; align-items: center; border-top: 1px solid #f0f0f1; padding-top: 10px; margin-top: 2px; }
+      button { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 5px 12px; cursor: pointer; font-size: 12px; }
+      button.off { background: #646970; }
+      button.danger { background: #b32d2e; }
+      button:disabled { opacity: .5; cursor: not-allowed; }
+      a.settings { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: #fff; background: #2271b1; border: 1px solid #2271b1; border-radius: 4px; padding: 5px 14px; text-decoration: none; line-height: 1.4; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+      a.settings:hover { background: #135e96; border-color: #135e96; }
+      a.settings svg { width: 13px; height: 13px; fill: currentColor; }
+      .msg { font-size: 12px; color: #00a32a; margin-left: auto; }
+      .hint { font-size: 12px; color: #646970; margin-top: 16px; }
+      .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+      .chip { font-size: 11px; color: #2271b1; background: #f0f6fc; border: 1px solid #c5d9ed; border-radius: 999px; padding: 2px 9px; text-decoration: none; line-height: 1.6; }
+      .chip:hover { background: #2271b1; color: #fff; }
+      .chip.off { color: #949494; background: #f6f7f7; border-color: #dcdcde; }
+      .chip.off:hover { background: #949494; color: #fff; }
+      .chip.plain { cursor: default; }
+      .chip.plain:hover { background: #f0f6fc; color: #2271b1; }
+      .chip.off.plain:hover { background: #f6f7f7; color: #949494; }
+    </style>
+
+    <div class="wrap">
+      <h1 style="font-size:20px;margin:0 0 16px;">插件管理</h1>
+      <div class="stats" id="stats"></div>
+      <div class="grid" id="grid"></div>
+      <p class="hint">禁用即时生效：被禁插件的路由返回 404，后台菜单与注入脚本被移除，前台残留节点被隐藏。系统插件不可禁用。「清除数据」删除该插件在 wp_options 中的设置（不影响文章与媒体）。</p>
+    </div>
+
+    <script>
+      var $ = function (id) { return document.getElementById(id); };
+      function esc(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+
+      var KIND_LABEL = { system: "系统", suite: "套件", editor: "编辑器", frontend: "前台", admin: "后台", integration: "集成" };
+
+      function load() {
+        fetch("/admin-ext/api/plugin-manager/state", { credentials: "same-origin" })
+          .then(function (r) { return r.json(); })
+          .then(function (list) {
+            var on = 0, off = 0;
+            list.forEach(function (p) { p.enabled ? on++ : off++; });
+            $("stats").innerHTML = "<span><b>" + list.length + "</b>插件</span><span><b>" + on + "</b>启用</span><span><b>" + off + "</b>禁用</span>"; // ap-audit-ok: 仅数值拼接，无文本数据
+            var grid = $("grid");
+            grid.innerHTML = "";
+            list.forEach(function (p) {
+              var card = document.createElement("div");
+              card.className = "card" + (p.enabled ? "" : " off");
+              var pill = p.system
+                ? '<span class="pill sys">系统</span>'
+                : (p.enabled ? '<span class="pill on">启用中</span>' : '<span class="pill off">已禁用</span>');
+              var head = document.createElement("div");
+              head.className = "head";
+              head.innerHTML =
+                '<div class="avatar">' + esc((p.label || p.slug).charAt(0).toUpperCase()) + "</div>" +
+                '<div><span class="name">' + esc(p.label) + '</span><span class="ver">v' + esc(p.version || "?") + "</span> " + pill +
+                '<div class="kind">' + esc(KIND_LABEL[p.kind] || p.kind) + " · " + esc(p.slug) + "</div></div>";
+              var desc = document.createElement("div");
+              desc.className = "desc";
+              desc.textContent = p.description || "";
+              card.appendChild(head); card.appendChild(desc);
+              // 套件卡片：渲染成员芯片（有管理页的可点击跳转）
+              if (p.members && p.members.length) {
+                var chips = document.createElement("div");
+                chips.className = "chips";
+                p.members.forEach(function (mm) {
+                  // 平台不兼容的成员：保留灰态芯片并在悬浮提示中说明原因（不可点击跳转），
+                  // 避免「功能凭空消失」让站长困惑；路由与菜单仍按禁用策略剥离
+                  var blocked = !!mm.cfUnsupported;
+                  var clickable = mm.settingsUrl && !blocked;
+                  var c = document.createElement(clickable ? "a" : "span");
+                  if (clickable) { c.href = mm.settingsUrl; }
+                  c.className = "chip" + (clickable ? "" : " plain") + ((mm.enabled && !blocked) ? "" : " off");
+                  c.textContent = mm.label;
+                  c.title = blocked
+                    ? "平台不支持：" + mm.cfUnsupported
+                    : (mm.enabled ? mm.slug : mm.slug + "（已随套件禁用）");
+                  chips.appendChild(c);
+                });
+                card.appendChild(chips);
+              }
+              var act = document.createElement("div");
+              act.className = "actions";
+              // 当前页就是该设置页时不再渲染「设置」按钮（自引用链接多此一举）
+              if (p.settingsUrl && p.enabled && p.settingsUrl !== location.pathname) {
+                var s = document.createElement("a");
+                s.className = "settings"; s.href = p.settingsUrl;
+                s.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.48.48 0 0 0-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/></svg><span>设置</span>'; // ap-audit-ok: 纯静态 SVG 图标模板，无动态数据
+                act.appendChild(s);
+              }
+              if (!p.system) {
+                var t = document.createElement("button");
+                t.textContent = p.enabled ? "禁用" : "启用";
+                if (p.enabled) t.className = "off";
+                t.onclick = function () { toggle(p.slug, !p.enabled, t); };
+                act.appendChild(t);
+                if (p.optionKeys && p.optionKeys.length) {
+                  var d = document.createElement("button");
+                  d.className = "danger"; d.textContent = "清除数据";
+                  d.onclick = function () { purge(p.slug, p.label, d); };
+                  act.appendChild(d);
+                }
+              }
+              var msg = document.createElement("span");
+              msg.className = "msg";
+              act.appendChild(msg);
+              card.appendChild(act);
+              grid.appendChild(card);
+            });
+          });
+      }
+
+      function toggle(slug, enabled, btn) {
+        btn.disabled = true;
+        fetch("/admin-ext/api/plugin-manager/state", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ slug: slug, enabled: enabled })
+        }).then(function (r) { return r.json(); }).then(function (d) {
+          if (d.ok) load();
+          else { alert(d.error || "操作失败"); btn.disabled = false; }
+        });
+      }
+
+      function purge(slug, label, btn) {
+        if (!confirm("确定清除「" + label + "」的全部设置数据？此操作不可恢复。")) return;
+        if (!confirm("再次确认：将删除该插件在 wp_options 中的配置。文章与媒体不受影响。")) return;
+        btn.disabled = true;
+        fetch("/admin-ext/api/plugin-manager/purge", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ slug: slug })
+        }).then(function (r) { return r.json(); }).then(function (d) {
+          alert(d.ok ? "已清除 " + d.removed + " 项设置" : (d.error || "清除失败"));
+          btn.disabled = false;
+        });
+      }
+
+      load();
+    </script>
+</AdminLayout>

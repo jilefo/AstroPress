@@ -1,0 +1,249 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { getCustomTaxonomies, getPostTypes } from "@astropress/core/registry";
+
+const editing = Astro.url.searchParams.get("edit");
+const isNew = Astro.url.searchParams.get("new") === "1";
+
+const customTaxonomies = getCustomTaxonomies();
+const postTypes = getPostTypes();
+
+const editingTax = editing ? customTaxonomies.find(t => t.slug === editing) : null;
+---
+
+<AdminLayout title="分类法">
+  <div style="display:grid;grid-template-columns:280px 1fr;gap:0;min-height:calc(100vh - 32px);margin:-20px -20px -40px">
+
+    <!-- Left: list -->
+    <div style="background:#fff;border-right:1px solid #dcdcde;display:flex;flex-direction:column">
+      <div style="padding:16px 20px;border-bottom:1px solid #dcdcde;display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:13px;font-weight:700;color:#1d2327;text-transform:uppercase;letter-spacing:.5px">分类法</span>
+        <a href="?new=1" style="font-size:12px;background:#2271b1;color:#fff;padding:4px 10px;border-radius:3px;text-decoration:none;font-weight:600">+ 新增</a>
+      </div>
+
+      <div style="flex:1;overflow-y:auto">
+        {customTaxonomies.length === 0 && !isNew && (
+          <div style="padding:32px 20px;text-align:center;color:#646970;font-size:13px">
+            还没有分类法。<br/>
+            <a href="?new=1" style="color:#2271b1;font-size:12px;margin-top:8px;display:inline-block">创建第一个 →</a>
+          </div>
+        )}
+
+        {customTaxonomies.map(tax => (
+          <a
+            href={`?edit=${tax.slug}`}
+            style={`display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid #f0f0f1;text-decoration:none;transition:background 0.1s;${editing === tax.slug ? "background:#f0f6fc;border-left:3px solid #2271b1;" : "border-left:3px solid transparent;"}`}
+          >
+            <span style={`width:28px;text-align:center;color:${editing === tax.slug ? "#2271b1" : "#646970"};display:flex;align-items:center;justify-content:center`}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            </span>
+            <div style="min-width:0">
+              <div style="font-size:13px;font-weight:600;color:#1d2327">{tax.config.pluralLabel}</div>
+              <div style="font-size:11px;color:#646970;font-family:monospace">{tax.slug}</div>
+              {tax.config.postTypes?.length > 0 && (
+                <div style="font-size:10px;color:#8c8f94;margin-top:1px">{tax.config.postTypes.join(", ")}</div>
+              )}
+            </div>
+          </a>
+        ))}
+      </div>
+    </div>
+
+    <!-- Right: form -->
+    <div style="background:#f6f7f7;padding:32px">
+
+      {!isNew && !editingTax && (
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;color:#646970;text-align:center">
+          <div style="margin-bottom:16px;opacity:0.3;color:#1d2327">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        </div>
+          <h2 style="font-size:16px;font-weight:600;margin:0 0 8px;color:#1d2327">管理分类法</h2>
+          <p style="font-size:13px;margin:0 0 16px">创建自定义分类法来归类你的内容。</p>
+          <a href="?new=1" style="background:#2271b1;color:#fff;padding:8px 18px;border-radius:3px;text-decoration:none;font-size:13px;font-weight:600">添加分类法</a>
+        </div>
+      )}
+
+      {(isNew || editingTax) && (
+        <div style="max-width:720px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+            <h1 style="margin:0;font-size:20px;font-weight:700;color:#1d2327">{isNew ? "添加新分类法" : `编辑：${editingTax!.config.pluralLabel}`}</h1>
+            {editingTax && (
+              <button
+                id="delete-btn"
+                data-key={editingTax.slug}
+                style="font-size:12px;color:#d63638;background:#fff;border:1px solid #d63638;padding:6px 12px;border-radius:3px;cursor:pointer"
+              >
+                删除分类法
+              </button>
+            )}
+          </div>
+
+          <form id="tax-form">
+            <!-- Basic Settings -->
+            <div style="background:#fff;border:1px solid #dcdcde;border-radius:4px;margin-bottom:16px;overflow:hidden">
+              <div style="padding:14px 20px;background:#f6f7f7;border-bottom:1px solid #dcdcde;font-size:13px;font-weight:700;color:#1d2327">基本设置</div>
+              <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+                <div>
+                  <label style="font-size:12px;font-weight:600;display:block;margin-bottom:5px;color:#1d2327">单数名称 <span style="color:#d63638">*</span></label>
+                  <input name="label" required value={editingTax?.config.label ?? ""}
+                    placeholder="例如：流派"
+                    style="width:100%;padding:8px 10px;font-size:13px;border:1px solid #8c8f94;border-radius:3px;outline:none"
+                    oninput="autoKey(this)" />
+                  <p style="font-size:11px;color:#646970;margin:4px 0 0">该分类法的单数名称。</p>
+                </div>
+
+                <div>
+                  <label style="font-size:12px;font-weight:600;display:block;margin-bottom:5px;color:#1d2327">复数名称 <span style="color:#d63638">*</span></label>
+                  <input name="pluralLabel" required value={editingTax?.config.pluralLabel ?? ""}
+                    placeholder="例如：多个流派"
+                    style="width:100%;padding:8px 10px;font-size:13px;border:1px solid #8c8f94;border-radius:3px;outline:none" />
+                </div>
+
+                <div>
+                  <label style="font-size:12px;font-weight:600;display:block;margin-bottom:5px;color:#1d2327">分类法键名 <span style="color:#d63638">*</span></label>
+                  <input name="key" id="tax-key" required value={editingTax?.slug ?? ""}
+                    placeholder="e.g. genre"
+                    readonly={!!editingTax}
+                    style={`width:100%;padding:8px 10px;font-size:13px;font-family:monospace;border:1px solid #8c8f94;border-radius:3px;outline:none;${editingTax ? "background:#f6f7f7;color:#646970;" : ""}`} />
+                  <p style="font-size:11px;color:#646970;margin:4px 0 0">小写字母，不含空格。最多 32 个字符。</p>
+                </div>
+
+                <div style="grid-column:1/-1">
+                  <label style="font-size:12px;font-weight:600;display:block;margin-bottom:5px;color:#1d2327">描述</label>
+                  <textarea name="description" rows="2"
+                    placeholder="选填描述"
+                    style="width:100%;padding:8px 10px;font-size:13px;border:1px solid #8c8f94;border-radius:3px;outline:none;resize:vertical"
+                  >{editingTax?.config.description ?? ""}</textarea>
+                </div>
+              </div>
+            </div>
+
+            <!-- Post Types -->
+            <div style="background:#fff;border:1px solid #dcdcde;border-radius:4px;margin-bottom:16px;overflow:hidden">
+              <div style="padding:14px 20px;background:#f6f7f7;border-bottom:1px solid #dcdcde;font-size:13px;font-weight:700;color:#1d2327">文章类型</div>
+              <div style="padding:20px">
+                <p style="font-size:12px;color:#646970;margin:0 0 12px">选择该分类法适用于哪些文章类型。</p>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+                  {postTypes.map(pt => {
+                    const checked = editingTax?.config.postTypes?.includes(pt.slug) ?? false;
+                    return (
+                      <label style="display:flex;gap:8px;align-items:center;cursor:pointer;font-size:13px;color:#1d2327;padding:6px 10px;border:1px solid #dcdcde;border-radius:3px">
+                        <input type="checkbox" name="postTypes" value={pt.slug} checked={checked}
+                          style="width:14px;height:14px;flex-shrink:0" />
+                        <span>
+                          <span style="display:block;font-weight:600">{pt.config.pluralLabel}</span>
+                          <span style="font-size:11px;color:#8c8f94;font-family:monospace">{pt.slug}</span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                  {postTypes.length === 0 && (
+                    <p style="font-size:12px;color:#8c8f94;grid-column:1/-1;margin:0">尚未注册任何文章类型。</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <!-- Settings -->
+            <div style="background:#fff;border:1px solid #dcdcde;border-radius:4px;margin-bottom:16px;overflow:hidden">
+              <div style="padding:14px 20px;background:#f6f7f7;border-bottom:1px solid #dcdcde;font-size:13px;font-weight:700;color:#1d2327">设置</div>
+              <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                {[
+                  { name: "public",      label: "公开",            desc: "对用户可见，并可在查询中使用",  default: true },
+                  { name: "showInRest",  label: "在 REST API 中显示",  desc: "启用后支持区块编辑器",      default: true },
+                  { name: "hierarchical",label: "层级结构",      desc: "类似分类（父级/子级）",    default: false },
+                ].map(field => {
+                  const val = editingTax ? (editingTax.config as any)[field.name] : field.default;
+                  return (
+                    <label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;padding:6px 0">
+                      <input type="checkbox" name={field.name} value="1"
+                        checked={val === true || val === undefined && field.default}
+                        style="margin-top:2px;width:15px;height:15px;flex-shrink:0" />
+                      <span>
+                        <span style="font-size:13px;font-weight:600;color:#1d2327;display:block">{field.label}</span>
+                        <span style="font-size:11px;color:#646970">{field.desc}</span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div style="display:flex;gap:10px;align-items:center">
+              <button type="submit" style="background:#2271b1;color:#fff;padding:9px 20px;border:none;border-radius:3px;font-size:14px;font-weight:600;cursor:pointer">
+                {isNew ? "创建分类法" : "更新分类法"}
+              </button>
+              <a href="/admin/taxonomies" style="font-size:13px;color:#646970;text-decoration:none">取消</a>
+              <span id="tax-status" style="font-size:13px;color:#646970;margin-left:8px"></span>
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
+  </div>
+
+  <style>
+    input:focus { border-color: #2271b1 !important; box-shadow: 0 0 0 1px #2271b1; }
+  </style>
+
+  <script is:inline>
+    // Auto-generate key from singular label
+    function autoKey(input) {
+      var keyEl = document.getElementById("tax-key");
+      if (keyEl && !keyEl.readOnly) {
+        keyEl.value = input.value.toLowerCase().trim()
+          .replace(/[^a-z0-9]+/g, "_")
+          .replace(/^_+|_+$/g, "")
+          .slice(0, 32);
+      }
+    }
+
+    // Handle form submit
+    var form = document.getElementById("tax-form");
+    if (form) {
+      form.addEventListener("submit", async function(e) {
+        e.preventDefault();
+        var status = document.getElementById("tax-status");
+        status.textContent = "保存中…";
+
+        var fd = new FormData(form);
+        var postTypes = fd.getAll("postTypes");
+        var payload = {
+          key: fd.get("key"),
+          label: fd.get("label"),
+          pluralLabel: fd.get("pluralLabel"),
+          description: fd.get("description") || undefined,
+          postTypes: postTypes,
+          public: fd.get("public") === "1",
+          showInRest: fd.get("showInRest") === "1",
+          hierarchical: fd.get("hierarchical") === "1",
+        };
+
+        var res = await fetch("/api/taxonomies", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (res.ok) {
+          status.textContent = "已保存 ✓";
+          setTimeout(function() { location.href = "/admin/taxonomies?edit=" + payload.key; }, 600);
+        } else {
+          status.textContent = "保存失败";
+        }
+      });
+    }
+
+    // Handle delete
+    var deleteBtn = document.getElementById("delete-btn");
+    if (deleteBtn) {
+      deleteBtn.addEventListener("click", async function() {
+        if (!confirm("确定删除此分类法？此操作无法撤销。")) return;
+        var key = deleteBtn.dataset.key;
+        var res = await fetch("/api/taxonomies/" + key, { method: "DELETE" });
+        if (res.ok) location.href = "/admin/taxonomies";
+      });
+    }
+  </script>
+</AdminLayout>

@@ -1,0 +1,39 @@
+---
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import FormEntries from "../../../../islands/FormEntries";
+import { wpOptions } from "@astropress/core/schema";
+import { eq } from "drizzle-orm";
+
+const { id } = Astro.params;
+const db = Astro.locals.db;
+if (!Astro.locals.user || !db) return Astro.redirect("/login");
+
+let formTitle = "Form Entries";
+try {
+  const [row] = await db.select({ value: wpOptions.optionValue }).from(wpOptions)
+    .where(eq(wpOptions.optionName, "astropress_forms")).limit(1);
+  const forms: any[] = row?.value ? JSON.parse(row.value) : [];
+  const form = forms.find((f: any) => f.id === id);
+  if (form) formTitle = `Entries: ${form.title ?? form.name}`;
+} catch {}
+---
+<AdminLayout title={formTitle}>
+
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+    <a
+      href={`/admin/forms/${id}`}
+      style="display:inline-flex;align-items:center;gap:5px;font-size:13px;color:var(--wp-blue);text-decoration:none"
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+      Back to Form
+    </a>
+  </div>
+
+  <h1 class="wp-heading-inline">{formTitle}</h1>
+  <hr class="wp-header-end" />
+
+  <FormEntries client:only="react" formId={id!} />
+
+</AdminLayout>

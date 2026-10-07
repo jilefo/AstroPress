@@ -1,0 +1,347 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { getPost } from "../../../lib/posts";
+import BlockEditor from "../../../islands/BlockEditor";
+import { getSidebarPanels, getTaxonomies } from "@astropress/core/registry";
+import SeoPanel from "../../../islands/SeoPanel";
+import CustomFieldsPanel from "../../../islands/CustomFieldsPanel";
+import TaxonomyPanel from "../../../islands/TaxonomyPanel";
+import { wpOptions } from "@astropress/core/schema";
+import { eq } from "drizzle-orm";
+
+const db = Astro.locals.db;
+const user = Astro.locals.user;
+const id = Number(Astro.params.id);
+
+if (!db || !user) return Astro.redirect("/login");
+
+const post = await getPost(db, id);
+if (!post) return Astro.redirect("/admin/posts");
+
+const [siteUrlRow] = await db.select({ value: wpOptions.optionValue }).from(wpOptions).where(eq(wpOptions.optionName, "siteurl")).limit(1);
+const siteUrl = (siteUrlRow?.value ?? "http://localhost:4322").replace(/\/$/, "");
+
+const panels = getSidebarPanels("post");
+const postTaxonomies = getTaxonomies().filter((t) => t.config.postTypes?.includes("post"));
+---
+<AdminLayout
+  title={post.title || "编辑文章"}
+  pageContext={{ postId: id, postType: "post", postStatus: post.status }}
+>
+  <div id="editor-root"
+    data-post-id={String(id)}
+    data-initial-slug={post.slug ?? ""}
+    data-site-url={siteUrl}
+    style="display:grid;grid-template-columns:1fr 280px;gap:20px;align-items:start">
+
+    <!-- Left: Title + Block editor -->
+    <div>
+      <input
+        id="post-title"
+        type="text"
+        placeholder="添加标题"
+        value={post.title}
+        class="wp-post-title-input"
+        oninput="updateSlug(this.value)"
+      />
+      <div id="permalink-row" style="font-size:12px;color:var(--wp-gray-500);margin-bottom:16px;display:flex;align-items:center;flex-wrap:wrap;gap:4px">
+        <span>固定链接：</span>
+        <span id="permalink-view" style="display:inline-flex;align-items:center;gap:4px">
+          <a id="permalink-link" href={post.slug ? `${siteUrl}/${post.slug}` : "#"} target="_blank" style="color:var(--wp-blue);text-decoration:none" rel="noopener">{post.slug ? `${siteUrl}/${post.slug}` : "—"}</a>
+          <button onclick="startEditSlug()" style="font-size:11px;color:var(--wp-blue);background:none;border:none;padding:0 2px;cursor:pointer;font-family:inherit;text-decoration:underline">编辑</button>
+        </span>
+        <span id="permalink-edit" style="display:none;align-items:center;gap:4px">
+          <input id="post-slug" type="text" value={post.slug}
+            style="font-size:12px;padding:2px 6px;border:1px solid #8c8f94;border-radius:2px;outline:none;width:200px;font-family:monospace"
+            onkeydown="if(event.key==='Enter')confirmSlug();if(event.key==='Escape')cancelEditSlug()"
+          />
+          <button onclick="confirmSlug()" style="font-size:11px;padding:2px 8px;background:#2271b1;color:#fff;border:none;border-radius:2px;cursor:pointer">确定</button>
+          <button onclick="cancelEditSlug()" style="font-size:11px;padding:2px 8px;background:none;border:1px solid #dcdcde;border-radius:2px;cursor:pointer;color:#646970">取消</button>
+        </span>
+      </div>
+
+      <!-- AI 写作助手工具栏 -->
+      <div id="ai-writing-toolbar" style="margin-bottom:12px;padding:10px 12px;background:linear-gradient(135deg,#f0f6ff 0%,#f8faff 100%);border:1px solid #c3d4e8;border-radius:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:13px;font-weight:600;color:#1a3a5c;white-space:nowrap">🤖 AI 写作助手</span>
+        <select id="ai-preset-select" style="flex:1;min-width:200px;padding:6px 10px;border:1px solid #b8c9dd;border-radius:4px;font-size:13px;background:#fff;cursor:pointer">
+          <option value="">选择提示词模板…</option>
+        </select>
+        <button type="button" id="ai-preset-apply" style="padding:6px 14px;background:#0f6bdf;color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;white-space:nowrap">填入正文</button>
+        <button type="button" id="ai-preset-panel" style="padding:6px 14px;background:#f0f0f1;color:#1d2327;border:1px solid #c3c4c7;border-radius:4px;font-size:12px;cursor:pointer;white-space:nowrap">打开 AI 面板</button>
+      </div>
+
+      <div class="postbox" style="overflow:hidden;min-height:480px">
+        <BlockEditor
+          client:only="react"
+          initialContent={post.content}
+          postId={id}
+        />
+      </div>
+
+      <!-- Excerpt -->
+      <div class="postbox" style="margin-top:16px">
+        <div class="postbox-header"><h2 class="postbox-title">摘要</h2></div>
+        <div class="postbox-inside">
+          <textarea
+            id="post-excerpt"
+            rows="3"
+            placeholder="摘要（选填）…"
+            class="wp-textarea"
+            style="width:100%"
+          >{post.excerpt}</textarea>
+        </div>
+      </div>
+
+      <!-- Custom Fields -->
+      <div style="margin-top:16px">
+        <CustomFieldsPanel client:only="react" postId={id} postType="post" />
+      </div>
+    </div>
+
+    <!-- Right sidebar -->
+    <aside>
+      <!-- Publish box -->
+      <div class="postbox">
+        <div class="postbox-header"><h2 class="postbox-title">发布</h2></div>
+        <div class="postbox-inside">
+          <div style="margin-bottom:12px">
+            <label class="wp-form-label">可见性</label>
+            <select id="post-status" class="wp-select" style="width:100%">
+              <option value="draft" selected={post.status === "draft"}>草稿</option>
+              <option value="publish" selected={post.status === "publish"}>已发布</option>
+              <option value="private" selected={post.status === "private"}>私密</option>
+            </select>
+          </div>
+
+          <div id="save-status" style="font-size:11px;color:var(--wp-gray-500);margin-bottom:10px;min-height:14px"></div>
+
+          <div style="display:flex;gap:6px">
+            <button onclick="savePost('draft')" class="button" style="flex:1;justify-content:center">保存草稿</button>
+            <button onclick="savePost('publish')" class="button-primary" style="flex:1;justify-content:center">发布</button>
+          </div>
+
+          <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--wp-gray-100)">
+            <button
+              onclick={`if(confirm('确定移入回收站吗？')) { fetch('/api/posts/${id}', {method:'DELETE'}).then(() => location.href='/admin/posts') }`}
+              class="button-link-delete"
+              style="font-size:12px"
+            >
+              移入回收站
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- View post link -->
+      {post.status === "publish" && (
+        <div class="postbox">
+          <div class="postbox-inside" style="font-size:12px">
+            <a href={`${siteUrl}/${post.slug}`} target="_blank" class="button-link">查看文章 →</a>
+          </div>
+        </div>
+      )}
+
+      <!-- Taxonomy panels -->
+      {postTaxonomies.map((tax) => (
+        <div class="postbox">
+          <div class="postbox-header">
+            <h2 class="postbox-title">{tax.config.pluralLabel}</h2>
+          </div>
+          <div class="postbox-inside">
+            <TaxonomyPanel
+              client:only="react"
+              postId={id}
+              taxonomy={tax.slug}
+              label={tax.config.label}
+              hierarchical={tax.config.hierarchical ?? false}
+            />
+          </div>
+        </div>
+      ))}
+
+      <!-- Plugin sidebar panels -->
+      {panels.map((panel) => (
+        <div class="postbox">
+          <div class="postbox-header">
+            <h2 class="postbox-title">{panel.config.title}</h2>
+          </div>
+          <div class="postbox-inside">
+            {panel.config.componentId === "SeoPanel" && (
+              <SeoPanel client:only="react" postId={id} />
+            )}
+          </div>
+        </div>
+      ))}
+    </aside>
+  </div>
+
+  <script is:inline>
+    (function () {
+      var root = document.getElementById("editor-root");
+      var postId = root.dataset.postId;
+      var currentSlug = root.dataset.initialSlug;
+      var siteUrl = root.dataset.siteUrl || "";
+
+      function slugify(str) {
+        return str.toLowerCase().trim()
+          .replace(/[^\w\s-]/g, "")
+          .replace(/[\s_]+/g, "-")
+          .replace(/^-+|-+$/g, "");
+      }
+
+      // slugLocked = user has manually set a slug; stop auto-generating from title
+      var slugLocked = false;
+
+      window.updateSlug = function (title) {
+        if (slugLocked) return;
+        // Don't write anything — just preview. Actual slug is derived on save if empty.
+        var preview = slugify(title);
+        var link = document.getElementById("permalink-link");
+        if (link) { link.textContent = preview ? (siteUrl + "/" + preview) : "—"; link.href = preview ? (siteUrl + "/" + preview) : "#"; }
+      };
+
+      function setPermalinkDisplay(slug) {
+        var link = document.getElementById("permalink-link");
+        if (link) { link.textContent = slug ? (siteUrl + "/" + slug) : "—"; link.href = slug ? (siteUrl + "/" + slug) : "#"; }
+        var input = document.getElementById("post-slug");
+        if (input) input.value = slug;
+        currentSlug = slug;
+      }
+
+      window.startEditSlug = function () {
+        // Pre-fill with current slug or title-derived slug
+        var input = document.getElementById("post-slug");
+        if (!input.value) {
+          input.value = slugify(document.getElementById("post-title").value);
+        }
+        document.getElementById("permalink-view").style.display = "none";
+        document.getElementById("permalink-edit").style.display = "inline-flex";
+        input.focus();
+        input.select();
+      };
+
+      window.confirmSlug = function () {
+        var input = document.getElementById("post-slug");
+        var raw = input.value.trim();
+        var newSlug = raw ? slugify(raw) || raw.toLowerCase().replace(/[^a-z0-9-]/g, "-") : "";
+        slugLocked = !!newSlug;
+        setPermalinkDisplay(newSlug);
+        document.getElementById("permalink-edit").style.display = "none";
+        document.getElementById("permalink-view").style.display = "inline-flex";
+      };
+
+      window.cancelEditSlug = function () {
+        document.getElementById("post-slug").value = currentSlug;
+        document.getElementById("permalink-edit").style.display = "none";
+        document.getElementById("permalink-view").style.display = "inline-flex";
+      };
+
+      window.savePost = async function (forceStatus) {
+        var title = document.getElementById("post-title").value;
+        var status = forceStatus || document.getElementById("post-status").value;
+        var slug = document.getElementById("post-slug").value.trim() || slugify(title);
+        var excerpt = document.getElementById("post-excerpt").value;
+        var content = window.__editorContent || "";
+
+        document.getElementById("save-status").textContent = "保存中\u2026";
+
+        try {
+          var res = await fetch("/api/posts/" + postId, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: title, content: content, excerpt: excerpt, status: status, slug: slug }),
+          });
+          if (res.ok) {
+            // Sync permalink display to the resolved slug
+            if (!slugLocked) setPermalinkDisplay(slug);
+            document.getElementById("save-status").textContent = "已保存 \u2713";
+            document.getElementById("post-status").value = status;
+            setTimeout(function () { document.getElementById("save-status").textContent = ""; }, 3000);
+          } else {
+            document.getElementById("save-status").textContent = "保存失败";
+          }
+        } catch (e) {
+          document.getElementById("save-status").textContent = "保存失败";
+        }
+      };
+
+      setInterval(function () {
+        var title = document.getElementById("post-title").value;
+        if (title) window.savePost(null);
+      }, 60000);
+
+      // ---- AI 写作助手工具栏 ----
+      var AI_PROMPT_PRESETS = [
+        { label: "📝 深度长文", prompt: "请根据以下主题生成一篇5000字以上的深度文章。要求：1. 使用Markdown格式，包含一级标题、至少6个小节标题、加粗关键概念；2. 内容要有深度，包含案例分析、数据支撑、专业术语解释；3. 语言流畅自然，避免AI味；4. 适当插入配图建议（用[配图：描述]标注）；5. 结尾要有总结和行动建议。主题：{title}" },
+        { label: "📰 公众号爆款", prompt: "请以公众号写作大师的身份，根据以下主题生成一篇爆款文章。要求：1. 标题要吸引人，使用数字、悬念、冲突等技巧；2. 开头3秒抓住读者注意力；3. 正文3000-5000字，分段清晰，多用短句；4. 金句频出，引发共鸣；5. 结尾引导点赞、在看、转发；6. 使用Markdown格式。主题：{title}" },
+        { label: "🔍 SEO 优化文", prompt: "请以SEO内容专家的身份，根据以下主题生成一篇SEO优化文章。要求：1. 标题包含核心关键词；2. 正文5000字以上，关键词密度2-3%；3. 使用H1-H6标题层级；4. 包含FAQ小节；5. 内链建议（用[内链：关键词]标注）；6. Meta描述建议；7. 使用Markdown格式。主题：{title}" },
+        { label: "✨ 去 AI 味润色", prompt: "请将以下内容进行深度去 AI 味改写，严格执行禁令清单：【禁用词】此外/然而/因此/总而言之/事实上/值得注意/换句话说/划重点/敲黑板/拆解/梳理/剖析/解构/赋能/闭环/抓手/落地/至关重要/不可或缺/深远影响/标志着/行业报告显示/专家认为/研究表明/未来可期/综上所述；【句式禁令】禁「不是A而是B」「看似…实则…」二分壳，禁三项式排比，「一旦…就/只有…才/无论…都」全文最多1次；【标点禁令】揭晓式破折号删（「答案很简单——专注」改「答案是专注」），「核心是：」类提示语冒号直写内容；【手法】然而→可/但/其实，抽象→具象（紧张→手在抖，提升效率→省了几个人），长短句交错。保留全部事实与数据，Markdown 格式输出。内容：{content}" },
+        { label: "📖 教程指南", prompt: "请以技术文档工程师的身份，根据以下主题生成一篇教程指南。要求：1. 问题场景描述；2. 分步骤操作指南（每步配代码或截图说明）；3. 常见问题排查；4. 进阶技巧；5. 使用Markdown格式，代码块标注语言。主题：{title}" },
+        { label: "📊 测评对比", prompt: "请以产品测评师的身份，根据以下主题生成一篇测评对比文章。要求：1. 多维度对比（功能、性能、价格、易用性）；2. 实测数据支撑；3. 优缺点分析；4. 适用人群建议；5. 使用Markdown格式，表格呈现对比数据。主题：{title}" },
+        { label: "🎯 观点评论", prompt: "请以行业观察员的身份，根据以下主题生成一篇观点评论文章。要求：1. 热点背景介绍；2. 多方观点梳理；3. 独到分析见解；4. 趋势预判；5. 使用Markdown格式，引用权威来源。主题：{title}" },
+        { label: "📋 清单盘点", prompt: "请以内容编辑的身份，根据以下主题生成一篇清单盘点文章。要求：1. 数字标题（如：10个、8款）；2. 盘点标准说明；3. 每个条目详细介绍；4. 总结推荐；5. 使用Markdown格式，有序列表呈现。主题：{title}" },
+        { label: "🔧 问题解答", prompt: "请以领域专家的身份，根据以下主题生成一篇问题解答文章。要求：1. 问题现象描述；2. 原因分析；3. 解决方案（多种）；4. 预防措施；5. 使用Markdown格式，代码块展示命令或配置。主题：{title}" },
+        { label: "📈 趋势分析", prompt: "请以行业分析师的身份，根据以下主题生成一篇趋势分析文章。要求：1. 现状概述；2. 数据支撑（引用权威报告）；3. 驱动因素分析；4. 未来预测；5. 建议与启示；6. 使用Markdown格式。主题：{title}" },
+      ];
+
+      var aiPresetSelect = document.getElementById("ai-preset-select");
+      var aiPresetApply = document.getElementById("ai-preset-apply");
+      var aiPresetPanel = document.getElementById("ai-preset-panel");
+
+      // 填充下拉框
+      AI_PROMPT_PRESETS.forEach(function (p, i) {
+        var opt = document.createElement("option");
+        opt.value = i;
+        opt.textContent = p.label;
+        opt.title = p.prompt.slice(0, 100) + "…";
+        aiPresetSelect.appendChild(opt);
+      });
+
+      // 填入正文
+      aiPresetApply.addEventListener("click", function () {
+        var idx = parseInt(aiPresetSelect.value, 10);
+        if (isNaN(idx) || idx < 0 || idx >= AI_PROMPT_PRESETS.length) {
+          alert("请先选择一个提示词模板");
+          return;
+        }
+        var preset = AI_PROMPT_PRESETS[idx];
+        var title = document.getElementById("post-title").value || "未命名主题";
+        var content = window.__editorContent || "";
+        var prompt = preset.prompt.replace("{title}", title).replace("{content}", content.slice(0, 2000));
+        
+        // 尝试填入 BlockEditor（通过全局 __editorContent 或尝试找到编辑器实例）
+        if (window.__apInsertToEditor) {
+          window.__apInsertToEditor(prompt);
+        } else {
+          // 回退：复制到剪贴板
+          navigator.clipboard.writeText(prompt).then(function () {
+            alert("提示词已复制到剪贴板，请粘贴到编辑器中");
+          });
+        }
+      });
+
+      // 打开 AI 面板
+      aiPresetPanel.addEventListener("click", function () {
+        // 触发 AI 聊天面板的打开（通过模拟点击 FAB 或调用全局函数）
+        var fab = document.querySelector("#apaiFab, #ap-ai-fab, .ap-ai-fab, [data-ap-ai]");
+        if (fab) {
+          fab.click();
+        } else {
+          // 尝试通过自定义事件打开；无插件响应时给出中文说明
+          window.dispatchEvent(new CustomEvent("ap:open-ai-panel"));
+          setTimeout(function () {
+            if (!document.querySelector("#apaiFab, #ap-ai-fab, .ap-ai-fab, [data-ap-ai]")) {
+              alert("AI 网页版助手未启用（Cloudflare 部署不支持该插件）。\n「选择提示词模板」与「爆款标题生成」功能不受影响，可正常使用。");
+            }
+          }, 400);
+        }
+      });
+
+      // AI 面板入口自检：AI 网页版助手未注入悬浮球（未安装/禁用/平台屏蔽）时隐藏该入口，避免死按钮
+      setTimeout(function () {
+        var fab = document.querySelector("#apaiFab, #ap-ai-fab, .ap-ai-fab, [data-ap-ai]");
+        if (!fab && aiPresetPanel) aiPresetPanel.style.display = "none";
+      }, 600);
+    })();
+  </script>
+</AdminLayout>

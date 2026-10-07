@@ -1,0 +1,26 @@
+{
+  "name": "Yesterday",
+  "version": "1.0.3",
+  "description": "Serene content-first classic three-column blog theme",
+  "author": "Jewel Khan",
+  "tokens": {
+    "fonts": {
+      "body": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      "heading": "'Playfair Display', Georgia, serif"
+    },
+    "spacing": {
+      "sectionY": "48px",
+      "borderRadius": "10px",
+      "containerMax": "1320px"
+    },
+    "colors": {
+      "textMuted": "#576776",
+      "surface": "#ffffff",
+      "background": "#dfe3e8",
+      "secondary": "#4c6784",
+      "border": "#e3e8ee",
+      "text": "#1f2d3d",
+      "primary": "#2c3e50"
+    }
+  }
+}

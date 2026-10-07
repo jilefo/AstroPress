@@ -1,0 +1,29 @@
+{
+    "name":  "@astropress/plugin-site-suite",
+    "version":  "1.0.0",
+    "private":  true,
+    "type":  "module",
+    "description":  "合并套件：广告管理 · 评论 · 社交分享 · 在线客服 · 页脚设置 · 文章打赏 · Gitalk评论",
+    "exports":  {
+                    ".":  "./src/index.ts",
+                    "./integration":  "./src/integration.ts"
+                },
+    "scripts":  {
+                    "typecheck":  "tsc --noEmit"
+                },
+    "dependencies":  {
+                         "@astropress/core":  "workspace:*",
+                         "@astropress/plugin-ads-manager":  "workspace:*",
+                         "@astropress/plugin-comments":  "workspace:*",
+                         "@astropress/plugin-share":  "workspace:*",
+                         "@astropress/plugin-customer-service":  "workspace:*",
+                         "@astropress/plugin-footer":  "workspace:*",
+                         "@astropress/plugin-donation":  "workspace:*",
+                         "@astropress/plugin-gitalk-comment":  "workspace:*"
+                     },
+    "devDependencies":  {
+                            "astro":  "^4.0.0",
+                            "typescript":  "^5.4.0",
+                            "@cloudflare/workers-types":  "^4.0.0"
+                        }
+}

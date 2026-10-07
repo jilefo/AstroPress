@@ -1,0 +1,26 @@
+{
+  "name": "Ayer",
+  "version": "1.9.6",
+  "description": "Hexo theme Ayer ported to AstroPress — clean Chinese typography, sea-blue accents, airy reading width",
+  "author": "Shen-Yu (ported)",
+  "tokens": {
+    "fonts": {
+      "body": "'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif",
+      "heading": "'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif"
+    },
+    "spacing": {
+      "sectionY": "36px",
+      "borderRadius": "4px",
+      "containerMax": "700px"
+    },
+    "colors": {
+      "textMuted": "#5c6b72",
+      "surface": "#ffffff",
+      "background": "#ffffff",
+      "secondary": "#3d85c6",
+      "border": "#dddddd",
+      "text": "#403e3e",
+      "primary": "#0678c1"
+    }
+  }
+}

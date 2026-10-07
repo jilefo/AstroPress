@@ -1,0 +1,153 @@
+---
+import { wpOptions, wpPosts } from "@astropress/core/schema";
+import { eq, and } from "drizzle-orm";
+import { DEFAULT_THEME_TOKENS, TEMPLATE_TYPE_LABELS } from "@astropress/core/types/theme";
+import type { ThemeTemplate } from "@astropress/core/types/theme";
+import ThemeEditor from "../../../../islands/ThemeEditor";
+
+const db = Astro.locals.db;
+if (!Astro.locals.user || !db) return Astro.redirect("/login");
+
+const { slug } = Astro.params;
+if (!slug) return Astro.redirect("/admin/themes");
+
+// Legacy fixed slugs (still supported for old data)
+const TEMPLATE_SLUG_MAP: Record<string, string> = {
+  "__header__": "header",
+  "__footer__": "footer",
+  "__single-post__": "single-post",
+  "__single-page__": "single-page",
+  "__archive__": "archive",
+  "__404__": "404",
+  "__search__": "search",
+};
+
+// Any slug wrapped in __ is a template slug (legacy fixed or new dynamic __type_id__)
+const mightBeTemplate = slug.startsWith("__") && slug.endsWith("__");
+const isLoopItem = slug.startsWith("__loop-item_") && slug.endsWith("__");
+
+let isTemplate = false;
+let templatePart: any = undefined;
+let templateRecord: ThemeTemplate | undefined;
+let templateConditions: any[] = [];
+
+if (mightBeTemplate && !isLoopItem) {
+  // Look up from the templates registry first
+  const [tmplRow] = await db
+    .select({ value: wpOptions.optionValue })
+    .from(wpOptions)
+    .where(eq(wpOptions.optionName, "astropress_theme_templates"))
+    .limit(1);
+  const allTemplates: ThemeTemplate[] = tmplRow?.value ? JSON.parse(tmplRow.value) : [];
+  templateRecord = allTemplates.find(t => t.schemaSlug === slug);
+
+  if (templateRecord) {
+    isTemplate = true;
+    templatePart = templateRecord.type;
+    templateConditions = templateRecord.conditions ?? [];
+  } else if (slug in TEMPLATE_SLUG_MAP) {
+    // Legacy slug with no registered template record
+    isTemplate = true;
+    templatePart = TEMPLATE_SLUG_MAP[slug];
+  }
+}
+
+let pageTitle = slug;
+if (isLoopItem) {
+  // Load loop template name
+  const [ltRow] = await db.select({ value: wpOptions.optionValue }).from(wpOptions)
+    .where(eq(wpOptions.optionName, "astropress_loop_templates")).limit(1);
+  const ltList: any[] = ltRow?.value ? JSON.parse(ltRow.value) : [];
+  const ltId = slug.replace("__loop-item_", "").replace(/__$/, "");
+  const lt = ltList.find((t: any) => t.id === ltId);
+  pageTitle = lt ? lt.name : "循环模板";
+} else if (!isTemplate) {
+  const [page] = await db
+    .select({ title: wpPosts.postTitle })
+    .from(wpPosts)
+    .where(and(eq(wpPosts.postName, slug), eq(wpPosts.postType, "page")))
+    .limit(1);
+  if (!page && !isTemplate) return Astro.redirect("/admin/themes");
+  pageTitle = page?.title ?? slug;
+}
+
+// Load block schema
+const schemaKey = `astropress_page_schema_${slug}`;
+
+const [schemaRow] = await db
+  .select({ value: wpOptions.optionValue })
+  .from(wpOptions)
+  .where(eq(wpOptions.optionName, schemaKey))
+  .limit(1);
+
+
+const schema = schemaRow?.value ? JSON.parse(schemaRow.value) : { version: 1, blocks: [] };
+
+// Load theme tokens
+const [tokenRow] = await db
+  .select({ value: wpOptions.optionValue })
+  .from(wpOptions)
+  .where(eq(wpOptions.optionName, "astropress_theme_config"))
+  .limit(1);
+
+const tokens = tokenRow?.value ? JSON.parse(tokenRow.value) : DEFAULT_THEME_TOKENS;
+
+// Load available forms for form block
+const [formsRow] = await db
+  .select({ value: wpOptions.optionValue })
+  .from(wpOptions)
+  .where(eq(wpOptions.optionName, "astropress_forms"))
+  .limit(1);
+
+const rawForms: any[] = formsRow?.value ? JSON.parse(formsRow.value) : [];
+const forms = rawForms.map((f: any) => ({
+  id: String(f.id),
+  title: String(f.title ?? f.name ?? "未命名表单"),
+  fieldCount: (f.fields ?? []).filter((field: any) => !["page_break", "section_divider", "html"].includes(field.type)).length,
+}));
+
+// Load siteUrl for live preview
+const [siteUrlRow] = await db
+  .select({ value: wpOptions.optionValue })
+  .from(wpOptions)
+  .where(eq(wpOptions.optionName, "siteurl"))
+  .limit(1);
+const siteUrl = (siteUrlRow?.value ?? "http://localhost:4322").replace(/\/$/, "");
+
+const displayTitle = isLoopItem
+  ? pageTitle + " — 循环模板"
+  : isTemplate
+  ? (TEMPLATE_TYPE_LABELS[templatePart as keyof typeof TEMPLATE_TYPE_LABELS] ?? templatePart) + " 模板"
+  : pageTitle;
+---
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>编辑：{displayTitle} — AstroPress</title>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      #editor-root { height: 100vh; }
+    </style>
+  </head>
+  <body>
+    <div id="editor-root">
+      <ThemeEditor
+        client:only="react"
+        slug={slug}
+        pageTitle={displayTitle}
+        initialBlocks={schema.blocks}
+        initialTokens={tokens}
+        forms={forms}
+        isTemplate={isTemplate}
+        isLoopItem={isLoopItem}
+        templatePart={templatePart}
+        templateId={templateRecord?.id}
+        initialConditions={templateConditions}
+        siteUrl={siteUrl}
+      />
+    </div>
+  </body>
+</html>

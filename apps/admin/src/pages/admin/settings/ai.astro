@@ -1,0 +1,118 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { eq } from "drizzle-orm";
+import { wpOptions } from "@astropress/core/schema";
+import AISettings from "../../../islands/AISettings";
+
+const db = Astro.locals.db;
+if (!db || !Astro.locals.user) return Astro.redirect("/login");
+
+// Check if any AI provider is already configured
+const row = await db
+  .select()
+  .from(wpOptions)
+  .where(eq(wpOptions.optionName, "astropress_ai_settings"))
+  .get();
+
+let isConfigured = false;
+let activeProvider = "";
+
+if (row?.optionValue) {
+  try {
+    const s = JSON.parse(row.optionValue);
+    activeProvider = s.activeProvider ?? "";
+    const providers = s.providers ?? {};
+    isConfigured = Object.values(providers).some(
+      (p: any) => p?.apiKey && p.enabled !== false
+    );
+  } catch {}
+}
+---
+<AdminLayout title="设置 › AI">
+  <div class="settings-wrap">
+
+    <!-- Page heading -->
+    <h1 class="wp-page-title">设置</h1>
+
+    <!-- Sub-nav tabs -->
+    <nav class="nav-tab-wrapper">
+      <a href="/admin/settings" class="nav-tab">常规</a>
+      <a href="/admin/settings/ai" class="nav-tab nav-tab-active">AI</a>
+    </nav>
+
+    {!isConfigured ? (
+      <!-- Setup required state -->
+      <div class="ai-setup-required">
+        <div class="ai-setup-icon">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" style="color:#2271b1">
+            <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+          </svg>
+        </div>
+        <h2 class="ai-setup-heading">为 AstroPress 配置 AI</h2>
+        <p class="ai-setup-desc">
+          连接 AI 服务商即可解锁 AI 助手——撰写内容、生成标题、
+          填充摘要，并用自然语言管理你的站点。
+        </p>
+        <div class="ai-setup-providers">
+          <span class="ai-provider-chip">Claude (Anthropic)</span>
+          <span class="ai-provider-chip">GPT (OpenAI)</span>
+          <span class="ai-provider-chip">Gemini (Google)</span>
+          <span class="ai-provider-chip">Mistral</span>
+          <span class="ai-provider-chip">Groq</span>
+        </div>
+        <p class="ai-setup-hint">
+          在下方粘贴任意 API 密钥即可开始。密钥安全存储在你的数据库中，绝不会公开暴露。
+        </p>
+      </div>
+    ) : (
+      <div class="notice notice-success" style="margin-bottom:20px;max-width:640px">
+        AI 已启用——当前使用 <strong>{activeProvider}</strong>。助手在每个后台页面都可用。
+      </div>
+    )}
+
+    <!-- AISettings island always rendered so user can edit/switch -->
+    <AISettings client:only="react" />
+
+  </div>
+</AdminLayout>
+
+<style is:global>
+  .settings-wrap { max-width: 860px; }
+
+  /* ── Setup required state ───────────────────────────────────────────── */
+  .ai-setup-required {
+    max-width: 540px;
+    background: var(--wp-white);
+    border: 1px solid var(--wp-gray-300);
+    border-top: 4px solid var(--wp-blue);
+    padding: 32px 32px 28px;
+    margin-bottom: 28px;
+    text-align: center;
+  }
+  .ai-setup-icon { margin-bottom: 16px; }
+  .ai-setup-heading {
+    font-size: 18px; font-weight: 600;
+    margin: 0 0 10px; color: var(--wp-gray-900);
+  }
+  .ai-setup-desc {
+    font-size: 13px; color: var(--wp-gray-600);
+    margin: 0 0 16px; line-height: 1.6;
+  }
+  .ai-setup-providers {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    justify-content: center; margin-bottom: 16px;
+  }
+  .ai-provider-chip {
+    display: inline-block;
+    padding: 3px 10px;
+    background: var(--wp-blue-light);
+    color: var(--wp-blue);
+    border: 1px solid #c5d9f0;
+    border-radius: 12px;
+    font-size: 11px; font-weight: 600;
+  }
+  .ai-setup-hint {
+    font-size: 11px; color: var(--wp-gray-500);
+    margin: 0; line-height: 1.5;
+  }
+</style>

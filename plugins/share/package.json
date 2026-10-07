@@ -1,0 +1,23 @@
+{
+  "name": "@astropress/plugin-share",
+  "version": "0.1.0",
+  "description": "文章社交分享：在文章页注入微信/微博/QQ/知乎/Twitter/Facebook/LinkedIn/Telegram/WhatsApp/复制链接按钮，后台可配置平台与位置",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./integration.admin": "./src/integration.admin.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@astropress/core": "workspace:*",
+    "drizzle-orm": "^0.36.0"
+  },
+  "devDependencies": {
+    "astro": "^4.0.0",
+    "typescript": "^5.4.0",
+    "@cloudflare/workers-types": "^4.0.0"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "Icarus",
+  "version": "6.1.1",
+  "description": "Hexo theme Icarus ported to AstroPress — Bulma-powered, clean cards, blue-grey readability",
+  "author": "Ruipeng Zhang (ported)",
+  "tokens": {
+    "fonts": {
+      "body": "Ubuntu, Roboto, 'Open Sans', 'Microsoft YaHei', sans-serif",
+      "heading": "Ubuntu, Roboto, 'Open Sans', 'Microsoft YaHei', sans-serif"
+    },
+    "spacing": {
+      "sectionY": "32px",
+      "borderRadius": "4px",
+      "containerMax": "1080px"
+    },
+    "colors": {
+      "textMuted": "#6f6f6f",
+      "surface": "#ffffff",
+      "background": "#f7f7f7",
+      "secondary": "#3273dc",
+      "border": "#dbdbdb",
+      "text": "#363636",
+      "primary": "#3273dc"
+    }
+  }
+}

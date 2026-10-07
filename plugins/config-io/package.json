@@ -1,0 +1,23 @@
+{
+  "name": "@astropress/plugin-config-io",
+  "version": "0.1.0",
+  "description": "配置导入导出：站点设置 / 插件设置 / 主题配置 / 内容数据的 JSON 导出与 merge/replace 导入",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./integration.admin": "./src/integration.admin.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@astropress/core": "workspace:*",
+    "drizzle-orm": "^0.36.0"
+  },
+  "devDependencies": {
+    "astro": "^4.0.0",
+    "typescript": "^5.4.0",
+    "@cloudflare/workers-types": "^4.0.0"
+  }
+}

@@ -1,0 +1,74 @@
+---
+// If already logged in, redirect to dashboard
+if (Astro.locals.user) {
+  return Astro.redirect("/admin/dashboard");
+}
+
+const error = Astro.url.searchParams.get("error");
+const errorMessages: Record<string, string> = {
+  invalid: "用户名或密码不正确，请重试。",
+  locked: "登录失败次数过多，为保障账号安全已临时锁定，请 15 分钟后再试。",
+  unknown: "发生未知错误，请稍后重试。",
+};
+---
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>登录 — AstroPress</title>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; }
+      body {
+        margin: 0; font-family: system-ui, -apple-system, sans-serif;
+        background: #f0f0f1; display: flex; align-items: center;
+        justify-content: center; min-height: 100vh;
+      }
+      .card {
+        background: #fff; border: 1px solid #dcdcde; border-radius: 4px;
+        padding: 36px 40px; width: 100%; max-width: 360px;
+      }
+      .brand { text-align: center; margin-bottom: 28px; }
+      .brand-logo { font-size: 32px; margin-bottom: 4px; }
+      .brand-name { font-size: 18px; font-weight: 700; color: #1d2327; }
+      label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: #1d2327; }
+      input {
+        display: block; width: 100%; padding: 8px 10px; font-size: 14px;
+        border: 1px solid #8c8f94; border-radius: 3px; margin-bottom: 16px;
+        outline: none; transition: border-color 0.15s;
+      }
+      input:focus { border-color: #2271b1; box-shadow: 0 0 0 1px #2271b1; }
+      button[type="submit"] {
+        width: 100%; padding: 10px; background: #2271b1; color: #fff;
+        border: none; border-radius: 3px; font-size: 14px; font-weight: 600;
+        cursor: pointer; transition: background 0.15s;
+      }
+      button[type="submit"]:hover { background: #135e96; }
+      .error {
+        background: #fcf0f1; border-left: 4px solid #d63638;
+        color: #d63638; padding: 10px 14px; font-size: 13px;
+        border-radius: 2px; margin-bottom: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="brand">
+        <div class="brand-logo">⚡</div>
+        <div class="brand-name">AstroPress</div>
+      </div>
+
+      {error && <div class="error">{errorMessages[error] ?? errorMessages.unknown}</div>}
+
+      <form method="POST" action="/api/auth/login">
+        <label for="username">用户名</label>
+        <input id="username" name="username" type="text" autocomplete="username" required autofocus />
+
+        <label for="password">密码</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required />
+
+        <button type="submit">登 录</button>
+      </form>
+    </div>
+  </body>
+</html>

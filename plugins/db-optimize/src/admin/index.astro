@@ -1,0 +1,329 @@
+---
+/**
+ * /admin-ext/db-optimize — 数据库优化后台页
+ *
+ * 数据全部经由同源 JSON API 获取；动态内容一律使用
+ * createElement / textContent / setAttribute 渲染，无动态 innerHTML。
+ */
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+if (!Astro.locals.user || !Astro.locals.db) return Astro.redirect("/login");
+---
+<AdminLayout title="数据库优化">
+    <style is:global>
+      * { box-sizing: border-box; }
+      .dbo-wrap { max-width: 960px; margin: 0 auto; padding: 0 16px 32px; }
+      .dbo-wrap h1 { font-size: 22px; margin: 16px 0 4px; color: #1d2327; }
+      .dbo-desc { font-size: 13px; color: #646970; margin: 0 0 16px; }
+      .card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 18px 20px; margin-bottom: 16px; }
+      .card h2 { font-size: 15px; margin: 0 0 12px; color: #1d2327; }
+      .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+      .stat-card { margin-bottom: 16px; }
+      .stat-label { font-size: 12px; color: #646970; text-transform: uppercase; letter-spacing: .03em; margin-bottom: 8px; }
+      .stat-value { font-size: 26px; font-weight: 600; color: #1d2327; line-height: 1.2; word-break: break-all; }
+      .stat-sub { font-size: 12px; color: #646970; margin-top: 6px; }
+      .table-wrap { border: 1px solid #c3c4c7; border-radius: 3px; max-height: 420px; overflow: auto; }
+      table.wp-table { border-collapse: collapse; width: 100%; font-size: 13px; }
+      table.wp-table th, table.wp-table td { padding: 8px 12px; border-bottom: 1px solid #f0f0f1; text-align: left; }
+      table.wp-table th { background: #f6f7f7; font-weight: 600; color: #1d2327; position: sticky; top: 0; z-index: 1; }
+      table.wp-table tbody tr:last-child td { border-bottom: 0; }
+      table.wp-table tbody tr:hover { background: #f6f7f7; }
+      table.wp-table td.num, table.wp-table th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+      table.wp-table td.tname { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+      .muted { color: #646970; }
+      .actions { display: flex; flex-direction: column; gap: 14px; }
+      .action-row { display: flex; align-items: center; gap: 16px; padding: 12px 0; border-bottom: 1px solid #f0f0f1; }
+      .action-row:last-child { border-bottom: 0; padding-bottom: 0; }
+      .action-info { flex: 1; min-width: 0; }
+      .action-info strong { font-size: 13px; color: #1d2327; }
+      .action-info p { font-size: 12px; color: #646970; margin: 4px 0 0; line-height: 1.6; }
+      .warn-text { color: #b32d2e; font-size: 12px; margin: 4px 0 0; font-weight: 600; }
+      .button { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 7px 16px; cursor: pointer; font-size: 13px; white-space: nowrap; }
+      .button:hover { background: #135e96; }
+      .button:disabled { opacity: .55; cursor: default; }
+      .button-danger { background: #d63638; }
+      .button-danger:hover { background: #b32d2e; }
+      .notice { border-left: 4px solid #d63638; background: #fcf0f1; padding: 10px 14px; font-size: 13px; color: #1d2327; border-radius: 0 3px 3px 0; margin-bottom: 16px; }
+      .notice code { display: block; margin-top: 6px; font-size: 12px; color: #b32d2e; word-break: break-all; }
+      .msg { font-size: 13px; padding: 9px 12px; border-radius: 3px; margin-bottom: 14px; border: 1px solid transparent; word-break: break-all; }
+      .msg.ok { background: #edfaef; border-color: #68de7c; color: #1d7a2e; }
+      .msg.err { background: #fcf0f1; border-color: #f0c5c7; color: #b32d2e; }
+      .msg.info { background: #f0f6fc; border-color: #72aee6; color: #135e96; }
+      .foot-hint { font-size: 12px; color: #646970; margin: 0; }
+    </style>
+
+    <div class="dbo-wrap">
+      <h1>数据库优化</h1>
+      <p class="dbo-desc">查看 SQLite 数据库体积与各表数据量，执行常规维护操作。</p>
+
+      <div id="unsupported" class="notice" hidden>
+        当前数据库无法读取统计信息，请确认数据库连接正常。
+      </div>
+      <div id="bytesNotice" class="msg info" hidden>
+        当前为 Cloudflare D1 托管数据库：数据库体积与 VACUUM / ANALYZE 类压缩维护由平台自动管理，相关操作已停用；表数据量、Autoload 统计与「删除修订版本」仍可正常使用。
+      </div>
+      <div id="loadError" class="notice" hidden>统计信息加载失败。</div>
+
+      <div id="content" hidden>
+        <div class="cards">
+          <div class="card stat-card">
+            <div class="stat-label">数据库文件估算大小</div>
+            <div class="stat-value" id="dbBytes">-</div>
+            <div class="stat-sub">共 <span id="pageCount">-</span> 页，页大小 <span id="pageSize">-</span></div>
+          </div>
+          <div class="card stat-card">
+            <div class="stat-label">Autoload 选项</div>
+            <div class="stat-value" id="autoloadCount">-</div>
+            <div class="stat-sub">占用 <span id="autoloadBytes">-</span></div>
+          </div>
+          <div class="card stat-card">
+            <div class="stat-label">文章修订版本</div>
+            <div class="stat-value" id="revisions">-</div>
+            <div class="stat-sub">post_type = revision</div>
+          </div>
+        </div>
+        <p class="foot-hint" id="sizeHint"></p>
+
+        <div class="card">
+          <h2>表数据量</h2>
+          <div class="table-wrap">
+            <table class="wp-table">
+              <thead>
+                <tr>
+                  <th>表名</th>
+                  <th class="num">行数</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>维护操作</h2>
+          <div id="msg" class="msg" hidden></div>
+          <div class="actions">
+            <div class="action-row">
+              <div class="action-info">
+                <strong>ANALYZE</strong>
+                <p>扫描全部表与索引，更新查询优化器使用的统计信息，帮助规划器选择更优查询计划。</p>
+              </div>
+              <button type="button" class="button" data-action="analyze">执行 ANALYZE</button>
+            </div>
+            <div class="action-row">
+              <div class="action-info">
+                <strong>PRAGMA optimize</strong>
+                <p>SQLite 推荐的常规维护命令，会在需要时自动执行 ANALYZE 等轻量优化。</p>
+              </div>
+              <button type="button" class="button" data-action="optimize">执行 PRAGMA optimize</button>
+            </div>
+            <div class="action-row">
+              <div class="action-info">
+                <strong>VACUUM</strong>
+                <p>重建数据库文件，回收删除数据后产生的空闲页（碎片）。</p>
+                <p class="warn-text">执行期间数据库短暂锁定，建议低峰操作</p>
+              </div>
+              <button type="button" class="button" data-action="vacuum">执行 VACUUM</button>
+            </div>
+            <div class="action-row">
+              <div class="action-info">
+                <strong>删除全部修订版本</strong>
+                <p>删除 wp_posts 中所有 post_type = revision 的记录（不影响正式文章）。</p>
+                <p class="warn-text">删除后不可恢复，建议先使用备份插件创建数据库备份；删除后执行 VACUUM 才能释放磁盘空间。</p>
+              </div>
+              <button type="button" class="button button-danger" data-action="delete_revisions">删除全部修订版本</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        var API_STATS = "/admin-ext/api/db-opt/stats";
+        var API_RUN = "/admin-ext/api/db-opt/run";
+
+        var CONFIRM_TEXT = {
+          analyze: "确定要执行 ANALYZE 吗？\n\n将扫描全部表与索引并更新查询优化器统计信息。",
+          optimize: "确定要执行 PRAGMA optimize 吗？",
+          vacuum:
+            "确定要执行 VACUUM 吗？\n\n执行期间数据库短暂锁定，期间无法读写，建议在低峰期操作。",
+          delete_revisions:
+            "警告：将永久删除全部文章修订版本（revision），此操作不可恢复！\n\n建议先使用备份插件创建数据库备份。\n\n确定继续吗？",
+        };
+
+        function fmtBytes(n) {
+          n = Number(n) || 0;
+          if (n >= 1024 * 1024 * 1024) return (n / 1024 / 1024 / 1024).toFixed(2) + " GB";
+          if (n >= 1024 * 1024) return (n / 1024 / 1024).toFixed(2) + " MB";
+          if (n >= 1024) return (n / 1024).toFixed(2) + " KB";
+          return n + " B";
+        }
+
+        function fmtInt(n) {
+          return (Number(n) || 0).toLocaleString("zh-CN");
+        }
+
+        function setText(id, text) {
+          var el = document.getElementById(id);
+          if (el) el.textContent = text;
+        }
+
+        function showMsg(kind, text) {
+          var bar = document.getElementById("msg");
+          bar.textContent = text;
+          bar.setAttribute("class", "msg " + kind);
+          bar.hidden = false;
+        }
+
+        function hideMsg() {
+          var bar = document.getElementById("msg");
+          bar.textContent = "";
+          bar.hidden = true;
+        }
+
+        function makeCell(text, opts) {
+          var td = document.createElement("td");
+          td.textContent = text;
+          if (opts && opts.className) td.setAttribute("class", opts.className);
+          if (opts && opts.colSpan) td.setAttribute("colspan", String(opts.colSpan));
+          return td;
+        }
+
+        function renderTables(tables) {
+          var tb = document.getElementById("tableBody");
+          tb.textContent = "";
+
+          if (!tables.length) {
+            var tr0 = document.createElement("tr");
+            tr0.appendChild(makeCell("未查询到用户表", { className: "muted", colSpan: 2 }));
+            tb.appendChild(tr0);
+            return;
+          }
+
+          tables.forEach(function (t) {
+            var tr = document.createElement("tr");
+            tr.appendChild(makeCell(String(t.name), { className: "tname" }));
+            tr.appendChild(makeCell(fmtInt(t.rows), { className: "num" }));
+            tb.appendChild(tr);
+          });
+        }
+
+        function renderStats(d) {
+          var noBytes = d.bytesUnavailable === true || d.dbBytes == null;
+          setText("dbBytes", noBytes ? "D1 托管" : fmtBytes(d.dbBytes));
+          setText("pageCount", noBytes ? "—" : fmtInt(d.pageCount));
+          setText("pageSize", noBytes ? "—" : fmtBytes(d.pageSize));
+          setText("autoloadCount", fmtInt(d.autoload.count) + " 个");
+          setText("autoloadBytes", fmtBytes(d.autoload.bytes));
+          setText("revisions", fmtInt(d.revisions) + " 条");
+          if (noBytes) {
+            setText("sizeHint", "Cloudflare D1 不支持 PRAGMA page_count/page_size，体积由平台统一维护。");
+            document.getElementById("bytesNotice").hidden = false;
+            ["vacuum", "analyze", "optimize"].forEach(function (a) {
+              var btn = document.querySelector('.actions button[data-action="' + a + '"]');
+              if (btn) { btn.disabled = true; btn.setAttribute("data-na", "1"); btn.title = "Cloudflare D1 不支持该维护命令（Node.js 部署可用）"; }
+            });
+          } else {
+            setText(
+              "sizeHint",
+              "估算大小 = PRAGMA page_count × page_size（" +
+                fmtInt(d.dbBytes) +
+                " 字节），与实际文件占用可能存在少量差异。"
+            );
+          }
+          renderTables(Array.isArray(d.tables) ? d.tables : []);
+        }
+
+        async function load() {
+          var r;
+          try {
+            r = await fetch(API_STATS);
+          } catch (e) {
+            document.getElementById("loadError").hidden = false;
+            return;
+          }
+          var d = null;
+          try { d = await r.json(); } catch (e2) { d = null; }
+
+          if (!r.ok || !d) {
+            document.getElementById("loadError").hidden = false;
+            return;
+          }
+          if (d.supported === false) {
+            document.getElementById("unsupported").hidden = false;
+            return;
+          }
+
+          renderStats(d);
+          document.getElementById("content").hidden = false;
+        }
+
+        function resultMessage(d) {
+          if (d.action === "vacuum") {
+            return d.reclaimed > 0
+              ? "VACUUM 完成，已回收约 " + fmtBytes(d.reclaimed) + " 磁盘空间。"
+              : "VACUUM 完成，未发现可回收的空闲空间。";
+          }
+          if (d.action === "analyze") {
+            return "ANALYZE 完成，查询优化器统计已更新。";
+          }
+          if (d.action === "optimize") {
+            return "PRAGMA optimize 执行完成。";
+          }
+          if (d.action === "delete_revisions") {
+            var m = "已删除 " + fmtInt(d.deleted || 0) + " 条修订版本。";
+            if (d.reclaimed > 0) {
+              m += " 已回收约 " + fmtBytes(d.reclaimed) + "。";
+            } else {
+              m += " D1 托管数据库的空间回收由平台自动完成；Node.js 部署可再执行 VACUUM 释放磁盘空间。";
+            }
+            return m;
+          }
+          return "操作完成。";
+        }
+
+        async function runAction(action) {
+          if (!window.confirm(CONFIRM_TEXT[action] || "确定执行该操作吗？")) return;
+
+          var buttons = document.querySelectorAll(".actions button[data-action]");
+          buttons.forEach(function (b) { b.disabled = true; });
+          showMsg("info", "正在执行，请稍候…");
+
+          try {
+            var r = await fetch(API_RUN, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: action, confirm: true }),
+            });
+            var d = await r.json();
+            if (r.ok && d && d.ok) {
+              showMsg("ok", resultMessage(d));
+              await load();
+            } else {
+              showMsg("err", (d && d.error) || "操作失败，请稍后重试。");
+            }
+          } catch (e) {
+            showMsg("err", "网络或服务器错误：" + (e && e.message ? e.message : String(e)));
+          } finally {
+            hideMsgSoon();
+            buttons.forEach(function (b) {
+              if (b.getAttribute("data-na") !== "1") b.disabled = false;
+            });
+          }
+        }
+
+        var msgTimer = null;
+        function hideMsgSoon() {
+          if (msgTimer) clearTimeout(msgTimer);
+        }
+
+        document.querySelectorAll(".actions button[data-action]").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            runAction(btn.getAttribute("data-action"));
+          });
+        });
+
+        load();
+      })();
+    </script>
+</AdminLayout>

@@ -1,0 +1,18 @@
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "node ./dist/server/entry.mjs"
+healthcheckPath = "/api/setup"
+healthcheckTimeout = 30
+restartPolicyType = "on_failure"
+
+[[services]]
+name = "astropress"
+
+[services.variables]
+PORT = "4321"
+HOST = "0.0.0.0"
+NODE_ENV = "production"
+# Set DATABASE_URL and AUTH_SECRET in the Railway dashboard

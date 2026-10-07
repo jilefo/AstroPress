@@ -1,0 +1,179 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { getPost } from "../../../lib/posts";
+import BlockEditor from "../../../islands/BlockEditor";
+import CustomFieldsPanel from "../../../islands/CustomFieldsPanel";
+import { wpOptions } from "@astropress/core/schema";
+import { eq } from "drizzle-orm";
+
+const db = Astro.locals.db;
+const user = Astro.locals.user;
+const id = Number(Astro.params.id);
+if (!db || !user) return Astro.redirect("/login");
+
+const post = await getPost(db, id);
+if (!post) return Astro.redirect("/admin/pages");
+
+const classic = Astro.url.searchParams.get("classic") === "1";
+
+// Check if page has a visual schema
+const [schemaRow] = post.slug ? await db
+  .select({ value: wpOptions.optionValue })
+  .from(wpOptions)
+  .where(eq(wpOptions.optionName, `astropress_page_schema_${post.slug}`))
+  .limit(1) : [null];
+
+const hasSchema = !!(schemaRow?.value && JSON.parse(schemaRow.value)?.blocks?.length > 0);
+
+const [siteUrlRow] = await db.select({ value: wpOptions.optionValue }).from(wpOptions).where(eq(wpOptions.optionName, "siteurl")).limit(1);
+const siteUrl = (siteUrlRow?.value ?? "http://localhost:4322").replace(/\/$/, "");
+
+// Always default to visual editor unless ?classic=1 is set
+if (!classic) {
+  if (post.slug) return Astro.redirect(`/admin/themes/edit/${post.slug}`);
+  // No slug yet — go to classic editor to set title/slug first
+}
+---
+<AdminLayout title={post.title || "编辑页面"}>
+
+  <!-- Visual editor banner -->
+  {post.slug && (
+    <div class="notice" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <span>本页面支持<strong>可视化区块编辑器</strong>。</span>
+      <a href={`/admin/themes/edit/${post.slug}`} class="button button-primary">打开可视化编辑器</a>
+    </div>
+  )}
+
+  <div style="display:grid;grid-template-columns:1fr 280px;gap:20px;align-items:start">
+    <div>
+      <input
+        id="post-title"
+        type="text"
+        placeholder="请输入页面标题"
+        value={post.title}
+        style="width:100%;font-size:28px;font-weight:700;border:none;border-bottom:2px solid #dcdcde;padding:8px 0;margin-bottom:20px;outline:none;background:transparent"
+        oninput="updateSlug(this.value)"
+      />
+      <div id="permalink-row" style="font-size:12px;color:#646970;margin-bottom:16px;display:flex;align-items:center;flex-wrap:wrap;gap:4px">
+        <span>固定链接：</span>
+        <span id="permalink-view" style="display:inline-flex;align-items:center;gap:4px">
+          <a id="permalink-link" href={post.slug ? `${siteUrl}/${post.slug}` : "#"} target="_blank" style="color:#2271b1;text-decoration:none" rel="noopener">{post.slug ? `${siteUrl}/${post.slug}` : "—"}</a>
+          <button onclick="startEditSlug()" style="font-size:11px;color:#2271b1;background:none;border:none;padding:0 2px;cursor:pointer;font-family:inherit;text-decoration:underline">编辑</button>
+        </span>
+        <span id="permalink-edit" style="display:none;align-items:center;gap:4px">
+          <input id="post-slug" type="text" value={post.slug}
+            style="font-size:12px;padding:2px 6px;border:1px solid #8c8f94;border-radius:2px;outline:none;width:200px;font-family:monospace"
+            onkeydown="if(event.key==='Enter')confirmSlug();if(event.key==='Escape')cancelEditSlug()"
+          />
+          <button onclick="confirmSlug()" style="font-size:11px;padding:2px 8px;background:#2271b1;color:#fff;border:none;border-radius:2px;cursor:pointer">确定</button>
+          <button onclick="cancelEditSlug()" style="font-size:11px;padding:2px 8px;background:none;border:1px solid #dcdcde;border-radius:2px;cursor:pointer;color:#646970">取消</button>
+        </span>
+      </div>
+      <div style="background:#fff;border:1px solid #dcdcde;border-radius:4px;overflow:hidden;min-height:480px">
+        <BlockEditor client:only="react" initialContent={post.content} postId={id} />
+      </div>
+      <div style="margin-top:16px">
+        <CustomFieldsPanel client:only="react" postId={id} postType="page" />
+      </div>
+    </div>
+
+    <aside>
+      <div style="background:#fff;border:1px solid #dcdcde;border-radius:4px;overflow:hidden;margin-bottom:16px">
+        <div style="background:#f6f7f7;padding:10px 14px;font-size:13px;font-weight:600;border-bottom:1px solid #dcdcde">发布</div>
+        <div style="padding:14px">
+          <select id="post-status" style="width:100%;padding:6px 8px;font-size:13px;border:1px solid #8c8f94;border-radius:3px;margin-bottom:12px">
+            <option value="draft" selected={post.status === "draft"}>草稿</option>
+            <option value="publish" selected={post.status === "publish"}>已发布</option>
+          </select>
+          <div id="save-status" style="font-size:12px;color:#646970;margin-bottom:12px;min-height:16px"></div>
+          <div style="display:flex;gap:8px">
+            <button onclick="savePost('draft')" style="flex:1;padding:7px;font-size:13px;background:#f6f7f7;border:1px solid #dcdcde;border-radius:3px;cursor:pointer">保存草稿</button>
+            <button onclick="savePost('publish')" style="flex:1;padding:7px;font-size:13px;background:#2271b1;color:#fff;border:none;border-radius:3px;cursor:pointer;font-weight:600">发布</button>
+          </div>
+        </div>
+      </div>
+      {post.slug && (
+        <div style="background:#fff;border:1px solid #dcdcde;border-radius:4px;overflow:hidden">
+          <div style="background:#f6f7f7;padding:10px 14px;font-size:13px;font-weight:600;border-bottom:1px solid #dcdcde">可视化编辑器</div>
+          <div style="padding:14px">
+            <p style="font-size:12px;color:#646970;margin:0 0 10px">{hasSchema ? "此页面已有可视化布局。" : "用可视化方式设计此页面。"}</p>
+            <a href={`/admin/themes/edit/${post.slug}`} class="button button-primary" style="width:100%;text-align:center;display:block">
+              {hasSchema ? "编辑可视化布局" : "打开可视化编辑器"}
+            </a>
+          </div>
+        </div>
+      )}
+    </aside>
+  </div>
+
+  <div id="page-meta" data-post-id={id} data-initial-slug={post.slug} data-site-url={siteUrl} style="display:none"></div>
+  <script is:inline>
+    (function() {
+      var meta = document.getElementById("page-meta");
+      var postId = Number(meta.dataset.postId);
+      var initialSlug = meta.dataset.initialSlug || "";
+      var currentSlug = initialSlug;
+      var slugLocked = false;
+      var siteUrl = meta.dataset.siteUrl || "";
+
+      function slugify(s) { return s.toLowerCase().trim().replace(/[^\w\s-]/g,"").replace(/[\s_]+/g,"-").replace(/^-+|-+$/g,""); }
+
+      function setPermalinkDisplay(slug) {
+        var link = document.getElementById("permalink-link");
+        if (link) { link.textContent = slug ? (siteUrl + "/" + slug) : "—"; link.href = slug ? (siteUrl + "/" + slug) : "#"; }
+        var input = document.getElementById("post-slug");
+        if (input) input.value = slug;
+        currentSlug = slug;
+      }
+
+      window.updateSlug = function(t) {
+        if (slugLocked) return;
+        var preview = slugify(t);
+        var link = document.getElementById("permalink-link");
+        if (link) { link.textContent = preview ? (siteUrl + "/" + preview) : "—"; link.href = preview ? (siteUrl + "/" + preview) : "#"; }
+      };
+
+      window.startEditSlug = function() {
+        var input = document.getElementById("post-slug");
+        if (!input.value) input.value = slugify(document.getElementById("post-title").value);
+        document.getElementById("permalink-view").style.display = "none";
+        document.getElementById("permalink-edit").style.display = "inline-flex";
+        input.focus(); input.select();
+      };
+
+      window.confirmSlug = function() {
+        var raw = document.getElementById("post-slug").value.trim();
+        var newSlug = raw ? slugify(raw) || raw.toLowerCase().replace(/[^a-z0-9-]/g, "-") : "";
+        slugLocked = !!newSlug;
+        setPermalinkDisplay(newSlug);
+        document.getElementById("permalink-edit").style.display = "none";
+        document.getElementById("permalink-view").style.display = "inline-flex";
+      };
+
+      window.cancelEditSlug = function() {
+        document.getElementById("post-slug").value = currentSlug;
+        document.getElementById("permalink-edit").style.display = "none";
+        document.getElementById("permalink-view").style.display = "inline-flex";
+      };
+
+      window.savePost = async function(forceStatus) {
+        var title = document.getElementById("post-title").value;
+        var status = forceStatus || document.getElementById("post-status").value;
+        var slug = document.getElementById("post-slug")?.value.trim() || slugify(title);
+        var content = window.__editorContent ?? "";
+        document.getElementById("save-status").textContent = "保存中…";
+        var res = await fetch("/api/posts/" + postId, {
+          method: "PUT", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, content, status, slug }),
+        });
+        if (res.ok) {
+          if (!slugLocked) setPermalinkDisplay(slug);
+          document.getElementById("save-status").textContent = "已保存 ✓";
+          setTimeout(function() { document.getElementById("save-status").textContent = ""; }, 3000);
+        } else {
+          document.getElementById("save-status").textContent = "保存失败";
+        }
+      };
+    })();
+  </script>
+</AdminLayout>

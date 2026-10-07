@@ -1,0 +1,1547 @@
+{
+ "ts": "be2a5c43",
+ "results": [
+  {
+   "plugin": "security",
+   "feature": "匿名访问后台设置 API 被登录墙拦截",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "security",
+   "feature": "跨 Origin POST 触发 CSRF 403",
+   "ok": true,
+   "detail": "403"
+  },
+  {
+   "plugin": "security",
+   "feature": "非法 JSON 返回 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "security",
+   "feature": "危险操作缺 confirm 被拒",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "forms",
+   "feature": "临时测试表单创建",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "forms",
+   "feature": "提交体超 1MB 返回 413",
+   "ok": true,
+   "detail": "413"
+  },
+  {
+   "plugin": "forms",
+   "feature": "非法 JSON 返回 400（原为 500）",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "forms",
+   "feature": "fields 非对象返回 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "forms",
+   "feature": "正常提交 200",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "forms",
+   "feature": "超长字段/URL 入库前裁尖（100KB/2KB）",
+   "ok": true,
+   "detail": "100000/2000"
+  },
+  {
+   "plugin": "forms",
+   "feature": "同 IP 60s 内超 10 次提交返回 429",
+   "ok": true,
+   "detail": "200/429"
+  },
+  {
+   "plugin": "forms",
+   "feature": "临时表单及条目清理",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "security",
+   "feature": "同 IP 连续 10 次失败后登录锁定（即使密码正确）",
+   "ok": true,
+   "detail": "/login?error=invalid -> /login?error=locked"
+  },
+  {
+   "plugin": "security",
+   "feature": "锁定按 IP 隔离，其他 IP 不被连坐",
+   "ok": true,
+   "detail": "/login?error=invalid"
+  },
+  {
+   "plugin": "security",
+   "feature": "媒体端点路径穿越向量全部 404 且不泄库",
+   "ok": true,
+   "detail": "[('/media/..%2f..%2flocal.db', 404, 9), ('/media/..%2f..%2f..%2f..%2flocal.db', 404, 9), ('/media/..%2f..%2f..%2f..%2f..%2fWindows%2fwin.ini', 404, 9), ('/media/%2e%2e/%2e%2e/local.db', 404, 26788), ('/media/sub/..%2f..%2f..%2f..%2flocal.db', 404, 9)]"
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "list 列出仓库根目录",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "mkdir 父目录不存在时 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "mkdir 创建沙箱目录",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "mkdir 同名目录 409",
+   "ok": true,
+   "detail": "409"
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "mkdir 多级（逐级）创建",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "mkdir 路径穿越被拒",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "mkdir 绝对/盘符路径被拒",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "write 新建文件",
+   "ok": true,
+   "detail": "200 {'ok': True, 'path': '.f-test-sandbox/a.txt', 'size': 14, 'created': True}"
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "write 缺 confirm 403",
+   "ok": true,
+   "detail": "403"
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "write 覆盖编辑既有文件",
+   "ok": true,
+   "detail": "{'ok': True, 'path': '.f-test-sandbox/a.txt', 'size': 13, 'created': False}"
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "read 读取文本内容",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "read 路径穿越被拒",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "write 非文本类型 415/400",
+   "ok": true,
+   "detail": "415"
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "rename 重命名",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "rename 非法目标名被拒",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "copy 复制文件到子目录",
+   "ok": true,
+   "detail": "{'ok': True, 'mode': 'copy', 'done': 1, 'failed': 0, 'results': [{'src': '.f-test-sandbox/a-renamed.txt', 'ok': True, 'dest': '.f-test-sandbox/sub/a-renamed.txt'}]}"
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "copy 同名自动加后缀",
+   "ok": true,
+   "detail": "{'ok': True, 'mode': 'copy', 'done': 1, 'failed': 0, 'results': [{'src': '.f-test-sandbox/a-renamed.txt', 'ok': True, 'dest': '.f-test-sandbox/sub/a-renamed-1.txt'}]}"
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "move 移动文件",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "move 目录移入自身子孙（防环）单项失败",
+   "ok": true,
+   "detail": "b'{\"ok\":false,\"mode\":\"move\",\"done\":0,\"failed\":1,\"results\":[{\"src\":\".f-test-sandbox/sub\",\"ok\":false,\"error\":\"\\xe4\\xb8\\x8d\\xe8\\x83\\xbd\\xe7\\xa7\\xbb\\xe5\\x8a\\xa8/\\xe5'"
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "dirs 目录树（字符串数组）",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "download 下载文件",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "download 目录被拒",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "upload 上传文件",
+   "ok": true,
+   "detail": "200 {'ok': True, 'file': 'f-upload.txt', 'path': '.f-test-sandbox/f-upload.txt', 'size': 14, 'renamed': False}"
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "upload 同名自动重命名",
+   "ok": true,
+   "detail": "200 {'ok': True, 'file': 'f-upload-1.txt', 'path': '.f-test-sandbox/f-upload-1.txt', 'size': 5, 'renamed': True}"
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "zip 打包目录",
+   "ok": true,
+   "detail": "{'ok': True, 'file': 'sub.zip', 'path': '.f-test-sandbox/sub.zip', 'size': 409, 'count': 3}"
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "unzip 解压到同名目录",
+   "ok": true,
+   "detail": "{'ok': True, 'dir': 'sub-extracted', 'count': 3}"
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "unzip zip-slip 恶意包被拒",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "zip-slip 文件未逃逸到仓库根",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "写入受保护目录 node_modules 被拒",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "delete 缺 confirm 403",
+   "ok": true,
+   "detail": "403"
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "delete 递归删除沙箱",
+   "ok": true,
+   "detail": "{'ok': True, 'deleted': ['.f-test-sandbox'], 'errors': []}"
+  },
+  {
+   "plugin": "file-manager",
+   "feature": "删除后目录不存在 404",
+   "ok": true,
+   "detail": "404"
+  },
+  {
+   "plugin": "db-console",
+   "feature": "tables 列出表",
+   "ok": true,
+   "detail": "200 n=18"
+  },
+  {
+   "plugin": "db-console",
+   "feature": "structure 表结构",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "db-console",
+   "feature": "structure 非法表名 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "db-console",
+   "feature": "browse 分页浏览数据",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "db-console",
+   "feature": "exec SELECT 查询",
+   "ok": true,
+   "detail": "None"
+  },
+  {
+   "plugin": "db-console",
+   "feature": "exec 写操作缺 confirmWrite 403",
+   "ok": true,
+   "detail": "403"
+  },
+  {
+   "plugin": "db-console",
+   "feature": "exec ATTACH 危险语句 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "db-console",
+   "feature": "exec 多语句 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "db-console",
+   "feature": "exec 确认写入（建测试数据）",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "db-console",
+   "feature": "update 行内编辑单元格",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "db-console",
+   "feature": "update 缺 confirm 403",
+   "ok": true,
+   "detail": "403"
+  },
+  {
+   "plugin": "db-console",
+   "feature": "update 值已落库",
+   "ok": true,
+   "detail": "[{'ov': 'v2'}]"
+  },
+  {
+   "plugin": "db-console",
+   "feature": "export CSV 导出（含 BOM）",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "db-console",
+   "feature": "export SQL 导出建表语句",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "db-console",
+   "feature": "export 非法表名 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "backup",
+   "feature": "list 备份列表",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "backup",
+   "feature": "create 创建备份（数据库）",
+   "ok": true,
+   "detail": "200 {'ok': True, 'entry': {'file': 'backup-20261003-140543.apzip', 'size': 498843, 'sizeMB': 0.48, 'createdAt': '2026-10-03T06:05:43.091Z', 'mediaCount': 4, 'tablesCount': 15, 'skipped': []}}"
+  },
+  {
+   "plugin": "backup",
+   "feature": "download 下载 .apzip",
+   "ok": true,
+   "detail": "200 application/zip"
+  },
+  {
+   "plugin": "backup",
+   "feature": "download 路径穿越 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "backup",
+   "feature": "restore 非 multipart 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "backup",
+   "feature": "restore 指定不存在备份 404",
+   "ok": true,
+   "detail": "404"
+  },
+  {
+   "plugin": "backup",
+   "feature": "delete 删除备份",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "config-io",
+   "feature": "export 指定 section",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "config-io",
+   "feature": "export 非法 section 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "config-io",
+   "feature": "export 全量导出",
+   "ok": true,
+   "detail": "200 1019790"
+  },
+  {
+   "plugin": "config-io",
+   "feature": "导出内容已剥离 AUTH_SECRET 密钥",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "plugin": "config-io",
+   "feature": "import 回导自身导出（幂等）",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "config-io",
+   "feature": "import 非法 JSON 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "comments",
+   "feature": "设置枚举/范围清洗（order→asc, perPage≤100）",
+   "ok": true,
+   "detail": "{'enabled': True, 'autoApprove': False, 'order': 'asc', 'perPage': 100, 'closedTypes': []}"
+  },
+  {
+   "plugin": "comments",
+   "feature": "匿名 JSON 提交评论 201",
+   "ok": true,
+   "detail": "201 {'ok': True, 'status': 'pending'}"
+  },
+  {
+   "plugin": "comments",
+   "feature": "蜜罐命中静默 202",
+   "ok": true,
+   "detail": "202"
+  },
+  {
+   "plugin": "comments",
+   "feature": "匿名 form-urlencoded 提交 201",
+   "ok": true,
+   "detail": "201"
+  },
+  {
+   "plugin": "comments",
+   "feature": "同 IP 第3条放行、第4条 429（30秒/3条）",
+   "ok": true,
+   "detail": "201/429"
+  },
+  {
+   "plugin": "comments",
+   "feature": "评论不存在文章 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "comments",
+   "feature": "非法 website 协议 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "comments",
+   "feature": "超大请求体 413（64KB 上限）",
+   "ok": true,
+   "detail": "413"
+  },
+  {
+   "plugin": "comments",
+   "feature": "list 待审列表含新评论",
+   "ok": true,
+   "detail": "3"
+  },
+  {
+   "plugin": "comments",
+   "feature": "action 审核通过",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "comments",
+   "feature": "reply 回复评论",
+   "ok": true,
+   "detail": "{'ok': True, 'id': 212, 'status': 'approved'}"
+  },
+  {
+   "plugin": "comments",
+   "feature": "reply 空内容 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "comments",
+   "feature": "action 未知动作 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "comments",
+   "feature": "action 空 ids 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "comments",
+   "feature": "测试评论已清理",
+   "ok": true,
+   "detail": "ids=[211, 210, 209]"
+  },
+  {
+   "plugin": "redirect",
+   "feature": "list 规则列表",
+   "ok": true,
+   "detail": "<class 'list'>"
+  },
+  {
+   "plugin": "redirect",
+   "feature": "成环规则创建被拒 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "redirect",
+   "feature": "重复 from 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "redirect",
+   "feature": "保留前缀 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "redirect",
+   "feature": "创建合法 302 规则",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "redirect",
+   "feature": "匿名访问命中 302 跳转",
+   "ok": true,
+   "detail": "302 /blog/pv-tips"
+  },
+  {
+   "plugin": "redirect",
+   "feature": "delete 规则 /f-rd-a-be2a5c43",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "redirect",
+   "feature": "delete 规则 /f-rd-ok-be2a5c43",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "redirect",
+   "feature": "delete 缺 id 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "link-directory",
+   "feature": "cats 创建分类",
+   "ok": true,
+   "detail": "{'ok': True, 'cat': {'id': 45, 'name': 'F轮分类be2a5c43', 'slug': 'fcat-be2a5c43', 'sort': 0, 'createdAt': '2026-10-03 06:05:44'}}"
+  },
+  {
+   "plugin": "link-directory",
+   "feature": "cats 空名称 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "link-directory",
+   "feature": "links 非法 URL 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "link-directory",
+   "feature": "links 创建待审链接",
+   "ok": true,
+   "detail": "200 {'ok': True, 'link': {'id': 44, 'catId': 45, 'name': 'F轮链接be2a5c43', 'url': 'https://example.com/fround', 'description': '', 'clicks': 0, 'status': 'pending', 'createdAt': '2026-10-03 06:05:44'}}"
+  },
+  {
+   "plugin": "link-directory",
+   "feature": "click 待审链接不跳转 404",
+   "ok": true,
+   "detail": "404"
+  },
+  {
+   "plugin": "link-directory",
+   "feature": "links 审核通过",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "link-directory",
+   "feature": "click 已审链接 302 跳转",
+   "ok": true,
+   "detail": "302"
+  },
+  {
+   "plugin": "link-directory",
+   "feature": "click 非法 id 404",
+   "ok": true,
+   "detail": "404"
+  },
+  {
+   "plugin": "link-directory",
+   "feature": "公开目录页 /directory 200",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "link-directory",
+   "feature": "links 删除链接",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "link-directory",
+   "feature": "cats 删除空分类",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "link-directory",
+   "feature": "settings 保存往返",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "ads-manager",
+   "feature": "slots 新增广告位",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "ads-manager",
+   "feature": "slots 非法 key 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "ads-manager",
+   "feature": "slots 重复 key 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "ads-manager",
+   "feature": "track 空事件 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "ads-manager",
+   "feature": "track 超大请求体 413（32KB 上限）",
+   "ok": true,
+   "detail": "413"
+  },
+  {
+   "plugin": "ads-manager",
+   "feature": "track 批量事件（非法项静默跳过）200",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "ads-manager",
+   "feature": "track CORS 预检 204（生产带 ACAO:* / dev 为 Vite 占位）",
+   "ok": true,
+   "detail": "204 {'vary': 'Origin, Access-Control-Request-Headers', 'access-control-allow-methods': 'GET,HEAD,PUT,PATCH,POST,DELETE', 'content-length': '0', 'date': 'Sat, 03 Oct 2026 06:05:45 GMT', 'connection': 'close'}"
+  },
+  {
+   "plugin": "ads-manager",
+   "feature": "loader.js 匿名可访问（JS 内容）",
+   "ok": true,
+   "detail": "200 application/javascript; charset=utf-8"
+  },
+  {
+   "plugin": "footer",
+   "feature": "customHtml 原样存储（消毒在输出端）",
+   "ok": true,
+   "detail": "<b>ok</b><script>alert(1)</script><img src=x onerror=alert(1)><svg/onload=alert(1)></svg><a href=\"javascript:alert(1)\">evil</a><a href=\"https://example.com\" target=\"_blank\">safe</a>"
+  },
+  {
+   "plugin": "donation",
+   "feature": "javascript: URL 被清空",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "plugin": "donation",
+   "feature": "前台输出层过滤 DB 直改的 javascript: 且保留合法爱发电链接",
+   "ok": true,
+   "detail": "200 block=True"
+  },
+  {
+   "plugin": "customer-service",
+   "feature": "非法颜色/位置回退默认",
+   "ok": true,
+   "detail": "bottom-right #2271b1"
+  },
+  {
+   "plugin": "related-posts",
+   "feature": "数值夹取 0..12",
+   "ok": true,
+   "detail": "{'enabled': True, 'related': 12, 'random': 0, 'popular': 4, 'heading': '更多阅读', 'css': ''}"
+  },
+  {
+   "plugin": "search",
+   "feature": "perPage/minChars 夹取",
+   "ok": true,
+   "detail": "{'enabled': True, 'perPage': 100, 'minChars': 10, 'placeholder': '搜索…', 'injectButton': True}"
+  },
+  {
+   "plugin": "search",
+   "feature": "公开搜索页 200 且含搜索表单",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "seo-tools",
+   "feature": "feedCount 下限夹取 1 + 字段合并保留标题",
+   "ok": true,
+   "detail": "{'feedEnabled': True, 'feedCount': 1, 'feedTitle': '', 'feedDescription': '', 'robotsExtra': ''}"
+  },
+  {
+   "plugin": "html-opt",
+   "feature": "preconnect 净化：去 javascript:/去重/保留合法",
+   "ok": true,
+   "detail": "['https://fonts.googleapis.com']"
+  },
+  {
+   "plugin": "image-lazy",
+   "feature": "skipFirst 夹取 ≤20",
+   "ok": true,
+   "detail": "{'enabled': True, 'lazyImages': True, 'lazyIframes': True, 'skipFirst': 20}"
+  },
+  {
+   "plugin": "security-headers",
+   "feature": "CSP 剥离 CRLF 防头注入",
+   "ok": true,
+   "detail": "\"default-src 'self'X-Evil: 1\""
+  },
+  {
+   "plugin": "page-cache",
+   "feature": "ttl/maxEntries 夹取",
+   "ok": true,
+   "detail": "{'enabled': True, 'ttlSec': 86400, 'maxEntries': 10, 'cache404': False, 'cacheWithQuery': False, 'excludes': []}"
+  },
+  {
+   "plugin": "page-cache",
+   "feature": "首访 MISS → 二访 HIT",
+   "ok": true,
+   "detail": "MISS/HIT"
+  },
+  {
+   "plugin": "page-cache",
+   "feature": "HIT 带 Age + Cache-Control:no-cache",
+   "ok": true,
+   "detail": "0"
+  },
+  {
+   "plugin": "image-lazy",
+   "feature": "正文图片补 loading/decoding",
+   "ok": true,
+   "detail": "25/25"
+  },
+  {
+   "plugin": "html-opt",
+   "feature": "MISS 响应头 X-HTML-Opt: on（HIT 由缓存重建响应，按设计不带此头）",
+   "ok": true,
+   "detail": "on"
+  },
+  {
+   "plugin": "html-opt",
+   "feature": "head 注入 preconnect 资源提示",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "plugin": "footer",
+   "feature": "前台输出白名单消毒（script/onerror/svg onload/javascript: 全剥，留安全标签与外链）",
+   "ok": true,
+   "detail": " {\n  margin-top: 8px;\n}\n.ap-footer-powered a {\n  color: inherit;\n  text-decoration: none;\n}\n.ap-footer-powered a:hover {\n  text-decoration: underline;\n}\n</style>\n<footer id=\"ap-footer\" class=\"ap-foote"
+  },
+  {
+   "plugin": "security-headers",
+   "feature": "nosniff/X-Frame-Options/Referrer-Policy/HSTS/CSP",
+   "ok": true,
+   "detail": "{'x-content-type-options': 'nosniff', 'x-frame-options': 'DENY', 'strict-transport-security': 'max-age=31536000; includeSubDomains', 'content-security-policy': \"default-src 'self'X-Evil: 1\"}"
+  },
+  {
+   "plugin": "related-posts",
+   "feature": "相关文章区块注入",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "plugin": "related-posts",
+   "feature": "track 追踪像素恒 200 GIF",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "related-posts",
+   "feature": "track 非法 id 仍 200（不报错）",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "share",
+   "feature": "enabled 缺省按 false 处理（特例语义）",
+   "ok": true,
+   "detail": "False"
+  },
+  {
+   "plugin": "share",
+   "feature": "禁用后文章页不注入分享条",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "plugin": "sitemap",
+   "feature": "sitemap.xml 匿名 200 XML 含文章",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "sitemap",
+   "feature": "禁用后 sitemap 404",
+   "ok": true,
+   "detail": "200/404"
+  },
+  {
+   "plugin": "sitemap",
+   "feature": "重新启用后恢复 200",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "seo-tools",
+   "feature": "rss.xml 200 且为 RSS 2.0",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "seo-tools",
+   "feature": "关闭 feed 后 rss 404",
+   "ok": true,
+   "detail": "404"
+  },
+  {
+   "plugin": "seo-tools",
+   "feature": "robots.txt 200 含 Disallow",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "webhook",
+   "feature": "keys 创建密钥（明文仅返回一次）",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "webhook",
+   "feature": "keys 空名称 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "webhook",
+   "feature": "keys 列表不回显密钥/hash",
+   "ok": true,
+   "detail": "[{'id': '6c9bbe9914eea8b5', 'name': 'F轮全权限be2a5c43', 'permissions': ['publish', 'delete'], 'createdAt': 1791007563143, 'lastUsed': None}, {'id': '8452"
+  },
+  {
+   "plugin": "webhook",
+   "feature": "status 无 key 401",
+   "ok": true,
+   "detail": "401"
+  },
+  {
+   "plugin": "webhook",
+   "feature": "status 带 key 200 + 权限",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "webhook",
+   "feature": "publish 新建草稿",
+   "ok": true,
+   "detail": "200 {'ok': True, 'action': 'created', 'postId': 165, 'slug': 'f-round-be2a5c43', 'type': 'post', 'status': 'draft', 'url': '/blog/f-round-be2a5c43'}"
+  },
+  {
+   "plugin": "webhook",
+   "feature": "publish 同 slug 幂等更新",
+   "ok": true,
+   "detail": "{'ok': True, 'action': 'updated', 'postId': 165, 'slug': 'f-round-be2a5c43', 'type': 'post', 'status': 'draft', 'url': '/blog/f-round-be2a5c43'}"
+  },
+  {
+   "plugin": "webhook",
+   "feature": "publish title/content 皆空 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "webhook",
+   "feature": "publish 无效 key 403",
+   "ok": true,
+   "detail": "403"
+  },
+  {
+   "plugin": "webhook",
+   "feature": "delete 无权限 403",
+   "ok": true,
+   "detail": "403"
+  },
+  {
+   "plugin": "webhook",
+   "feature": "delete 有权限删除文章",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "webhook",
+   "feature": "delete 再删 404",
+   "ok": true,
+   "detail": "404"
+  },
+  {
+   "plugin": "webhook",
+   "feature": "logs 审计日志可读",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "webhook",
+   "feature": "keys 删除不存在 id 返回 200 ok:false（契约特例）",
+   "ok": true,
+   "detail": "{'ok': False}"
+  },
+  {
+   "plugin": "webhook",
+   "feature": "测试密钥已清理",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "plugin": "webdav",
+   "feature": "token 生成（明文一次）",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "webdav",
+   "feature": "token GET 仅返回 hasToken 不回显",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "webdav",
+   "feature": "token 重置缺 confirm 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "webdav",
+   "feature": "匿名 PROPFIND 401",
+   "ok": true,
+   "detail": "401"
+  },
+  {
+   "plugin": "webdav",
+   "feature": "401 带 WWW-Authenticate: Basic",
+   "ok": true,
+   "detail": "Basic realm=\"AstroPress WebDAV\", charset=\"UTF-8\""
+  },
+  {
+   "plugin": "webdav",
+   "feature": "PROPFIND 根目录 207 multistatus",
+   "ok": true,
+   "detail": "207"
+  },
+  {
+   "plugin": "webdav",
+   "feature": "MKCOL 新建目录 201",
+   "ok": true,
+   "detail": "201"
+  },
+  {
+   "plugin": "webdav",
+   "feature": "MKCOL 已存在 405",
+   "ok": true,
+   "detail": "405"
+  },
+  {
+   "plugin": "webdav",
+   "feature": "PUT 新文件 201",
+   "ok": true,
+   "detail": "201"
+  },
+  {
+   "plugin": "webdav",
+   "feature": "PUT 覆盖 204",
+   "ok": true,
+   "detail": "204"
+  },
+  {
+   "plugin": "webdav",
+   "feature": "GET 内容一致",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "webdav",
+   "feature": "GET 目录 403",
+   "ok": true,
+   "detail": "403"
+  },
+  {
+   "plugin": "webdav",
+   "feature": "路径穿越 403/404",
+   "ok": true,
+   "detail": "404"
+  },
+  {
+   "plugin": "webdav",
+   "feature": "stats 存储统计 files≥1",
+   "ok": true,
+   "detail": "{'ok': True, 'files': 1, 'bytes': 12, 'dir': 'D:\\\\Projects\\\\Blogs\\\\AstroPress\\\\webdav-storage'}"
+  },
+  {
+   "plugin": "webdav",
+   "feature": "DELETE 递归清理目录 204",
+   "ok": true,
+   "detail": "204"
+  },
+  {
+   "plugin": "webdav",
+   "feature": "OPTIONS DAV 能力头（生产 200+DAV / dev 204 Vite 占位）",
+   "ok": true,
+   "detail": "204 "
+  },
+  {
+   "plugin": "permalink",
+   "feature": "后台设置保存 200",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "permalink",
+   "feature": "单段旧链接 /pv-tips 重写到文章页 200",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "editor-scripts",
+   "feature": "/api/ap-wp-editor/wp-editor.js 登录态 200",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "editor-scripts",
+   "feature": "/api/ap-wp-editor/wp-editor.js 匿名拿不到 JS（被登录墙拦截）",
+   "ok": true,
+   "detail": "200 text/html"
+  },
+  {
+   "plugin": "editor-scripts",
+   "feature": "/api/ap-etools/tools.js 登录态 200",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "editor-scripts",
+   "feature": "/api/ap-etools/tools.js 匿名拿不到 JS（被登录墙拦截）",
+   "ok": true,
+   "detail": "200 text/html"
+  },
+  {
+   "plugin": "editor-scripts",
+   "feature": "/api/ap-media/editor-upload.js 登录态 200",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "editor-scripts",
+   "feature": "/api/ap-media/editor-upload.js 匿名拿不到 JS（被登录墙拦截）",
+   "ok": true,
+   "detail": "200 text/html"
+  },
+  {
+   "plugin": "editor-scripts",
+   "feature": "/api/ap-media-av/media-av.js 登录态 200",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "editor-scripts",
+   "feature": "/api/ap-media-av/media-av.js 匿名拿不到 JS（被登录墙拦截）",
+   "ok": true,
+   "detail": "200 text/html"
+  },
+  {
+   "plugin": "editor-scripts",
+   "feature": "/api/ap-mirror/image-mirror.js 登录态 200",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "editor-scripts",
+   "feature": "/api/ap-mirror/image-mirror.js 匿名拿不到 JS（被登录墙拦截）",
+   "ok": true,
+   "detail": "200 text/html"
+  },
+  {
+   "plugin": "editor-scripts",
+   "feature": "/api/ap-autofill/script.js 登录态 200",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "editor-scripts",
+   "feature": "/api/ap-autofill/script.js 匿名拿不到 JS（被登录墙拦截）",
+   "ok": true,
+   "detail": "200 text/html"
+  },
+  {
+   "plugin": "editor-scripts",
+   "feature": "/api/ap-i18n/script.js 登录态 200",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "editor-scripts",
+   "feature": "/api/ap-i18n/script.js 匿名拿不到 JS（被登录墙拦截）",
+   "ok": true,
+   "detail": "200 text/html"
+  },
+  {
+   "plugin": "editor-upload",
+   "feature": "真实 1x1 PNG 上传 201",
+   "ok": true,
+   "detail": "201 {'id': 166, 'url': 'http://localhost:4321/media/1791007564592-f-round-be2a5c43.png', 'filename': '1791007564592-f-round-be2a5c43.png'}"
+  },
+  {
+   "plugin": "editor-upload",
+   "feature": "meta 更新附件元数据",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "editor-upload",
+   "feature": "改扩展名伪图 magic-byte 拦截 415",
+   "ok": true,
+   "detail": "415"
+  },
+  {
+   "plugin": "media-av",
+   "feature": "伪音频 magic-byte 拦截 415",
+   "ok": true,
+   "detail": "415"
+  },
+  {
+   "plugin": "media-av",
+   "feature": "扩展名白名单 415",
+   "ok": true,
+   "detail": "415"
+  },
+  {
+   "plugin": "ai-autofill",
+   "feature": "write 空 topic 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "ai-autofill",
+   "feature": "generate 全空 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "editor-tools",
+   "feature": "translate 非法 target 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "ai-chat",
+   "feature": "status 提供商列表",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "ai-chat",
+   "feature": "login 未知 action 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "ai-chat",
+   "feature": "send 空 prompt 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "admin-i18n",
+   "feature": "非法 target 语言码 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "admin-i18n",
+   "feature": "test 未配置 webhook 时优雅返回 configured:false",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "gist-sync",
+   "feature": "settings GET（token 掩码，hasToken 嵌在 settings）",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "gist-sync",
+   "feature": "push 无 token 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "gist-sync",
+   "feature": "push 缺 confirm 403",
+   "ok": true,
+   "detail": "403"
+  },
+  {
+   "plugin": "gist-sync",
+   "feature": "history 可读",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "git-sync",
+   "feature": "settings GET",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "git-sync",
+   "feature": "settings 缺 confirm 403",
+   "ok": true,
+   "detail": "403"
+  },
+  {
+   "plugin": "git-sync",
+   "feature": "非法 preset 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "git-sync",
+   "feature": "scopes 全 false 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "git-sync",
+   "feature": "history 可读（{ok,history}）",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "static-html",
+   "feature": "settings 保存（小规模参数）",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "static-html",
+   "feature": "generate 缺 confirm 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "static-html",
+   "feature": "generate 触发生成",
+   "ok": true,
+   "detail": "200 {'ok': True}"
+  },
+  {
+   "plugin": "static-html",
+   "feature": "生成完成且 static-html/index.html 已产出",
+   "ok": true,
+   "detail": "state={'running': False, 'trigger': 'manual', 'startedAt': '2026-10-03T06:06:05.484Z', 'finishedAt': '2026-10-03T06:06:05.771Z', 'status': 'ok', 'phase': '生成完成', 'pages': 6, 'assets': 0, 'bytes': 312066, 'outputDir': 'static-html', 'errors': [], 'lastAutoAt': None, 'origin': 'http://localhost:4321'}"
+  },
+  {
+   "plugin": "db-optimize",
+   "feature": "stats 库统计",
+   "ok": true,
+   "detail": "['supported', 'dbBytes', 'pageCount', 'pageSize', 'tables', 'autoload', 'revisions']"
+  },
+  {
+   "plugin": "db-optimize",
+   "feature": "run 非法 action 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "db-optimize",
+   "feature": "run 缺 confirm 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "db-optimize",
+   "feature": "ANALYZE 执行",
+   "ok": true,
+   "detail": "200 {'ok': True, 'action': 'analyze', 'bytesBefore': 1560576, 'bytesAfter': 1560576, 'reclaimed': 0}"
+  },
+  {
+   "plugin": "db-optimize",
+   "feature": "清理修订版本",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "error-monitor",
+   "feature": "匿名 404 被记录",
+   "ok": true,
+   "detail": "3 rows"
+  },
+  {
+   "plugin": "error-monitor",
+   "feature": "delete 缺 path 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "error-monitor",
+   "feature": "delete 缺 confirm 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "error-monitor",
+   "feature": "delete 删除单条记录",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "error-monitor",
+   "feature": "删除后列表不再含该路径",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "plugin": "multilingual",
+   "feature": "公开 config 匿名可读",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "multilingual",
+   "feature": "switcher.js 匿名 200",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "multilingual",
+   "feature": "panel.js 匿名 200",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "multilingual",
+   "feature": "非法语言码 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "multilingual",
+   "feature": "启用中英双语",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "multilingual",
+   "feature": "config 反映两种语言",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "multilingual",
+   "feature": "strings 非字符串值 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "multilingual",
+   "feature": "strings 保存译文",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "multilingual",
+   "feature": "strings 读取译文",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "multilingual",
+   "feature": "文章自链 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "plugin-manager",
+   "feature": "state 列出全部 40 插件",
+   "ok": true,
+   "detail": "46"
+  },
+  {
+   "plugin": "plugin-manager",
+   "feature": "非法 slug 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "plugin-manager",
+   "feature": "系统插件禁禁用 400",
+   "ok": true,
+   "detail": "seo 400"
+  },
+  {
+   "plugin": "plugin-manager",
+   "feature": "禁用 html-opt",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "plugin-manager",
+   "feature": "被禁插件路由立即 404（guard pre）",
+   "ok": true,
+   "detail": "404"
+  },
+  {
+   "plugin": "plugin-manager",
+   "feature": "禁用后首个前台 MISS 即无 X-HTML-Opt 头（共享缓存即时失效）",
+   "ok": true,
+   "detail": "None"
+  },
+  {
+   "plugin": "plugin-manager",
+   "feature": "禁用后前台 MISS 无 X-HTML-Opt 头（≤32s 生效）",
+   "ok": true,
+   "detail": "None"
+  },
+  {
+   "plugin": "plugin-manager",
+   "feature": "重新启用 html-opt",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "plugin-manager",
+   "feature": "重新启用后路由恢复",
+   "ok": true,
+   "detail": "200"
+  },
+  {
+   "plugin": "plugin-manager",
+   "feature": "启用后首个前台 MISS 即恢复 X-HTML-Opt 头（共享缓存即时失效）",
+   "ok": true,
+   "detail": "on"
+  },
+  {
+   "plugin": "plugin-manager",
+   "feature": "重新启用后前台 MISS 恢复 X-HTML-Opt 头（≤32s）",
+   "ok": true,
+   "detail": "on"
+  },
+  {
+   "plugin": "plugin-manager",
+   "feature": "purge 未知插件 404",
+   "ok": true,
+   "detail": "404"
+  },
+  {
+   "plugin": "plugin-manager",
+   "feature": "purge 系统插件 400",
+   "ok": true,
+   "detail": "400"
+  },
+  {
+   "plugin": "plugin-manager",
+   "feature": "purge 清除 share 配置",
+   "ok": true,
+   "detail": "{'ok': True, 'removed': 1}"
+  },
+  {
+   "plugin": "admin-pages",
+   "feature": "全部 33 个后台页 200 且渲染 HTML",
+   "ok": true,
+   "detail": "[]"
+  }
+ ]
+}

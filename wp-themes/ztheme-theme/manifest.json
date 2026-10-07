@@ -1,0 +1,26 @@
+{
+  "name": "ztheme",
+  "version": "1.1.3",
+  "description": "Modern clean blog theme with Tailwind-inspired blue accent",
+  "author": "ztheme",
+  "tokens": {
+    "fonts": {
+      "body": "'Inter', -apple-system, sans-serif",
+      "heading": "'Inter', -apple-system, sans-serif"
+    },
+    "spacing": {
+      "sectionY": "48px",
+      "borderRadius": "8px",
+      "containerMax": "1200px"
+    },
+    "colors": {
+      "textMuted": "#64748b",
+      "surface": "#f8fafc",
+      "background": "#ffffff",
+      "secondary": "#a06707",
+      "border": "#e2e8f0",
+      "text": "#1e293b",
+      "primary": "#166af4"
+    }
+  }
+}

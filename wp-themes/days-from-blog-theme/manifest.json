@@ -1,0 +1,26 @@
+{
+  "name": "Days From Blog",
+  "version": "1.0.3",
+  "description": "Fresh serene blue-toned blog theme",
+  "author": "Days From Date",
+  "tokens": {
+    "fonts": {
+      "body": "'Segoe UI', Arial, sans-serif",
+      "heading": "'Segoe UI', Arial, sans-serif"
+    },
+    "spacing": {
+      "sectionY": "48px",
+      "borderRadius": "8px",
+      "containerMax": "1200px"
+    },
+    "colors": {
+      "textMuted": "#657388",
+      "surface": "#ffffff",
+      "background": "#f5f8fa",
+      "secondary": "#5a7689",
+      "border": "#e2e8f0",
+      "text": "#2d3748",
+      "primary": "#125c88"
+    }
+  }
+}

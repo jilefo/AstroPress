@@ -1,0 +1,115 @@
+---
+/**
+ * /admin-ext/seo-tools — SEO 工具管理页
+ * 编辑 RSS 订阅与 robots.txt 设置
+ */
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+if (!Astro.locals.user || !Astro.locals.db) return Astro.redirect("/login");
+---
+<AdminLayout title="SEO 工具">
+    <style is:global>
+      * { box-sizing: border-box; }
+      .wrap { max-width: 720px; margin: 0 auto; padding: 0 16px; display: grid; gap: 20px; }
+      .card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 20px; }
+      h1 { font-size: 20px; } h2 { font-size: 15px; margin: 0 0 12px; }
+      button { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 6px 14px; cursor: pointer; font-size: 13px; }
+      .msg { font-size: 13px; margin-top: 8px; min-height: 18px; color: #646970; }
+      .msg.ok { color: #00a32a; }
+      .msg.err { color: #b32d2e; }
+      input[type="text"], input[type="number"], textarea { width: 100%; font-size: 13px; padding: 6px 8px; border: 1px solid #8c8f94; border-radius: 3px; font-family: inherit; }
+      textarea { min-height: 100px; resize: vertical; }
+      label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 4px; }
+      .hint { font-size: 12px; color: #646970; margin-top: 4px; }
+      .link-box { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+      .link-box a { color: #2271b1; font-size: 13px; text-decoration: none; }
+      .link-box a:hover { text-decoration: underline; }
+      .toggle-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+      .toggle-row input[type="checkbox"] { width: 16px; height: 16px; }
+    </style>
+
+    <div class="wrap">
+      <section class="card">
+        <h2>RSS 订阅</h2>
+        <p class="hint" style="margin-top:0">配置 RSS 2.0 订阅源，读者可通过 /rss.xml 订阅博客更新。</p>
+
+        <div class="toggle-row">
+          <input type="checkbox" id="feedEnabled" />
+          <label for="feedEnabled" style="margin:0;font-weight:normal;">启用 RSS 订阅</label>
+        </div>
+
+        <label for="feedCount">文章数量</label>
+        <input type="number" id="feedCount" min="1" max="100" />
+        <p class="hint">每次订阅源中包含的最新文章数量（1–100）。</p>
+
+        <label for="feedTitle">订阅源标题（可选）</label>
+        <input type="text" id="feedTitle" placeholder="留空则使用站点名称" />
+
+        <label for="feedDescription">订阅源描述（可选）</label>
+        <input type="text" id="feedDescription" placeholder="留空则使用站点描述" />
+      </section>
+
+      <section class="card">
+        <h2>robots.txt 扩展规则</h2>
+        <p class="hint" style="margin-top:0">在默认规则之后追加自定义内容，每行一条。</p>
+
+        <textarea id="robotsExtra" placeholder="例如：&#10;Disallow: /private&#10;User-agent: Googlebot&#10;Allow: /public"></textarea>
+      </section>
+
+      <section class="card">
+        <h2>链接</h2>
+        <div class="link-box">
+          <a href="/rss.xml" target="_blank" rel="noopener">RSS 订阅源 ↗</a>
+          <a href="/robots.txt" target="_blank" rel="noopener">robots.txt ↗</a>
+        </div>
+      </section>
+
+      <div class="row" style="display:flex;align-items:center;gap:12px;">
+        <button id="saveBtn">保存设置</button>
+        <span class="msg" id="saveMsg"></span>
+      </div>
+    </div>
+
+    <script>
+      var $ = function (id) { return document.getElementById(id); };
+
+      function loadSettings() {
+        fetch("/admin-ext/api/seo-tools/settings", { credentials: "same-origin" })
+          .then(function (r) { return r.json(); })
+          .then(function (s) {
+            $("feedEnabled").checked = !!s.feedEnabled;
+            $("feedCount").value = s.feedCount ?? 20;
+            $("feedTitle").value = s.feedTitle ?? "";
+            $("feedDescription").value = s.feedDescription ?? "";
+            $("robotsExtra").value = s.robotsExtra ?? "";
+          });
+      }
+
+      $("saveBtn").addEventListener("click", function () {
+        var payload = {
+          feedEnabled: $("feedEnabled").checked,
+          feedCount: parseInt($("feedCount").value, 10) || 20,
+          feedTitle: $("feedTitle").value,
+          feedDescription: $("feedDescription").value,
+          robotsExtra: $("robotsExtra").value
+        };
+        fetch("/admin-ext/api/seo-tools/settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify(payload)
+        }).then(function (r) { return r.json(); }).then(function (d) {
+          var msg = $("saveMsg");
+          if (d.ok) {
+            msg.textContent = "保存成功";
+            msg.className = "msg ok";
+          } else {
+            msg.textContent = "保存失败: " + (d.error || "unknown");
+            msg.className = "msg err";
+          }
+          setTimeout(function () { msg.textContent = ""; msg.className = "msg"; }, 3000);
+        });
+      });
+
+      loadSettings();
+    </script>
+</AdminLayout>

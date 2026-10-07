@@ -1,0 +1,105 @@
+---
+/**
+ * /admin-ext/image-lazy — 图片懒加载插件设置页
+ */
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+if (!Astro.locals.user || !Astro.locals.db) return Astro.redirect("/login");
+---
+<AdminLayout title="图片懒加载">
+    <style is:global>
+      * { box-sizing: border-box; }
+      .wrap { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+      .card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 20px; }
+      h1 { font-size: 20px; margin: 0 0 16px; }
+      h2 { font-size: 15px; margin: 24px 0 12px; padding-top: 16px; border-top: 1px solid #e5e7eb; }
+      label { display: block; font-size: 13px; font-weight: 600; margin: 16px 0 4px; }
+      input[type="number"] { width: 90px; font-size: 13px; padding: 6px 8px; border: 1px solid #8c8f94; border-radius: 3px; }
+      button { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 8px 16px; cursor: pointer; font-size: 13px; margin-top: 20px; }
+      .msg { font-size: 13px; margin-top: 10px; min-height: 18px; }
+      .ok { color: #00a32a; }
+      .err { color: #b32d2e; }
+      .hint { font-size: 12px; color: #646970; margin-top: 4px; }
+      .check { display: flex; align-items: center; gap: 6px; font-size: 13px; margin: 12px 0; }
+      .check label { margin: 0; font-weight: 400; }
+      .note { background: #f6f7f7; border: 1px solid #c3c4c7; border-radius: 3px; padding: 10px 12px; font-size: 12px; color: #3c434a; line-height: 1.8; margin-top: 20px; }
+      code { background: #f0f0f1; padding: 1px 4px; border-radius: 2px; font-family: Consolas, Monaco, monospace; }
+    </style>
+
+    <div class="wrap">
+      <div class="card">
+        <h1>图片懒加载</h1>
+
+        <div class="check">
+          <input type="checkbox" id="enabled" checked />
+          <label for="enabled">启用图片懒加载（总开关）</label>
+        </div>
+
+        <h2>处理范围</h2>
+        <div class="check">
+          <input type="checkbox" id="lazyImages" checked />
+          <label for="lazyImages">为 &lt;img&gt; 添加懒加载</label>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="lazyIframes" checked />
+          <label for="lazyIframes">为 &lt;iframe&gt; 添加懒加载</label>
+        </div>
+
+        <label for="skipFirst">跳过前 N 张图片</label>
+        <input type="number" id="skipFirst" min="0" max="20" step="1" value="1" />
+        <div class="hint">正文最前面的 N 张 &lt;img&gt; 不添加懒加载属性（0~20 的整数），用于保护首屏 LCP 图，避免主图延迟加载。</div>
+
+        <div class="note">
+          <div>· 自动为符合条件的标签补充 <code>loading="lazy"</code>，图片还会补充 <code>decoding="async"</code>。</div>
+          <div>· <code>class</code> 含 <code>no-lazy</code> 的标签会被跳过，例如 <code>&lt;img class="no-lazy"&gt;</code>。</div>
+          <div>· 已经带有 <code>loading</code> 属性的标签不会重复添加，多次处理结果一致。</div>
+        </div>
+
+        <button id="save">保存设置</button>
+        <div class="msg" id="msg"></div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        var msg = document.getElementById("msg");
+
+        function clampN(v) {
+          var n = parseInt(v, 10);
+          if (!isFinite(n)) n = 1;
+          if (n < 0) n = 0;
+          if (n > 20) n = 20;
+          return n;
+        }
+
+        async function load() {
+          var r = await fetch("/admin-ext/api/image-lazy/settings");
+          if (!r.ok) return;
+          var s = await r.json();
+          document.getElementById("enabled").checked = !!s.enabled;
+          document.getElementById("lazyImages").checked = s.lazyImages !== false;
+          document.getElementById("lazyIframes").checked = s.lazyIframes !== false;
+          document.getElementById("skipFirst").value = String(clampN(s.skipFirst));
+        }
+
+        document.getElementById("save").addEventListener("click", async function () {
+          var payload = {
+            enabled: document.getElementById("enabled").checked,
+            lazyImages: document.getElementById("lazyImages").checked,
+            lazyIframes: document.getElementById("lazyIframes").checked,
+            skipFirst: clampN(document.getElementById("skipFirst").value),
+          };
+          var r = await fetch("/admin-ext/api/image-lazy/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          var d = await r.json().catch(function () { return {}; });
+          msg.className = "msg " + (r.ok ? "ok" : "err");
+          msg.textContent = r.ok ? "已保存。" : (d.error || "保存失败");
+          setTimeout(function () { msg.textContent = ""; }, 3000);
+        });
+
+        load();
+      })();
+    </script>
+</AdminLayout>

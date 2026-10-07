@@ -1,0 +1,23 @@
+{
+  "name": "@astropress/plugin-gitalk-comment",
+  "version": "0.1.0",
+  "description": "Gitalk 评论：基于 GitHub Issue 的前台评论组件，后台可配置 OAuth App 与仓库信息，文章页自动注入，零核心修改",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./integration.admin": "./src/integration.admin.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@astropress/core": "workspace:*",
+    "drizzle-orm": "^0.36.0"
+  },
+  "devDependencies": {
+    "astro": "^4.0.0",
+    "typescript": "^5.4.0",
+    "@cloudflare/workers-types": "^4.0.0"
+  }
+}

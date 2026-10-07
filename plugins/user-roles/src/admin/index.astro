@@ -1,0 +1,99 @@
+---
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+import { ALL_ROLES, ROLE_LABEL, hasCapability } from "../lib/capabilities";
+import type { Role } from "../lib/capabilities";
+
+const CAPABILITIES = [
+  { cap: "manage_options", label: "管理设置", desc: "访问设置、插件管理、站点配置" },
+  { cap: "manage_users", label: "管理用户", desc: "创建/编辑/删除用户" },
+  { cap: "activate_plugins", label: "管理插件", desc: "启用/禁用/配置插件" },
+  { cap: "edit_theme_options", label: "管理主题", desc: "主题切换、自定义、菜单管理" },
+  { cap: "manage_categories", label: "管理分类", desc: "创建/编辑/删除分类法与术语" },
+  { cap: "edit_others_posts", label: "编辑他人文章", desc: "编辑/删除所有文章和页面" },
+  { cap: "delete_others_posts", label: "删除他人文章", desc: "删除非本人创建的文章" },
+  { cap: "publish_posts", label: "发布文章", desc: "发布自己的文章" },
+  { cap: "publish_pages", label: "发布页面", desc: "发布页面" },
+  { cap: "delete_posts", label: "删除文章", desc: "删除自己的文章" },
+  { cap: "delete_pages", label: "删除页面", desc: "删除页面" },
+  { cap: "edit_posts", label: "编辑文章", desc: "编辑自己的文章（含草稿）" },
+  { cap: "upload_files", label: "上传文件", desc: "上传媒体文件" },
+  { cap: "read", label: "访问后台", desc: "登录并访问后台仪表盘" },
+];
+---
+<AdminLayout title="用户角色与权限">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+    <h1 class="wp-heading-inline">用户角色与权限</h1>
+  </div>
+  <hr class="wp-header-end" />
+
+  <div class="postbox" style="margin-bottom:20px">
+    <div class="postbox-inside" style="padding:16px 20px">
+      <p style="margin:0 0 8px;font-size:13px;color:#1d2327">
+        <strong>WordPress 兼容的五级角色体系</strong>：角色越高，拥有的能力越多。上级角色自动继承下级的全部能力。
+      </p>
+      <p style="margin:0;font-size:12px;color:#646970">
+        角色可在「用户 → 编辑用户」页面中修改。此页面仅供查看能力矩阵。
+      </p>
+    </div>
+  </div>
+
+  <div style="overflow-x:auto">
+    <table class="wp-list-table widefat fixed striped" style="min-width:700px">
+      <thead>
+        <tr>
+          <th style="width:22%">能力</th>
+          <th style="width:10%">说明</th>
+          {ALL_ROLES.map(r => (
+            <th style="width:13.6%;text-align:center">{ROLE_LABEL[r as Role]}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {CAPABILITIES.map(({ cap, label, desc }) => (
+          <tr>
+            <td><code style="font-size:12px">{cap}</code><br/><span style="font-size:12px;font-weight:600">{label}</span></td>
+            <td style="font-size:11px;color:#646970">{desc}</td>
+            {ALL_ROLES.map(r => {
+              const has = hasCapability(r as Role, cap);
+              return (
+                <td style="text-align:center">
+                  {has ? (
+                    <span style="color:#00a32a;font-size:16px" title={r + " 拥有此能力"}>&#10003;</span>
+                  ) : (
+                    <span style="color:#dcdcde;font-size:16px" title={r + " 无此能力"}>&#10005;</span>
+                  )}
+                </td>
+              );
+            })}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="postbox" style="margin-top:20px">
+    <div class="postbox-header"><h2 class="postbox-title">角色说明</h2></div>
+    <div class="postbox-inside" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+      <div style="font-size:12px;line-height:1.6">
+        <strong style="color:#d63638">管理员</strong><br/>
+        拥有全部权限，可管理设置、插件、主题、用户。
+      </div>
+      <div style="font-size:12px;line-height:1.6">
+        <strong style="color:#dba617">编辑</strong><br/>
+        可编辑/发布/删除所有文章和页面，管理评论和分类。
+      </div>
+      <div style="font-size:12px;line-height:1.6">
+        <strong style="color:#2271b1">作者</strong><br/>
+        可发布/删除自己的文章，上传媒体文件。
+      </div>
+      <div style="font-size:12px;line-height:1.6">
+        <strong style="color:#00a32a">贡献者</strong><br/>
+        可编辑自己的文章（草稿），但不能发布。
+      </div>
+      <div style="font-size:12px;line-height:1.6">
+        <strong style="color:#646970">订阅者</strong><br/>
+        仅可登录并访问仪表盘，无内容管理权限。
+      </div>
+    </div>
+  </div>
+</AdminLayout>

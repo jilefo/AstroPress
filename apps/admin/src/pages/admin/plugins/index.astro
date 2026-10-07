@@ -1,0 +1,75 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { getLoadedPlugins } from "@astropress/core";
+import { getSidebarPanels } from "@astropress/core/registry";
+
+const plugins = getLoadedPlugins();
+const panels = getSidebarPanels();
+---
+<AdminLayout title="Plugins">
+
+  <h1 class="wp-heading-inline">Plugins</h1>
+  <hr class="wp-header-end" />
+
+  {plugins.length === 0 ? (
+    <div class="ap-empty-state">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" style="color:#8c8f94;margin-bottom:12px">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+      </svg>
+      <h2 style="font-size:15px;font-weight:600;color:#1d2327;margin:0 0 8px">No Plugins Loaded</h2>
+      <p style="font-size:13px;color:#646970;margin:0;line-height:1.5">
+        Add plugins to the <code style="background:#f6f7f7;border:1px solid #dcdcde;padding:1px 5px;border-radius:2px">plugins/</code> directory and register them in <code style="background:#f6f7f7;border:1px solid #dcdcde;padding:1px 5px;border-radius:2px">apps/admin/src/plugins.ts</code>.
+      </p>
+    </div>
+  ) : (
+    <table class="wp-list-table widefat fixed striped">
+      <thead>
+        <tr>
+          <th scope="col" class="manage-column column-primary">Plugin</th>
+          <th scope="col" class="manage-column" style="width:80px">Version</th>
+          <th scope="col" class="manage-column" style="width:90px">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {plugins.map((p) => {
+          const panelCount = panels.filter((panel) =>
+            p.config.name === "seo" ? panel.config.componentId === "SeoPanel" : false
+          ).length;
+          return (
+            <tr>
+              <td class="column-title column-primary">
+                <strong>{p.config.name}</strong>
+                {p.config.description && (
+                  <div style="font-size:13px;color:#646970;margin-top:3px">{p.config.description}</div>
+                )}
+                {panelCount > 0 && (
+                  <div style="font-size:11px;color:#2271b1;margin-top:3px">
+                    {panelCount} sidebar panel{panelCount > 1 ? "s" : ""} registered
+                  </div>
+                )}
+              </td>
+              <td style="color:var(--wp-gray-600);font-size:12px">v{p.config.version}</td>
+              <td>
+                <span style="display:inline-block;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;background:#d1e7dd;color:#146c43">
+                  Active
+                </span>
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  )}
+
+  <div style="margin-top:20px;background:#f6f7f7;border:1px solid #dcdcde;padding:14px 16px;max-width:600px">
+    <h2 style="margin:0 0 8px;font-size:13px;font-weight:700">Adding Plugins</h2>
+    <p style="margin:0;font-size:13px;color:#646970">
+      Create a package in <code style="background:#fff;border:1px solid #dcdcde;padding:1px 5px;border-radius:2px">plugins/your-plugin/</code> that exports a
+      <code style="background:#fff;border:1px solid #dcdcde;padding:1px 5px;border-radius:2px">definePlugin(…)</code> default, then import and
+      call <code style="background:#fff;border:1px solid #dcdcde;padding:1px 5px;border-radius:2px">loadPlugin()</code> in
+      <code style="background:#fff;border:1px solid #dcdcde;padding:1px 5px;border-radius:2px">apps/admin/src/plugins.ts</code>.
+    </p>
+  </div>
+
+</AdminLayout>
+

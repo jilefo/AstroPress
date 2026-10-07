@@ -1,0 +1,133 @@
+---
+/**
+ * /admin-ext/asset-cache — 静态资源缓存头插件设置页
+ */
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+if (!Astro.locals.user || !Astro.locals.db) return Astro.redirect("/login");
+---
+<AdminLayout title="静态资源缓存">
+    <style is:global>
+      * { box-sizing: border-box; }
+      .wrap { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+      .card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 20px; margin-bottom: 20px; }
+      h1 { font-size: 20px; margin: 0 0 16px; }
+      h2 { font-size: 15px; margin: 24px 0 12px; padding-top: 16px; border-top: 1px solid #e5e7eb; }
+      label { display: block; font-size: 13px; font-weight: 600; margin: 16px 0 4px; }
+      input[type="number"] { width: 200px; font-size: 13px; padding: 6px 8px; border: 1px solid #8c8f94; border-radius: 3px; }
+      textarea { width: 100%; font-size: 13px; padding: 6px 8px; border: 1px solid #8c8f94; border-radius: 3px; font-family: Consolas, Monaco, monospace; resize: vertical; }
+      button { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 8px 16px; cursor: pointer; font-size: 13px; margin-top: 20px; }
+      .msg { font-size: 13px; margin-top: 10px; min-height: 18px; }
+      .ok { color: #00a32a; }
+      .err { color: #b32d2e; }
+      .hint { font-size: 12px; color: #646970; margin-top: 4px; }
+      .check { display: flex; align-items: center; gap: 6px; font-size: 13px; margin-top: 16px; }
+      .check label { font-weight: 400; margin: 0; }
+      code { background: #f0f0f1; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+    </style>
+
+    <div class="wrap">
+      <div class="card">
+        <h1>静态资源缓存</h1>
+
+        <div class="check" style="margin-top:0">
+          <input type="checkbox" id="enabled" checked />
+          <label for="enabled">启用静态资源 Cache-Control 强缓存头</label>
+        </div>
+        <div class="hint">仅对前台公开响应生效；text/html 一律不处理（交给页面缓存 / 协商缓存）；不影响 /admin、/api/、/admin-ext。</div>
+
+        <h2>缓存时长（max-age，单位秒）</h2>
+
+        <label for="astroMaxAge">构建资产 /_astro/*</label>
+        <input type="number" id="astroMaxAge" min="0" max="31536000" step="1" value="31536000" />
+        <div class="hint">Vite 构建的哈希资产，内容变即文件名变，默认 31536000（1 年）并固定附带 immutable。填 0 = 不设置。</div>
+
+        <label for="mediaMaxAge">媒体库 /media/*</label>
+        <input type="number" id="mediaMaxAge" min="0" max="31536000" step="1" value="604800" />
+        <div class="hint">默认 604800（7 天）。填 0 = 不设置。</div>
+
+        <label for="staticMaxAge">常见静态扩展名</label>
+        <input type="number" id="staticMaxAge" min="0" max="31536000" step="1" value="86400" />
+        <div class="hint">适用于 css / js / woff / woff2 / ttf / otf / png / jpg / jpeg / gif / svg / webp / ico / avif / mp4 / mp3，默认 86400（1 天）。填 0 = 不设置。</div>
+
+        <h2>高级</h2>
+
+        <div class="check" style="margin-top:0">
+          <input type="checkbox" id="forceOverride" />
+          <label for="forceOverride">强制覆盖上游已有的 Cache-Control</label>
+        </div>
+        <div class="hint">默认尊重上游已设置的非默认 Cache-Control（no-cache / no-store 视为默认值，会被本插件替换）。</div>
+
+        <label for="extraRules">附加自定义扩展名映射</label>
+        <textarea id="extraRules" rows="4" placeholder="pdf=3600&#10;zip=86400"></textarea>
+        <div class="hint">每行一条，格式 <code>扩展名=秒数</code>（扩展名不含点）。自定义映射优先于内置扩展名规则；最多 30 条。</div>
+
+        <button id="save">保存设置</button>
+        <div class="msg" id="msg"></div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        var msg = document.getElementById("msg");
+
+        function showMsg(ok, text) {
+          msg.className = "msg " + (ok ? "ok" : "err");
+          msg.textContent = text;
+          setTimeout(function () { msg.textContent = ""; }, 3000);
+        }
+
+        async function load() {
+          var r = await fetch("/admin-ext/api/asset-cache/settings");
+          if (!r.ok) return;
+          var s = await r.json();
+          document.getElementById("enabled").checked = !!s.enabled;
+          document.getElementById("astroMaxAge").value = String(s.astroMaxAge);
+          document.getElementById("mediaMaxAge").value = String(s.mediaMaxAge);
+          document.getElementById("staticMaxAge").value = String(s.staticMaxAge);
+          document.getElementById("forceOverride").checked = !!s.forceOverride;
+          document.getElementById("extraRules").value = Array.isArray(s.extraRules)
+            ? s.extraRules.map(function (x) { return x.ext + "=" + String(x.maxAge); }).join("\n")
+            : "";
+        }
+
+        document.getElementById("save").addEventListener("click", async function () {
+          var extraRules = document.getElementById("extraRules").value
+            .split("\n")
+            .map(function (line) { return line.trim(); })
+            .filter(function (line) { return line.length > 0; })
+            .map(function (line) {
+              var idx = line.indexOf("=");
+              if (idx < 0) return { ext: line, maxAge: NaN };
+              return { ext: line.slice(0, idx).trim(), maxAge: parseInt(line.slice(idx + 1).trim(), 10) };
+            });
+          var payload = {
+            enabled: document.getElementById("enabled").checked,
+            astroMaxAge: parseInt(document.getElementById("astroMaxAge").value, 10),
+            mediaMaxAge: parseInt(document.getElementById("mediaMaxAge").value, 10),
+            staticMaxAge: parseInt(document.getElementById("staticMaxAge").value, 10),
+            forceOverride: document.getElementById("forceOverride").checked,
+            extraRules: extraRules,
+          };
+          var r = await fetch("/admin-ext/api/asset-cache/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          var d = await r.json().catch(function () { return {}; });
+          if (r.ok && d.settings) {
+            showMsg(true, "已保存。");
+            document.getElementById("astroMaxAge").value = String(d.settings.astroMaxAge);
+            document.getElementById("mediaMaxAge").value = String(d.settings.mediaMaxAge);
+            document.getElementById("staticMaxAge").value = String(d.settings.staticMaxAge);
+            document.getElementById("extraRules").value = Array.isArray(d.settings.extraRules)
+              ? d.settings.extraRules.map(function (x) { return x.ext + "=" + String(x.maxAge); }).join("\n")
+              : "";
+          } else {
+            showMsg(false, d.error || "保存失败");
+          }
+        });
+
+        load();
+      })();
+    </script>
+</AdminLayout>

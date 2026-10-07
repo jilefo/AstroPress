@@ -1,0 +1,10 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import FormBuilder from "../../../islands/FormBuilder";
+
+const { id } = Astro.params;
+if (!Astro.locals.user) return Astro.redirect("/login");
+---
+<AdminLayout title="Form Builder">
+  <FormBuilder client:only="react" formId={id} />
+</AdminLayout>

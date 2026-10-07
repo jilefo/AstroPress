@@ -1,0 +1,465 @@
+---
+/**
+ * /admin-ext/db-console — Adminer 风格 SQLite 管理器
+ *
+ * 左侧：全部表/视图；右侧：浏览 / 结构 / SQL 三个标签。
+ * 所有数据操作均经由同源 JSON API，页面本身不直接访问数据库。
+ */
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+if (!Astro.locals.user) return Astro.redirect("/login");
+---
+<AdminLayout title="数据库控制台">
+    <style is:global>
+      * { box-sizing: border-box; }
+      .dbpath { opacity: .75; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+      .layout { display: flex; align-items: flex-start; gap: 0; min-height: calc(100vh - 43px); }
+      .sidebar { width: 260px; flex-shrink: 0; background: linear-gradient(180deg,#22282e 0%,#1d2327 100%); color: #c3c4c7; min-height: calc(100vh - 43px); overflow-y: auto; max-height: calc(100vh - 43px); position: sticky; top: 0; }
+      .sidebar::-webkit-scrollbar { width: 8px; }
+      .sidebar::-webkit-scrollbar-thumb { background: #3a424a; border-radius: 4px; }
+      .sidebar::-webkit-scrollbar-thumb:hover { background: #4a545e; }
+      .sb-head { padding: 14px 14px 10px; border-bottom: 1px solid #2c3338; position: sticky; top: 0; background: #22282e; z-index: 2; }
+      .sb-title { font-size: 12px; font-weight: 600; color: #f0f0f1; letter-spacing: .04em; display: flex; align-items: center; gap: 7px; margin-bottom: 10px; }
+      .sb-title svg { flex-shrink: 0; opacity: .8; }
+      .sb-filter { width: 100%; background: #14181c; border: 1px solid #333a41; color: #e0e3e6; border-radius: 4px; padding: 6px 9px 6px 28px; font-size: 12px; outline: none; }
+      .sb-filter:focus { border-color: #2271b1; box-shadow: 0 0 0 1px #2271b1; }
+      .sb-filter::placeholder { color: #646970; }
+      .sb-filter-wrap { position: relative; }
+      .sb-filter-wrap svg { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); opacity: .5; pointer-events: none; }
+      .sidebar h2 { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: #8a9199; margin: 14px 14px 4px; display: flex; align-items: center; gap: 6px; }
+      .sidebar h2::after { content: ""; flex: 1; height: 1px; background: #2c3338; }
+      .sidebar a.tbl { display: flex; align-items: center; gap: 8px; padding: 5px 14px 5px 12px; color: #c3c4c7; text-decoration: none; border-left: 3px solid transparent; font-size: 12.5px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+      .sidebar a.tbl:hover { background: #2c3338; color: #fff; }
+      .sidebar a.tbl.is-active { background: #2271b1; color: #fff; border-left-color: #72aee6; }
+      .sidebar a.tbl .ticon { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 4px; background: rgba(255,255,255,.07); color: #9aa4ad; font-size: 9px; font-weight: 700; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-style: normal; }
+      .sidebar a.tbl:hover .ticon { background: rgba(255,255,255,.12); color: #d7dde3; }
+      .sidebar a.tbl.is-active .ticon { background: rgba(255,255,255,.22); color: #fff; }
+      .sidebar a.tbl .tname { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .sidebar a.tbl .tcount { flex-shrink: 0; font-size: 10px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: rgba(255,255,255,.09); color: #a7aaad; border-radius: 8px; padding: 1px 7px; line-height: 1.5; }
+      .sidebar a.tbl.is-active .tcount { background: rgba(255,255,255,.22); color: #fff; }
+      .sidebar a.tbl .tcount.zero { opacity: .45; }
+      .sb-empty { color: #646970; font-size: 12px; padding: 6px 14px; }
+      .sb-foot { padding: 10px 14px; margin-top: 8px; border-top: 1px solid #2c3338; font-size: 11px; color: #646970; }
+      .main { flex: 1; padding: 16px 20px; min-width: 0; }
+      .tabs { display: flex; gap: 2px; border-bottom: 1px solid #c3c4c7; margin-bottom: 14px; }
+      .tabs button { background: none; border: 1px solid transparent; border-bottom: none; padding: 8px 18px; cursor: pointer; font-size: 13px; color: #2271b1; border-radius: 4px 4px 0 0; margin-bottom: -1px; }
+      .tabs button.is-active { background: #fff; border-color: #c3c4c7; color: #1d2327; font-weight: 600; }
+      .panel { display: none; }
+      .panel.is-active { display: block; }
+      .card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 16px; }
+      .meta { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+      .meta strong { font-size: 14px; }
+      .btn { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 6px 14px; cursor: pointer; font-size: 13px; text-decoration: none; display: inline-block; }
+      .btn:disabled { opacity: .5; cursor: default; }
+      .btn.secondary { background: #f6f7f7; color: #2271b1; border: 1px solid #2271b1; }
+      .pager { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+      table.grid { border-collapse: collapse; min-width: 100%; width: max-content; font-size: 12px; background: #fff; }
+      table.grid th, table.grid td { border: 1px solid #dcdcdd; padding: 5px 8px; text-align: left; vertical-align: top; max-width: 480px; word-break: break-word; }
+      table.grid th { background: #f6f7f7; position: sticky; top: 0; white-space: nowrap; }
+      table.grid td.editable { cursor: cell; }
+      table.grid td.editable:hover { background: #f0f6fb; outline: 1px dashed #72aee6; outline-offset: -1px; }
+      input.celledit { font: inherit; font-size: 13px; padding: 2px 6px; border: 1px solid #2271b1; border-radius: 3px; min-width: 160px; }
+      table.grid td button { padding: 1px 8px; font-size: 11px; margin-left: 4px; }
+      .tablewrap { overflow: auto; max-height: calc(100vh - 260px); border: 1px solid #dcdcdd; }
+      .null { color: #a7aaad; font-style: italic; }
+      .blob { color: #b32d2e; font-family: ui-monospace, monospace; }
+      .muted { color: #646970; }
+      textarea { width: 100%; min-height: 180px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; padding: 10px; border: 1px solid #8c8f94; border-radius: 3px; resize: vertical; }
+      .sqlbar { display: flex; align-items: center; gap: 14px; margin: 10px 0; flex-wrap: wrap; }
+      .check { display: flex; align-items: center; gap: 6px; }
+      .warn { color: #b32d2e; }
+      .result { margin-top: 14px; }
+      .result .ok { color: #00a32a; font-weight: 600; }
+      .result .err { color: #b32d2e; font-weight: 600; white-space: pre-wrap; background: #fcf0f1; border: 1px solid #f0c5c7; padding: 10px; border-radius: 3px; }
+      pre.ddl { background: #1d2327; color: #c3c4c7; padding: 12px; border-radius: 4px; overflow: auto; font-size: 12px; line-height: 1.5; }
+      .empty { color: #646970; padding: 24px; text-align: center; }
+      .badge { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 8px; background: #f0f0f1; color: #646970; margin-left: 6px; vertical-align: middle; }
+    </style>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="sb-head">
+          <div class="sb-title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>
+            数据库对象
+          </div>
+          <div class="sb-filter-wrap">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="sb-filter" id="tableFilter" type="text" placeholder="筛选表名…" autocomplete="off" />
+          </div>
+        </div>
+        <div id="sbGroups"><div class="sb-empty">加载中…</div></div>
+        <div class="sb-foot" id="sbFoot"></div>
+      </aside>
+
+      <main class="main">
+        <div class="dbpath" id="dbpath" style="margin-bottom:10px;">数据库文件：读取中…</div>
+        <div class="tabs">
+          <button data-tab="browse" class="is-active" id="tabBrowse">浏览</button>
+          <button data-tab="structure" id="tabStructure">结构</button>
+          <button data-tab="sql" id="tabSql">SQL</button>
+        </div>
+
+        <section class="panel is-active" id="panelBrowse">
+          <div class="card">
+            <div id="browseEmpty" class="empty">请从左侧选择一张表</div>
+            <div id="browseContent" hidden>
+              <div class="meta">
+                <strong id="browseTitle"></strong>
+                <span class="muted" id="browseTotal"></span>
+                <span class="muted">（双击单元格可编辑，保存前需确认）</span>
+                <span style="margin-left:auto;display:flex;gap:8px;">
+                  <a class="btn secondary" id="exportCsv" href="#">导出 CSV</a>
+                  <a class="btn secondary" id="exportSql" href="#">导出 SQL</a>
+                </span>
+              </div>
+              <div class="tablewrap">
+                <table class="grid" id="browseTable"></table>
+              </div>
+              <div class="pager">
+                <button class="btn secondary" id="prevPage">上一页</button>
+                <span id="pageInfo" class="muted"></span>
+                <button class="btn secondary" id="nextPage">下一页</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" id="panelStructure">
+          <div class="card">
+            <div id="structEmpty" class="empty">请从左侧选择一张表</div>
+            <div id="structContent" hidden>
+              <h2 style="margin:0 0 12px;font-size:16px;" id="structTitle"></h2>
+              <h3 style="font-size:13px;margin:12px 0 6px;">字段</h3>
+              <div class="tablewrap" style="max-height:40vh;">
+                <table class="grid" id="structTable"></table>
+              </div>
+              <h3 style="font-size:13px;margin:16px 0 6px;">建表语句</h3>
+              <pre class="ddl" id="ddl"></pre>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" id="panelSql">
+          <div class="card">
+            <textarea id="sqlInput" spellcheck="false" placeholder="SELECT * FROM 表 LIMIT 50;"></textarea>
+            <div class="sqlbar">
+              <button class="btn" id="execBtn">执行</button>
+              <label class="check warn">
+                <input type="checkbox" id="confirmWrite" />
+                我知道写操作会直接修改数据库
+              </label>
+              <span class="muted">仅允许单条语句；ATTACH / DETACH / VACUUM 被禁用。</span>
+            </div>
+            <div class="result" id="sqlResult"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      (function () {
+        var state = { table: null, type: "table", page: 0, total: 0, tab: "browse", sqlTouched: false, rows: [], columns: [], canEdit: false };
+        var PAGE_SIZE = 50;
+        var allItems = [];
+        var filterText = "";
+
+        var ESC_MAP = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+        function esc(s) {
+          return String(s).replace(/[&<>"']/g, function (c) { return ESC_MAP[c]; });
+        }
+
+        function api(url, opts) {
+          return fetch(url, Object.assign({ credentials: "same-origin" }, opts)).then(function (r) {
+            if (r.status === 401) { location.href = "/login"; throw new Error("未登录"); }
+            return r.json().then(function (data) { return { ok: r.ok, status: r.status, data: data }; });
+          });
+        }
+
+        // ---------- 左侧表/视图列表 ----------
+        function loadTables() {
+          api("/admin-ext/api/db-console/tables").then(function (res) {
+            if (!res.ok) return;
+            var dbpath = document.getElementById("dbpath");
+            dbpath.textContent = "数据库文件：" + (res.data.dbPath || "unknown");
+            allItems = res.data.tables || [];
+            renderGroups();
+            updateFoot();
+          });
+        }
+
+        function groupOf(name) {
+          if (name.indexOf("wp_") === 0) return "wp";
+          if (name.indexOf("ap_") === 0 || name.indexOf("astropress_") === 0) return "ap";
+          if (name.indexOf("sqlite_") === 0) return "sqlite";
+          return "other";
+        }
+        function groupLabel(key) {
+          return { wp: "WordPress 核心", ap: "AstroPress 插件", sqlite: "SQLite 内部", other: "其他" }[key];
+        }
+        function groupIcon(name) {
+          var g = groupOf(name);
+          return g === "wp" ? "W" : (g === "ap" ? "A" : (g === "sqlite" ? "S" : "T"));
+        }
+
+        function renderGroups() {
+          var container = document.getElementById("sbGroups");
+          var q = filterText.trim().toLowerCase();
+          var items = allItems.filter(function (t) {
+            return !q || t.name.toLowerCase().indexOf(q) !== -1;
+          });
+          if (!items.length) { container.innerHTML = '<div class="sb-empty">无匹配结果</div>'; return; } // ap-audit-ok: 静态串
+
+          var groups = { wp: [], ap: [], sqlite: [], other: [] };
+          items.forEach(function (t) { groups[groupOf(t.name)].push(t); });
+
+          var html = "";
+          ["wp", "ap", "sqlite", "other"].forEach(function (k) {
+            var arr = groups[k];
+            if (!arr.length) return;
+            html += '<h2>' + esc(groupLabel(k)) + ' <span style="opacity:.6;font-size:11px;font-family:sans-serif;font-weight:400;text-transform:none;letter-spacing:0">' + arr.length + '</span></h2><nav>';
+            html += arr.map(function (t) {
+              var icon = t.type === "view" ? "V" : groupIcon(t.name);
+              var rowsBadge = t.type === "table" && t.rows !== null
+                ? '<span class="tcount ' + (t.rows === 0 ? "zero" : "") + '">' + t.rows + '</span>'
+                : (t.type === "view" ? '<span class="tcount" style="font-size:9px">VIEW</span>' : '');
+              return '<a href="#" class="tbl" data-type="' + t.type + '" data-name="' + esc(t.name) + '">' +
+                '<span class="ticon">' + icon + '</span>' +
+                '<span class="tname">' + esc(t.name) + '</span>' +
+                rowsBadge +
+                '</a>';
+            }).join("");
+            html += '</nav>';
+          });
+          container.innerHTML = html; // ap-audit-ok: 表名/分组名均经 esc() 转义，行数为数字
+        }
+
+        function updateFoot() {
+          var total = allItems.length;
+          var tables = allItems.filter(function (t) { return t.type === "table"; }).length;
+          var views = allItems.filter(function (t) { return t.type === "view"; }).length;
+          document.getElementById("sbFoot").textContent = "共 " + total + " 个对象（" + tables + " 表 / " + views + " 视图）";
+        }
+
+        document.getElementById("tableFilter").addEventListener("input", function (e) {
+          filterText = e.target.value;
+          renderGroups();
+        });
+
+        document.querySelector(".sidebar").addEventListener("click", function (e) {
+          var a = e.target.closest("a.tbl[data-name]");
+          if (!a) return;
+          e.preventDefault();
+          selectTable(a.getAttribute("data-name"), a.getAttribute("data-type"));
+        });
+
+        function selectTable(name, type) {
+          state.table = name;
+          state.type = type || "table";
+          state.page = 0;
+          document.querySelectorAll(".sidebar a.tbl[data-name]").forEach(function (a) {
+            a.classList.toggle("is-active", a.getAttribute("data-name") === name);
+          });
+          if (!state.sqlTouched) {
+            document.getElementById("sqlInput").value = 'SELECT * FROM "' + name.replace(/"/g, '""') + '" LIMIT 50;';
+          }
+          if (state.tab === "browse") loadBrowse();
+          if (state.tab === "structure") loadStructure();
+        }
+
+        // ---------- 标签切换 ----------
+        document.querySelectorAll(".tabs button").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            state.tab = btn.getAttribute("data-tab");
+            document.querySelectorAll(".tabs button").forEach(function (b) { b.classList.toggle("is-active", b === btn); });
+            document.querySelectorAll(".panel").forEach(function (p) {
+              p.classList.toggle("is-active", p.id === "panel" + state.tab.charAt(0).toUpperCase() + state.tab.slice(1));
+            });
+            if (state.tab === "browse" && state.table) loadBrowse();
+            if (state.tab === "structure" && state.table) loadStructure();
+          });
+        });
+
+        // ---------- 浏览 ----------
+        function cellHtml(v) {
+          if (v === null || v === undefined) return '<span class="null">NULL</span>';
+          if (v && typeof v === "object" && typeof v.__blob === "number") {
+            return '<span class="blob">[BLOB ' + v.__blob + " bytes]</span>";
+          }
+          var s = String(v);
+          var disp = s.length > 200 ? s.slice(0, 200) + "…" : s;
+          return '<span title="' + esc(s) + '">' + esc(disp) + "</span>";
+        }
+
+        function renderGrid(tableEl, columns, rows, editable) {
+          var html = "<thead><tr>" + columns.map(function (c) { return "<th>" + esc(c) + "</th>"; }).join("") + "</tr></thead>";
+          html += "<tbody>" + rows.map(function (row, i) {
+            return '<tr data-idx="' + i + '">' + columns.map(function (c) {
+              var cls = editable ? ' class="editable"' : "";
+              return "<td" + cls + ">" + cellHtml(row[c]) + "</td>";
+            }).join("") + "</tr>";
+          }).join("") + "</tbody>";
+          tableEl.innerHTML = html; // ap-audit-ok: html 中列名/单元格均经 esc() 或 cellHtml() 全量转义
+        }
+
+        // ---------- 行内编辑（双击单元格） ----------
+        document.getElementById("browseTable").addEventListener("dblclick", function (e) {
+          if (!state.canEdit || !state.table) return;
+          var td = e.target.closest("td");
+          if (!td || !td.parentNode) return;
+          var idx = Number(td.parentNode.getAttribute("data-idx"));
+          var row = state.rows[idx];
+          if (!row || row.__rowid === undefined || row.__rowid === null) return;
+          var col = state.columns[td.cellIndex];
+          if (!col) return;
+          var cur = row[col];
+          if (cur && typeof cur === "object") return; // BLOB 不支持行内编辑
+          openCellEditor(td, row, col, cur);
+        });
+
+        function openCellEditor(td, row, col, cur) {
+          if (td.querySelector("input.celledit")) return;
+          td.textContent = "";
+          var input = document.createElement("input");
+          input.className = "celledit";
+          input.value = cur === null || cur === undefined ? "" : String(cur);
+          if (cur === null) input.placeholder = "NULL";
+          var ok = document.createElement("button");
+          ok.type = "button"; ok.textContent = "✓"; ok.title = "保存";
+          var nl = document.createElement("button");
+          nl.type = "button"; nl.textContent = "NULL"; nl.title = "设为 NULL";
+          var no = document.createElement("button");
+          no.type = "button"; no.textContent = "✕"; no.title = "取消";
+          td.appendChild(input); td.appendChild(ok); td.appendChild(nl); td.appendChild(no);
+          input.focus(); input.select();
+          function save(v) {
+            if (!confirm("确认更新 " + state.table + "." + col + "（rowid=" + row.__rowid + "）？")) { loadBrowse(); return; }
+            api("/admin-ext/api/db-console/update", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ table: state.table, rowid: Number(row.__rowid), column: col, value: v, confirm: true }),
+            }).then(function (res) {
+              if (!res.ok || !res.data.ok) alert("更新失败：" + (res.data.error || ("HTTP " + res.status)));
+              loadBrowse();
+            });
+          }
+          ok.addEventListener("click", function () { save(input.value); });
+          nl.addEventListener("click", function () { save(null); });
+          no.addEventListener("click", function () { loadBrowse(); });
+          input.addEventListener("keydown", function (ev) {
+            if (ev.key === "Enter") save(input.value);
+            if (ev.key === "Escape") loadBrowse();
+          });
+        }
+
+        function loadBrowse() {
+          if (!state.table) return;
+          var q = "?name=" + encodeURIComponent(state.table) + "&page=" + state.page;
+          api("/admin-ext/api/db-console/browse" + q).then(function (res) {
+            document.getElementById("browseEmpty").hidden = true;
+            document.getElementById("browseContent").hidden = false;
+            var box = document.getElementById("browseContent");
+            if (!res.ok) {
+              document.getElementById("browseTable").innerHTML = '<tr><td><span class="blob">' + esc(res.data.error || "加载失败") + "</span></td></tr>";
+              return;
+            }
+            var d = res.data;
+            state.total = d.total;
+            document.getElementById("browseTitle").textContent = state.table +
+              (state.type === "view" ? "（视图）" : "");
+            document.getElementById("browseTotal").textContent = "共 " + d.total + " 行";
+            var cols = d.columns.filter(function (c) { return c !== "__rowid"; });
+            state.rows = d.rows;
+            state.columns = cols;
+            state.canEdit = state.type === "table" && d.columns.indexOf("__rowid") >= 0;
+            renderGrid(document.getElementById("browseTable"), cols, d.rows, state.canEdit);
+            var pages = Math.max(1, Math.ceil(d.total / PAGE_SIZE));
+            document.getElementById("pageInfo").textContent = "第 " + (d.page + 1) + " / " + pages + " 页";
+            document.getElementById("prevPage").disabled = d.page <= 0;
+            document.getElementById("nextPage").disabled = (d.page + 1) * PAGE_SIZE >= d.total;
+            var base = "/admin-ext/api/db-console/export?name=" + encodeURIComponent(state.table);
+            document.getElementById("exportCsv").href = base + "&format=csv";
+            document.getElementById("exportSql").href = base + "&format=sql";
+          });
+        }
+
+        document.getElementById("prevPage").addEventListener("click", function () {
+          if (state.page > 0) { state.page--; loadBrowse(); }
+        });
+        document.getElementById("nextPage").addEventListener("click", function () {
+          if ((state.page + 1) * PAGE_SIZE < state.total) { state.page++; loadBrowse(); }
+        });
+
+        // ---------- 结构 ----------
+        function loadStructure() {
+          if (!state.table) return;
+          api("/admin-ext/api/db-console/structure?name=" + encodeURIComponent(state.table)).then(function (res) {
+            document.getElementById("structEmpty").hidden = true;
+            document.getElementById("structContent").hidden = false;
+            if (!res.ok) {
+              document.getElementById("ddl").textContent = res.data.error || "加载失败";
+              document.getElementById("structTable").innerHTML = "";
+              return;
+            }
+            var d = res.data;
+            document.getElementById("structTitle").textContent = state.table;
+            var cols = ["cid", "name", "type", "notnull", "dflt_value", "pk"];
+            var head = "<thead><tr>" + cols.map(function (c) { return "<th>" + c + "</th>"; }).join("") + "</tr></thead>";
+            var body = "<tbody>" + d.columns.map(function (r) {
+              return "<tr>" + cols.map(function (c) {
+                return "<td>" + cellHtml(r[c] === null || r[c] === undefined ? null : r[c]) + "</td>";
+              }).join("") + "</tr>";
+            }).join("") + "</tbody>";
+            document.getElementById("structTable").innerHTML = head + body; // ap-audit-ok: 列名为固定数组，数据经 cellHtml() 转义
+            document.getElementById("ddl").textContent = d.sql || "（无建表语句）";
+          });
+        }
+
+        // ---------- SQL ----------
+        document.getElementById("sqlInput").addEventListener("input", function () { state.sqlTouched = true; });
+
+        document.getElementById("execBtn").addEventListener("click", function () {
+          var out = document.getElementById("sqlResult");
+          var sqlText = document.getElementById("sqlInput").value;
+          var confirmWrite = document.getElementById("confirmWrite").checked;
+          out.innerHTML = '<span class="muted">执行中…</span>'; // ap-audit-ok: 静态提示，无动态数据
+          api("/admin-ext/api/db-console/exec", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sql: sqlText, confirmWrite: confirmWrite }),
+          }).then(function (res) {
+            var d = res.data;
+            if (!res.ok || d.error) {
+              out.innerHTML = '<div class="err">' + esc((d && d.error) || "执行失败") + "</div>";
+              return;
+            }
+            if (d.type === "write") {
+              out.innerHTML = '<div class="ok">执行成功</div><div class="muted" style="margin-top:6px;">影响行数 ' +
+                esc(String(d.changes)) + " · 耗时 " + d.durationMs + " ms</div>";
+              // 写操作后刷新左侧列表
+              loadTables();
+              return;
+            }
+            var info = '<div class="muted" style="margin-bottom:8px;">返回 ' + d.rows.length + " 行 · 耗时 " + d.durationMs + " ms</div>";
+            if (!d.columns.length) {
+              out.innerHTML = info + '<div class="ok">语句已执行（无结果集）</div>'; // ap-audit-ok: info 仅拼接行数/耗时数字，其余为静态串
+              return;
+            }
+            var wrap = document.createElement("div");
+            wrap.className = "tablewrap";
+            wrap.style.maxHeight = "50vh";
+            var table = document.createElement("table");
+            table.className = "grid";
+            wrap.appendChild(table);
+            out.innerHTML = "";
+            out.insertAdjacentHTML("beforeend", info);
+            out.appendChild(wrap);
+            renderGrid(table, d.columns, d.rows);
+          }).catch(function (e) {
+            out.innerHTML = '<div class="err">' + esc(e.message || "网络错误") + "</div>";
+          });
+        });
+
+        loadTables();
+      })();
+    </script>
+</AdminLayout>

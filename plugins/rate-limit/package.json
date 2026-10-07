@@ -1,0 +1,23 @@
+{
+  "name": "@astropress/plugin-rate-limit",
+  "version": "0.1.0",
+  "description": "全局限流：公开端点统一 IP 令牌桶限流（路径前缀/方法/上限/窗口可配），429 + Retry-After，后台可查看命中计数与清空状态",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./integration.admin": "./src/integration.admin.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@astropress/core": "workspace:*",
+    "drizzle-orm": "^0.36.0"
+  },
+  "devDependencies": {
+    "astro": "^4.0.0",
+    "typescript": "^5.4.0",
+    "@cloudflare/workers-types": "^4.0.0"
+  }
+}

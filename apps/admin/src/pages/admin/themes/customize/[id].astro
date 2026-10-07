@@ -1,0 +1,214 @@
+---
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import { wpOptions } from "@astropress/core/schema";
+import { eq } from "drizzle-orm";
+import type { Theme } from "@astropress/core/types/theme";
+
+const db = Astro.locals.db;
+if (!Astro.locals.user || !db) return Astro.redirect("/login");
+
+const { id } = Astro.params;
+const [themesRow] = await db.select({ value: wpOptions.optionValue }).from(wpOptions).where(eq(wpOptions.optionName, "astropress_themes")).limit(1);
+const themes: Theme[] = themesRow?.value ? JSON.parse(themesRow.value) : [];
+const theme = themes.find(t => t.id === id);
+if (!theme) return Astro.redirect("/admin/themes");
+
+const [activeRow] = await db.select({ value: wpOptions.optionValue }).from(wpOptions).where(eq(wpOptions.optionName, "astropress_active_theme")).limit(1);
+const isActive = activeRow?.value === id || (!activeRow?.value && id === "default");
+
+const colorLabels: Record<string, string> = {
+  primary: "主色",
+  secondary: "辅助色",
+  background: "背景色",
+  surface: "表面色",
+  text: "文字色",
+  textMuted: "弱化文字",
+  border: "边框色",
+};
+---
+<AdminLayout title={`自定义：${theme.name}`}>
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+    <a href="/admin/themes" class="button">← 返回主题</a>
+    <h1 class="wp-heading-inline" style="margin:0">{theme.name}</h1>
+    {isActive ? (
+      <span class="status-badge status-publish" style="font-size:12px">启用</span>
+    ) : (
+      <button onclick={`activateTheme('${theme.id}')`} class="button button-primary">启用</button>
+    )}
+  </div>
+  <hr class="wp-header-end" />
+
+  <div id="save-notice" style="display:none" class="notice notice-success"><p>主题已保存！</p></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+    <!-- Left: Identity -->
+    <div>
+      <div class="postbox">
+        <div class="postbox-header"><h3 class="postbox-title">标识</h3></div>
+        <div class="postbox-inside">
+          <div style="margin-bottom:14px">
+            <label class="wp-form-label">主题名称</label>
+            <input id="t-name" type="text" class="wp-input" style="width:100%" value={theme.name} />
+          </div>
+          <div>
+            <label class="wp-form-label">描述</label>
+            <input id="t-desc" type="text" class="wp-input" style="width:100%" value={theme.description || ""} />
+          </div>
+        </div>
+      </div>
+
+      <!-- Typography -->
+      <div class="postbox">
+        <div class="postbox-header"><h3 class="postbox-title">字体排版</h3></div>
+        <div class="postbox-inside">
+          <div style="margin-bottom:14px">
+            <label class="wp-form-label">标题字体</label>
+            <input id="t-font-heading" type="text" class="wp-input" style="width:100%" value={theme.tokens.fonts.heading} />
+            <p style="font-size:11px;color:#646970;margin-top:4px">CSS font-family 值</p>
+          </div>
+          <div>
+            <label class="wp-form-label">正文字体</label>
+            <input id="t-font-body" type="text" class="wp-input" style="width:100%" value={theme.tokens.fonts.body} />
+          </div>
+        </div>
+      </div>
+
+      <!-- Spacing -->
+      <div class="postbox">
+        <div class="postbox-header"><h3 class="postbox-title">布局与间距</h3></div>
+        <div class="postbox-inside">
+          <div style="margin-bottom:14px">
+            <label class="wp-form-label">区块纵向内边距</label>
+            <input id="t-spacing-y" type="text" class="wp-input" style="width:160px" value={theme.tokens.spacing.sectionY} />
+          </div>
+          <div style="margin-bottom:14px">
+            <label class="wp-form-label">最大宽度</label>
+            <input id="t-spacing-max" type="text" class="wp-input" style="width:160px" value={theme.tokens.spacing.containerMax} />
+          </div>
+          <div>
+            <label class="wp-form-label">圆角</label>
+            <input id="t-spacing-radius" type="text" class="wp-input" style="width:160px" value={theme.tokens.spacing.borderRadius} />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Colors + Preview -->
+    <div>
+      <div class="postbox">
+        <div class="postbox-header"><h3 class="postbox-title">颜色</h3></div>
+        <div class="postbox-inside">
+          {Object.entries(theme.tokens.colors).map(([key, val]) => (
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+              <input type="color" id={`t-color-${key}`} value={String(val)} style="width:40px;height:32px;border:1px solid #dcdcde;border-radius:3px;padding:1px;cursor:pointer" oninput={`document.getElementById('t-color-text-${key}').value=this.value;updatePreview()`} />
+              <div style="flex:1">
+                <div style="font-size:11px;color:#646970;margin-bottom:3px">{colorLabels[key] ?? key}</div>
+                <input type="text" id={`t-color-text-${key}`} value={String(val)} class="wp-input" style="width:100%;font-family:monospace;font-size:12px" oninput={`document.getElementById('t-color-${key}').value=this.value;updatePreview()`} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <!-- Live Preview -->
+      <div class="postbox">
+        <div class="postbox-header"><h3 class="postbox-title">预览</h3></div>
+        <div class="postbox-inside" style="padding:0;overflow:hidden;border-radius:0 0 3px 3px">
+          <div id="color-preview" style="padding:24px">
+            <div id="prev-hero" style="padding:24px;text-align:center;border-radius:4px;margin-bottom:12px">
+              <div id="prev-heading" style="font-size:18px;font-weight:700;margin-bottom:6px">主标题</div>
+              <div id="prev-subtext" style="font-size:13px;margin-bottom:12px;opacity:0.85">此处为预览副标题文字</div>
+              <div id="prev-btn" style="display:inline-block;padding:8px 20px;border-radius:4px;font-size:13px;font-weight:600;color:#fff">按钮</div>
+            </div>
+            <div id="prev-card" style="padding:16px;border-radius:4px;border:1px solid;margin-bottom:12px">
+              <div id="prev-card-title" style="font-size:14px;font-weight:600;margin-bottom:4px">卡片标题</div>
+              <div id="prev-card-text" style="font-size:12px">此处为卡片正文文字。</div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <div id="prev-swatch-primary" style="height:32px;border-radius:4px;flex:1"></div>
+              <div id="prev-swatch-secondary" style="height:32px;border-radius:4px;flex:1"></div>
+              <div id="prev-swatch-accent" style="height:32px;border-radius:4px;flex:1"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:8px;display:flex;gap:8px">
+    <button onclick="saveTheme()" class="button button-primary">保存主题</button>
+    {!isActive && <button onclick={`activateTheme('${theme.id}')`} class="button">保存并启用</button>}
+  </div>
+</AdminLayout>
+
+<script is:inline define:vars={{ themeId: theme.id, initialTokens: theme.tokens }}>
+  (function () {
+    function getTokens() {
+      return {
+        colors: {
+          primary: document.getElementById('t-color-primary').value,
+          secondary: document.getElementById('t-color-secondary').value,
+          background: document.getElementById('t-color-background').value,
+          surface: document.getElementById('t-color-surface').value,
+          text: document.getElementById('t-color-text').value,
+          textMuted: document.getElementById('t-color-textMuted').value,
+          border: document.getElementById('t-color-border').value,
+        },
+        fonts: {
+          heading: document.getElementById('t-font-heading').value,
+          body: document.getElementById('t-font-body').value,
+        },
+        spacing: {
+          sectionY: document.getElementById('t-spacing-y').value,
+          containerMax: document.getElementById('t-spacing-max').value,
+          borderRadius: document.getElementById('t-spacing-radius').value,
+        },
+      };
+    }
+
+    window.updatePreview = function () {
+      var t = getTokens();
+      var hero = document.getElementById('prev-hero');
+      hero.style.background = t.colors.primary;
+      hero.style.color = '#fff';
+      document.getElementById('prev-btn').style.background = t.colors.secondary;
+      document.getElementById('prev-btn').style.borderRadius = t.spacing.borderRadius;
+      var card = document.getElementById('prev-card');
+      card.style.background = t.colors.surface;
+      card.style.borderColor = t.colors.border;
+      document.getElementById('prev-card-title').style.color = t.colors.text;
+      document.getElementById('prev-card-text').style.color = t.colors.textMuted;
+      document.getElementById('color-preview').style.background = t.colors.background;
+      document.getElementById('prev-swatch-primary').style.background = t.colors.primary;
+      document.getElementById('prev-swatch-secondary').style.background = t.colors.secondary;
+      var acc = document.getElementById('prev-swatch-accent');
+      if (acc) acc.style.background = t.colors.border;
+      document.getElementById('prev-heading').style.fontFamily = t.fonts.heading;
+    };
+
+    window.saveTheme = async function () {
+      var tokens = getTokens();
+      var name = document.getElementById('t-name').value.trim();
+      var description = document.getElementById('t-desc').value.trim();
+      var res = await fetch('/api/themes/' + themeId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, description, tokens }),
+      });
+      if (res.ok) {
+        var n = document.getElementById('save-notice');
+        n.style.display = 'block';
+        setTimeout(function () { n.style.display = 'none'; }, 3000);
+      }
+    };
+
+    window.activateTheme = async function (id) {
+      await window.saveTheme();
+      var res = await fetch('/api/themes/' + id, { method: 'POST' });
+      if (res.ok) window.location.href = '/admin/themes';
+    };
+
+    // Init preview
+    updatePreview();
+  })();
+</script>

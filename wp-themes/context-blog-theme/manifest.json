@@ -1,0 +1,26 @@
+{
+  "name": "Context Blog",
+  "version": "1.3.7",
+  "description": "Context-oriented personal blog theme with clean typography",
+  "author": "postmagthemes.com",
+  "tokens": {
+    "fonts": {
+      "body": "'Roboto', -apple-system, sans-serif",
+      "heading": "'Josefin Sans', -apple-system, sans-serif"
+    },
+    "spacing": {
+      "sectionY": "48px",
+      "borderRadius": "4px",
+      "containerMax": "1200px"
+    },
+    "colors": {
+      "textMuted": "#727272",
+      "surface": "#f8f9fa",
+      "background": "#ffffff",
+      "secondary": "#dc2a2a",
+      "border": "#efefef",
+      "text": "#353451",
+      "primary": "#2074c8"
+    }
+  }
+}

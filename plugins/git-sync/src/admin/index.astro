@@ -1,0 +1,363 @@
+---
+/**
+ * /admin-ext/git-sync — Git 同步（云端容灾备份）
+ *
+ * 通过各 Git 托管平台的 REST API（Contents API）把站点数据推送到远端仓库，
+ * 不依赖本机 git 命令行。同步范围：数据库转储 / 站点配置 / 媒体文件。
+ */
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+if (!Astro.locals.user || !Astro.locals.db) return Astro.redirect("/login");
+---
+<AdminLayout title="Git 同步">
+    <style is:global>
+      * { box-sizing: border-box; }
+      .wrap { max-width: 920px; margin: 0 auto; padding: 0 16px; display: grid; gap: 20px; }
+      .card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 20px; }
+      h1 { font-size: 20px; margin: 0 0 6px; }
+      h2 { font-size: 15px; margin: 0 0 12px; }
+      .muted { color: #646970; font-size: 12px; line-height: 1.7; }
+      .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; margin: 14px 0; }
+      .grid2 label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; margin: 0; }
+      .grid2 input, .grid2 select { font-size: 13px; padding: 6px 8px; border: 1px solid #8c8f94; border-radius: 3px; font-weight: normal; }
+      .hint { font-size: 12px; color: #646970; font-weight: normal; }
+      .check { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; margin: 10px 0; }
+      .check label { font-weight: normal; margin: 0; }
+      .check small { color: #646970; display: block; margin-top: 2px; }
+      .btn { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 7px 16px; cursor: pointer; font-size: 13px; }
+      .btn:hover { background: #135e96; }
+      .btn:disabled { opacity: .5; cursor: default; }
+      .btn.secondary { background: #f6f7f7; color: #2271b1; border: 1px solid #2271b1; }
+      .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+      .msg { margin-top: 10px; font-size: 13px; min-height: 18px; }
+      .ok { color: #00a32a; }
+      .err { color: #b32d2e; }
+      code { background: #f0f0f1; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+      .spinner { width: 18px; height: 18px; border: 2px solid #c3c4c7; border-top-color: #2271b1; border-radius: 50%; animation: gs-spin 0.8s linear infinite; }
+      @keyframes gs-spin { to { transform: rotate(360deg); } }
+      .sumline { font-size: 13px; margin: 12px 0 6px; font-weight: 600; }
+      .filelist { font-size: 12px; max-height: 260px; overflow: auto; border: 1px solid #e2e4e7; border-radius: 4px; padding: 8px 12px; background: #f6f7f9; margin: 0; list-style: none; }
+      .filelist li { padding: 2px 0; word-break: break-all; }
+      .warnbox { background: #fcf0c8; border: 1px solid #d9c471; border-radius: 4px; padding: 10px 12px; font-size: 12px; color: #6d5400; margin-top: 10px; }
+      table.grid { border-collapse: collapse; width: 100%; font-size: 12px; margin-top: 6px; }
+      table.grid th, table.grid td { border: 1px solid #dcdcdd; padding: 7px 9px; text-align: left; vertical-align: top; }
+      table.grid th { background: #f6f7f7; }
+      .empty { color: #646970; text-align: center; padding: 16px; }
+    </style>
+
+    <div class="wrap">
+      <!-- 设置区 -->
+      <section class="card">
+        <h1>Git 同步</h1>
+        <div class="muted">
+          通过 Git 托管平台的 REST API 把站点数据推送到远端仓库（云端容灾备份），不依赖本机 git 命令行。
+          媒体文件逐个推送，单文件 &gt;10MB 跳过，单次最多 50 个（超出请再次执行同步续传）。
+        </div>
+
+        <div class="grid2">
+          <label>平台预设
+            <select id="f-preset">
+              <option value="github">GitHub</option>
+              <option value="gitee">Gitee</option>
+              <option value="gitea">Gitea（自建/自定义）</option>
+              <option value="gitcode">GitCode</option>
+              <option value="atomgit">AtomGit</option>
+              <option value="gitlink">GitLink</option>
+              <option value="cnb">cnb.cool</option>
+              <option value="codeup">Codeup（阿里云）</option>
+            </select>
+          </label>
+          <label id="row-baseurl">API Base URL
+            <input type="text" id="f-baseurl" placeholder="https://gitea.example.com" />
+            <span class="hint" id="baseurlHint"></span>
+          </label>
+          <label>仓库所有者（owner）
+            <input type="text" id="f-owner" placeholder="如 octocat" />
+          </label>
+          <label>仓库名（repo）
+            <input type="text" id="f-repo" placeholder="如 my-site-backup" />
+          </label>
+          <label>分支
+            <input type="text" id="f-branch" placeholder="main" />
+          </label>
+          <label>远端目录前缀（可留空）
+            <input type="text" id="f-prefix" placeholder="如 astropress-backup" />
+          </label>
+          <label>dump.sql 远端路径
+            <input type="text" id="f-dumppath" placeholder="backups/astropress-dump.sql" />
+          </label>
+          <label>Access Token
+            <input type="password" id="f-token" autocomplete="new-password" />
+            <span class="hint" id="tokenHint"></span>
+          </label>
+        </div>
+
+        <h2>同步范围</h2>
+        <div class="check">
+          <input type="checkbox" id="s-dbdump" checked />
+          <label for="s-dbdump">数据库转储<small>local.db 的 SQL 逻辑转储，推送到上方配置的 dump 路径</small></label>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="s-config" checked />
+          <label for="s-config">站点配置（JSON）<small>站点设置 / 插件设置 / 主题配置，自动剥离 secret/key/password/salt/token 等敏感键</small></label>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="s-media" />
+          <label for="s-media">媒体文件<small>媒体目录下的小文件逐个推送（&gt;10MB 跳过，单次最多 50 个）</small></label>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="s-site" />
+          <label for="s-site">整站源码<small>遍历仓库根目录推送到 site/ 前缀下（排除 node_modules/.git/dist/backups 等目录与 .env/local.db 等文件；&gt;1MB 跳过，单次 100 个，多次同步轮转覆盖全站）</small></label>
+        </div>
+
+        <div class="row">
+          <button class="btn" id="saveBtn">保存设置</button>
+        </div>
+        <div class="msg" id="saveMsg"></div>
+      </section>
+
+      <!-- 操作区 -->
+      <section class="card">
+        <h2>操作</h2>
+        <div class="row">
+          <button class="btn secondary" id="testBtn">测试连接</button>
+          <button class="btn" id="syncBtn">立即同步</button>
+          <span class="spinner" id="spinner" hidden></span>
+        </div>
+        <div class="msg" id="opMsg"></div>
+        <div id="syncResult" hidden>
+          <div class="sumline" id="sumLine"></div>
+          <ul class="filelist" id="fileList"></ul>
+          <div class="warnbox" id="warnList" hidden></div>
+        </div>
+      </section>
+
+      <!-- 同步历史 -->
+      <section class="card">
+        <h2>同步历史（最近 20 条）</h2>
+        <table class="grid">
+          <thead>
+            <tr><th>时间</th><th>平台</th><th>文件数</th><th>结果</th><th>详情</th></tr>
+          </thead>
+          <tbody id="histBody"></tbody>
+        </table>
+      </section>
+    </div>
+
+    <script>
+      (function () {
+        var PRESET_KIND = {
+          github: "github", gitee: "gitee", gitea: "gitea",
+          gitcode: "gitea", atomgit: "gitea", gitlink: "gitea",
+          cnb: "stub", codeup: "stub"
+        };
+        var PRESET_BASE = {
+          gitcode: "https://gitcode.com",
+          atomgit: "https://atomgit.com",
+          gitlink: "https://www.gitlink.org.cn"
+        };
+
+        function $(id) { return document.getElementById(id); }
+        function el(tag, cls, text) {
+          var e = document.createElement(tag);
+          if (cls) e.className = cls;
+          if (text !== undefined) e.textContent = text;
+          return e;
+        }
+        function setMsg(elm, text, cls) { elm.className = "msg " + cls; elm.textContent = text; }
+        function api(url, opts) {
+          return fetch(url, Object.assign({ credentials: "same-origin" }, opts)).then(function (r) {
+            if (r.status === 401) { location.href = "/login"; throw new Error("未登录"); }
+            return r.json().then(function (d) { return { status: r.status, ok: r.ok, data: d }; });
+          });
+        }
+        function postJson(url, body) {
+          return api(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body || {}),
+          });
+        }
+        function fmtTime(iso) {
+          if (!iso) return "-";
+          try { return new Date(iso).toLocaleString("zh-CN", { hour12: false }); } catch (e) { return iso; }
+        }
+        function fmtBytes(n) {
+          if (n >= 1048576) return (n / 1048576).toFixed(1) + " MB";
+          if (n >= 1024) return (n / 1024).toFixed(1) + " KB";
+          return n + " B";
+        }
+
+        // 平台切换：gitea 系显示 API Base URL
+        function refreshPreset() {
+          var p = $("f-preset").value;
+          var kind = PRESET_KIND[p];
+          var row = $("row-baseurl");
+          if (kind === "gitea") {
+            row.style.display = "";
+            var def = PRESET_BASE[p] || "";
+            $("baseurlHint").textContent = def ? "默认 " + def + "（可修改）" : "站点根地址，如 https://gitea.example.com";
+            if (def && !$("f-baseurl").value) $("f-baseurl").value = def;
+          } else {
+            row.style.display = "none";
+          }
+        }
+        $("f-preset").addEventListener("change", refreshPreset);
+
+        // 载入设置
+        function loadSettings() {
+          api("/admin-ext/api/git-sync/settings").then(function (res) {
+            if (!res.ok || !res.data.settings) return;
+            var s = res.data.settings;
+            $("f-preset").value = s.preset;
+            $("f-baseurl").value = s.baseUrl || "";
+            $("f-owner").value = s.owner || "";
+            $("f-repo").value = s.repo || "";
+            $("f-branch").value = s.branch || "main";
+            $("f-prefix").value = s.prefix || "";
+            $("f-dumppath").value = s.dumpPath || "";
+            $("s-dbdump").checked = !!(s.scopes && s.scopes.dbDump);
+            $("s-config").checked = !!(s.scopes && s.scopes.configJson);
+            $("s-media").checked = !!(s.scopes && s.scopes.media);
+            $("s-site").checked = !!(s.scopes && s.scopes.site);
+            $("tokenHint").textContent = s.hasToken
+              ? "已保存 token（" + s.tokenMasked + "），留空则不修改"
+              : "尚未保存 token（推送私有仓库必填）";
+            refreshPreset();
+          });
+        }
+
+        // 保存设置
+        $("saveBtn").addEventListener("click", function () {
+          var btn = this;
+          btn.disabled = true;
+          var body = {
+            confirm: true,
+            preset: $("f-preset").value,
+            baseUrl: $("f-baseurl").value,
+            owner: $("f-owner").value,
+            repo: $("f-repo").value,
+            branch: $("f-branch").value,
+            prefix: $("f-prefix").value,
+            dumpPath: $("f-dumppath").value,
+            token: $("f-token").value,
+            scopes: {
+              dbDump: $("s-dbdump").checked,
+              media: $("s-media").checked,
+              configJson: $("s-config").checked,
+              site: $("s-site").checked
+            }
+          };
+          postJson("/admin-ext/api/git-sync/settings", body).then(function (res) {
+            btn.disabled = false;
+            if (res.ok && res.data.ok) {
+              setMsg($("saveMsg"), "设置已保存", "ok");
+              $("f-token").value = "";
+              loadSettings();
+            } else {
+              setMsg($("saveMsg"), (res.data && res.data.error) || "保存失败", "err");
+            }
+          }).catch(function (e) {
+            btn.disabled = false;
+            setMsg($("saveMsg"), e.message || "网络错误", "err");
+          });
+        });
+
+        // 测试连接
+        $("testBtn").addEventListener("click", function () {
+          var btn = this;
+          btn.disabled = true;
+          setMsg($("opMsg"), "正在测试连接…", "muted");
+          postJson("/admin-ext/api/git-sync/test", {}).then(function (res) {
+            btn.disabled = false;
+            if (res.ok && res.data.ok) {
+              setMsg($("opMsg"), res.data.platform + "：" + res.data.info, "ok");
+            } else {
+              setMsg($("opMsg"), (res.data && res.data.error) || "连接失败", "err");
+            }
+          }).catch(function (e) {
+            btn.disabled = false;
+            setMsg($("opMsg"), e.message || "网络错误", "err");
+          });
+        });
+
+        // 立即同步（长任务：spinner + 结果清单）
+        function renderSummary(sum) {
+          $("syncResult").hidden = false;
+          $("sumLine").textContent =
+            "平台 " + sum.platform + "：共 " + sum.total + " 个文件，成功 " + sum.succeeded +
+            "，失败 " + sum.failed + "，耗时 " + (sum.durationMs / 1000).toFixed(1) + "s";
+          var list = $("fileList");
+          list.textContent = "";
+          (sum.results || []).forEach(function (r) {
+            var li = el("li", r.ok ? "ok" : "err");
+            li.textContent = (r.ok ? "✓ " : "✗ ") + r.path +
+              (r.ok ? "（" + fmtBytes(r.bytes) + "）" : "：" + (r.error || "未知错误"));
+            list.appendChild(li);
+          });
+          var warn = $("warnList");
+          warn.textContent = "";
+          if (sum.warnings && sum.warnings.length) {
+            warn.hidden = false;
+            sum.warnings.forEach(function (w) { warn.appendChild(el("div", "", "⚠ " + w)); });
+          } else {
+            warn.hidden = true;
+          }
+        }
+
+        $("syncBtn").addEventListener("click", function () {
+          if (!confirm("立即同步会向远端仓库写入/覆盖文件，确定继续吗？")) return;
+          var btn = this;
+          btn.disabled = true;
+          $("testBtn").disabled = true;
+          $("spinner").hidden = false;
+          setMsg($("opMsg"), "正在同步，请稍候（文件较多时可能需要一段时间）…", "muted");
+          postJson("/admin-ext/api/git-sync/sync", { confirm: true }).then(function (res) {
+            btn.disabled = false;
+            $("testBtn").disabled = false;
+            $("spinner").hidden = true;
+            if (res.data && res.data.summary) {
+              renderSummary(res.data.summary);
+              setMsg($("opMsg"), res.data.ok ? "同步完成" : "同步结束（存在失败项，见下方清单）", res.data.ok ? "ok" : "err");
+            } else {
+              setMsg($("opMsg"), (res.data && res.data.error) || "同步失败", "err");
+            }
+            loadHistory();
+          }).catch(function (e) {
+            btn.disabled = false;
+            $("testBtn").disabled = false;
+            $("spinner").hidden = true;
+            setMsg($("opMsg"), e.message || "网络错误", "err");
+          });
+        });
+
+        // 同步历史
+        function loadHistory() {
+          api("/admin-ext/api/git-sync/history").then(function (res) {
+            var tbody = $("histBody");
+            tbody.textContent = "";
+            var list = (res.ok && res.data.history) || [];
+            if (!list.length) {
+              var tr0 = el("tr");
+              var td0 = el("td", "empty", "暂无同步记录");
+              td0.colSpan = 5;
+              tr0.appendChild(td0);
+              tbody.appendChild(tr0);
+              return;
+            }
+            list.forEach(function (h) {
+              var tr = el("tr");
+              tr.appendChild(el("td", "", fmtTime(h.time)));
+              tr.appendChild(el("td", "", h.platform || ""));
+              tr.appendChild(el("td", "", String(h.files)));
+              tr.appendChild(el("td", h.ok ? "ok" : "err", h.ok ? "成功" : "失败"));
+              tr.appendChild(el("td", "", h.message || ""));
+              tbody.appendChild(tr);
+            });
+          });
+        }
+
+        loadSettings();
+        loadHistory();
+      })();
+    </script>
+</AdminLayout>

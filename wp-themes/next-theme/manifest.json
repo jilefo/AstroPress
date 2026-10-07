@@ -1,0 +1,26 @@
+{
+  "name": "NexT",
+  "version": "8.29.0",
+  "description": "Hexo theme NexT (Muse scheme) ported to AstroPress — pure typography, no cards, minimal black-on-white",
+  "author": "iissnan & IIssNan (ported)",
+  "tokens": {
+    "fonts": {
+      "body": "'PingFang SC', 'Microsoft YaHei', sans-serif",
+      "heading": "'PingFang SC', 'Microsoft YaHei', sans-serif"
+    },
+    "spacing": {
+      "sectionY": "40px",
+      "borderRadius": "0px",
+      "containerMax": "700px"
+    },
+    "colors": {
+      "textMuted": "#767676",
+      "surface": "#ffffff",
+      "background": "#ffffff",
+      "secondary": "#222222",
+      "border": "#dddddd",
+      "text": "#555555",
+      "primary": "#222222"
+    }
+  }
+}

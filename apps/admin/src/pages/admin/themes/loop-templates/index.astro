@@ -1,0 +1,167 @@
+---
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import { eq } from "drizzle-orm";
+import { wpOptions } from "@astropress/core/schema";
+import type { LoopTemplate } from "@astropress/core/types/theme";
+import { DEFAULT_LOOP_TEMPLATES } from "../../../../lib/loopTemplates";
+
+const db = Astro.locals.db;
+if (!Astro.locals.user || !db) return Astro.redirect("/login");
+
+const [row] = await db.select({ value: wpOptions.optionValue }).from(wpOptions)
+  .where(eq(wpOptions.optionName, "astropress_loop_templates")).limit(1);
+const userTemplates: LoopTemplate[] = row?.value ? JSON.parse(row.value) : [];
+---
+<AdminLayout title="循环模板">
+  <h1 class="wp-heading-inline">循环项模板</h1>
+  <a href="#" class="page-title-action" id="create-btn">添加</a>
+  <hr class="wp-header-end" />
+
+  <!-- Create dialog -->
+  <div id="create-dialog" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:6px;padding:28px;width:480px;max-width:92vw;box-shadow:0 8px 32px rgba(0,0,0,.3)">
+      <h2 style="margin:0 0 16px;font-size:18px">新建循环模板</h2>
+      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">模板名称</label>
+      <input id="new-name" type="text" placeholder="例如：博客卡片" class="regular-text" style="width:100%;margin-bottom:16px" />
+      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">从以下模板开始</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px" id="starter-grid">
+        {DEFAULT_LOOP_TEMPLATES.map(t => (
+          <button class="starter-btn" data-id={t.id} style="padding:12px;border:2px solid #dcdcde;border-radius:4px;cursor:pointer;text-align:left;background:#f6f7f7;font-size:13px;font-weight:600">
+            {t.name}
+          </button>
+        ))}
+        <button class="starter-btn" data-id="blank" style="padding:12px;border:2px solid #dcdcde;border-radius:4px;cursor:pointer;text-align:left;background:#f6f7f7;font-size:13px;font-weight:600">
+          空白模板
+        </button>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button id="cancel-btn" class="button">取消</button>
+        <button id="confirm-btn" class="button button-primary">创建并编辑</button>
+      </div>
+    </div>
+  </div>
+
+  <p style="color:#646970;font-size:13px;margin-bottom:20px;line-height:1.6">
+    循环项模板用于定义「查询循环」区块中每张文章卡片的外观。使用可视化编辑器进行设计——通过循环类区块从每篇文章中动态提取内容。
+  </p>
+
+  <!-- Default templates -->
+  <h2 style="font-size:14px;font-weight:700;margin:0 0 12px;color:#1d2327">内置模板</h2>
+  <table class="wp-list-table widefat fixed striped" style="margin-bottom:28px">
+    <thead><tr>
+      <th>名称</th>
+      <th>类型</th>
+      <th>操作</th>
+    </tr></thead>
+    <tbody>
+      {DEFAULT_LOOP_TEMPLATES.map(t => (
+        <tr>
+          <td style="font-weight:600">{t.name}</td>
+          <td><span style="background:#e0f0ff;color:#0073aa;font-size:11px;padding:2px 8px;border-radius:99px;font-weight:600">内置</span></td>
+          <td><span style="color:#646970;font-size:13px">只读</span></td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+
+  <!-- User templates -->
+  <h2 style="font-size:14px;font-weight:700;margin:0 0 12px;color:#1d2327">我的模板</h2>
+  {userTemplates.length === 0 ? (
+    <div class="ap-empty-state" style="max-width:480px">
+      <p style="font-size:13px;color:#646970;margin:0 0 16px">还没有自定义循环模板。新建一个来设计文章在「查询循环」区块中的外观吧。</p>
+      <a href="#" class="button button-primary" id="create-btn2">新建第一个模板</a>
+    </div>
+  ) : (
+    <table class="wp-list-table widefat fixed striped" id="user-templates-table">
+      <thead><tr>
+        <th>名称</th>
+        <th>创建时间</th>
+        <th>操作</th>
+      </tr></thead>
+      <tbody>
+        {userTemplates.map(t => (
+          <tr id={`row-${t.id}`}>
+            <td style="font-weight:600">
+              <a href={`/admin/themes/edit/__loop-item_${t.id}__`} style="color:#2271b1;text-decoration:none">{t.name}</a>
+            </td>
+            <td style="color:#646970;font-size:12px">{new Date(t.createdAt).toLocaleDateString()}</td>
+            <td style="display:flex;gap:8px;align-items:center">
+              <a href={`/admin/themes/edit/__loop-item_${t.id}__`} class="button button-small">编辑</a>
+              <button class="button button-small delete-btn" data-id={t.id} style="color:#d63638;border-color:#d63638">删除</button>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+
+  <script is:inline>
+    var selectedStarter = "default-with-image";
+
+    function openDialog() {
+      var d = document.getElementById("create-dialog");
+      d.style.display = "flex";
+      document.getElementById("new-name").focus();
+    }
+
+    document.getElementById("create-btn")?.addEventListener("click", function(e) { e.preventDefault(); openDialog(); });
+    document.getElementById("create-btn2")?.addEventListener("click", function(e) { e.preventDefault(); openDialog(); });
+    document.getElementById("cancel-btn")?.addEventListener("click", function() {
+      document.getElementById("create-dialog").style.display = "none";
+    });
+
+    document.querySelectorAll(".starter-btn").forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        document.querySelectorAll(".starter-btn").forEach(function(b) { b.style.borderColor = "#dcdcde"; b.style.background = "#f6f7f7"; });
+        btn.style.borderColor = "#2271b1";
+        btn.style.background = "#e8f0fa";
+        selectedStarter = btn.dataset.id;
+      });
+    });
+    // Select first by default
+    var first = document.querySelector(".starter-btn");
+    if (first) { first.style.borderColor = "#2271b1"; first.style.background = "#e8f0fa"; }
+
+    document.getElementById("confirm-btn")?.addEventListener("click", async function() {
+      var name = document.getElementById("new-name").value.trim();
+      if (!name) { document.getElementById("new-name").focus(); return; }
+      var btn = document.getElementById("confirm-btn");
+      btn.disabled = true;
+      btn.textContent = "创建中\u2026";
+
+      var startBlocks = [];
+      if (selectedStarter && selectedStarter !== "blank") {
+        try {
+          var res = await fetch("/api/themes/loop-templates/defaults/" + selectedStarter);
+          if (res.ok) { var data = await res.json(); startBlocks = data.blocks || []; }
+        } catch(e) {}
+      }
+
+      var res = await fetch("/api/themes/loop-templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name, blocks: startBlocks }),
+      });
+      if (res.ok) {
+        var data = await res.json();
+        window.location.href = "/admin/themes/edit/" + data.schemaSlug;
+      } else {
+        btn.disabled = false;
+        btn.textContent = "创建并编辑";
+        alert("创建模板失败。");
+      }
+    });
+
+    document.querySelectorAll(".delete-btn").forEach(function(btn) {
+      btn.addEventListener("click", async function() {
+        if (!confirm("确定删除该模板吗？此操作无法撤销。")) return;
+        var id = btn.dataset.id;
+        var res = await fetch("/api/themes/loop-templates/" + id, { method: "DELETE" });
+        if (res.ok) {
+          var row = document.getElementById("row-" + id);
+          if (row) row.remove();
+        }
+      });
+    });
+  </script>
+</AdminLayout>

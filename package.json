@@ -1,0 +1,26 @@
+{
+  "name": "astropress",
+  "version": "1.0.4",
+  "private": true,
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "build:cf": "pnpm --filter @astropress/admin run build:cf",
+    "deploy:cf": "pnpm --filter @astropress/admin run deploy:cf",
+    "db:migrate:local": "node scripts/migrate-local.mjs",
+    "db:seed": "tsx packages/core/src/seed.ts",
+    "db:setup": "pnpm db:migrate:local"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "packageManager": "pnpm@9.0.0"
+}

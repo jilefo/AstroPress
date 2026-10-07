@@ -1,0 +1,242 @@
+---
+/**
+ * /admin-ext/revisions?post=<id> — 文章版本历史
+ */
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+if (!Astro.locals.user || !Astro.locals.db) return Astro.redirect("/login");
+
+const postParam = Astro.url.searchParams.get("post") ?? "";
+const postId = /^[0-9]+$/.test(postParam) ? postParam : "";
+---
+<AdminLayout title="版本历史">
+    <style is:global>
+      * { box-sizing: border-box; }
+      .wrap { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+      .card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 20px; margin-bottom: 20px; }
+      h1 { font-size: 20px; margin: 0 0 16px; }
+      h2 { font-size: 15px; margin: 0 0 12px; }
+      button { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 8px 16px; cursor: pointer; font-size: 13px; }
+      button:hover { background: #135e96; }
+      .btn-secondary { background: #f6f7f7; color: #2c3338; border: 1px solid #c3c4c7; }
+      .btn-secondary:hover { background: #eceeef; }
+      .btn-small { padding: 4px 10px; margin: 0 6px 0 0; }
+      .msg { font-size: 13px; margin-top: 10px; min-height: 18px; }
+      .ok { color: #00a32a; }
+      .err { color: #b32d2e; }
+      .hint { font-size: 12px; color: #646970; margin-top: 4px; }
+      table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+      th { background: #f6f7f7; font-weight: 600; white-space: nowrap; }
+      td.col-time { white-space: nowrap; color: #646970; }
+      td.col-num { text-align: right; white-space: nowrap; }
+      td.col-title { word-break: break-all; }
+      td.col-editor { white-space: nowrap; color: #646970; }
+      td.col-op { white-space: nowrap; }
+      .empty { padding: 24px; text-align: center; color: #646970; font-size: 13px; }
+      .jump { display: flex; gap: 8px; align-items: center; margin-top: 12px; }
+      .jump input { width: 120px; font-size: 13px; padding: 6px 8px; border: 1px solid #8c8f94; border-radius: 3px; }
+      #apRevMask { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 9990; overflow-y: auto; }
+      .aprev-panel { background: #fff; max-width: 760px; margin: 40px auto 60px; border-radius: 4px; padding: 20px; box-shadow: 0 8px 30px rgba(0,0,0,.25); }
+      .aprev-panel h3 { margin: 0 0 6px; font-size: 16px; word-break: break-all; }
+      .aprev-meta { font-size: 12px; color: #646970; margin-bottom: 12px; }
+      .aprev-label { font-size: 12px; font-weight: 600; color: #2c3338; margin: 12px 0 4px; }
+      .aprev-pre { background: #f6f7f7; border: 1px solid #dcdcdd; border-radius: 3px; padding: 10px; font-size: 12px; font-family: Consolas, Monaco, monospace; white-space: pre-wrap; word-break: break-all; max-height: 320px; overflow-y: auto; margin: 0; }
+      .aprev-actions { margin-top: 16px; text-align: right; }
+    </style>
+
+    <div class="wrap" id="apRevRoot" data-post-id={postId}>
+      <div class="card">
+        <h1>版本历史</h1>
+        <div id="postTip" class="hint" style="margin-top:0"></div>
+
+        <div id="noPost" style="display:none">
+          <p class="hint">未指定文章。请从文章/页面/CPT 编辑页工具区的「🕘 版本历史」链接进入，或直接输入文章 ID：</p>
+          <div class="jump">
+            <input type="text" id="jumpId" inputmode="numeric" placeholder="文章 ID" />
+            <button type="button" class="btn-secondary" id="jumpBtn">查看版本</button>
+          </div>
+        </div>
+
+        <div id="listWrap" style="display:none">
+          <table>
+            <thead>
+              <tr>
+                <th>保存时间</th>
+                <th>标题</th>
+                <th style="text-align:right">字数</th>
+                <th>编辑者</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="revBody"></tbody>
+          </table>
+          <div class="empty" id="emptyTip" style="display:none">该文章暂无历史版本。每次保存已有文章时会自动留存旧版本（最多 20 版）。</div>
+        </div>
+
+        <div class="msg" id="msg"></div>
+      </div>
+    </div>
+
+    <div id="apRevMask">
+      <div class="aprev-panel">
+        <h3 id="mTitle"></h3>
+        <div class="aprev-meta" id="mMeta"></div>
+        <div class="aprev-label" id="mExcerptLabel">摘要</div>
+        <pre class="aprev-pre" id="mExcerpt"></pre>
+        <div class="aprev-label">内容</div>
+        <pre class="aprev-pre" id="mContent"></pre>
+        <div class="aprev-actions">
+          <button type="button" class="btn-secondary" id="mClose">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        var postId = document.getElementById("apRevRoot").getAttribute("data-post-id") || "";
+        var msg = document.getElementById("msg");
+        var bodyEl = document.getElementById("revBody");
+        var emptyEl = document.getElementById("emptyTip");
+        var mask = document.getElementById("apRevMask");
+
+        function flash(text, ok) {
+          msg.className = "msg " + (ok ? "ok" : "err");
+          msg.textContent = text;
+          setTimeout(function () { msg.textContent = ""; }, 4000);
+        }
+
+        function cell(tr, text, cls) {
+          var td = document.createElement("td");
+          td.textContent = text;
+          if (cls) td.setAttribute("class", cls);
+          tr.appendChild(td);
+          return td;
+        }
+
+        function fmtTime(s) {
+          var t = Date.parse(String(s || ""));
+          if (!Number.isFinite(t)) return String(s || "—");
+          return new Date(t).toLocaleString();
+        }
+
+        function openModal(item) {
+          document.getElementById("mTitle").textContent = String(item.title || "（无标题）");
+          document.getElementById("mMeta").textContent =
+            "保存于 " + fmtTime(item.saved_at) + (item.editor ? " · 编辑者：" + item.editor : "");
+          var excerpt = String(item.excerpt || "");
+          document.getElementById("mExcerptLabel").style.display = excerpt ? "block" : "none";
+          var mExcerpt = document.getElementById("mExcerpt");
+          mExcerpt.style.display = excerpt ? "block" : "none";
+          mExcerpt.textContent = excerpt;
+          document.getElementById("mContent").textContent = String(item.content || "");
+          mask.style.display = "block";
+        }
+
+        function closeModal() {
+          mask.style.display = "none";
+        }
+
+        document.getElementById("mClose").addEventListener("click", closeModal);
+        mask.addEventListener("click", function (e) {
+          if (e.target === mask) closeModal();
+        });
+
+        function viewRevision(id) {
+          fetch("/admin-ext/api/revisions/read?id=" + encodeURIComponent(id))
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+              if (d && d.item) openModal(d.item);
+              else flash((d && d.error) || "读取版本失败", false);
+            })
+            .catch(function () { flash("读取版本失败", false); });
+        }
+
+        function restoreRevision(id) {
+          if (!window.confirm("确认恢复此版本？当前文章内容将被该版本覆盖。")) return;
+          fetch("/admin-ext/api/revisions/restore", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: Number(id), confirm: true }),
+          })
+            .then(function (r) {
+              return r.json().catch(function () { return {}; }).then(function (d) {
+                return { ok: r.ok, data: d };
+              });
+            })
+            .then(function (res) {
+              if (res.ok && res.data && res.data.ok) {
+                flash("已恢复。返回编辑页刷新即可看到回滚后的内容。", true);
+                fetchList();
+              } else {
+                flash((res.data && res.data.error) || "恢复失败", false);
+              }
+            })
+            .catch(function () { flash("恢复失败", false); });
+        }
+
+        function renderList(items) {
+          while (bodyEl.firstChild) bodyEl.removeChild(bodyEl.firstChild);
+          if (!items || items.length === 0) {
+            emptyEl.style.display = "block";
+            return;
+          }
+          emptyEl.style.display = "none";
+
+          items.forEach(function (item) {
+            var tr = document.createElement("tr");
+            cell(tr, fmtTime(item.saved_at), "col-time");
+            cell(tr, String(item.title || "（无标题）"), "col-title");
+            cell(tr, String(item.content_len ?? 0), "col-num");
+            cell(tr, String(item.editor || "—"), "col-editor");
+
+            var tdOp = document.createElement("td");
+            tdOp.setAttribute("class", "col-op");
+
+            var viewBtn = document.createElement("button");
+            viewBtn.setAttribute("type", "button");
+            viewBtn.setAttribute("class", "btn-secondary btn-small");
+            viewBtn.textContent = "查看";
+            viewBtn.addEventListener("click", function () { viewRevision(item.id); });
+            tdOp.appendChild(viewBtn);
+
+            var restoreBtn = document.createElement("button");
+            restoreBtn.setAttribute("type", "button");
+            restoreBtn.setAttribute("class", "btn-small");
+            restoreBtn.textContent = "恢复此版本";
+            restoreBtn.addEventListener("click", function () { restoreRevision(item.id); });
+            tdOp.appendChild(restoreBtn);
+
+            tr.appendChild(tdOp);
+            bodyEl.appendChild(tr);
+          });
+        }
+
+        function fetchList() {
+          if (!postId) return;
+          fetch("/admin-ext/api/revisions/list?post=" + encodeURIComponent(postId))
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+              if (d && d.items) renderList(d.items);
+              else flash((d && d.error) || "加载版本列表失败", false);
+            })
+            .catch(function () { flash("加载版本列表失败", false); });
+        }
+
+        if (postId) {
+          document.getElementById("postTip").textContent = "文章 ID：" + postId + "（每次保存自动留存旧版本，最多保留 20 版）";
+          document.getElementById("listWrap").style.display = "block";
+          fetchList();
+        } else {
+          document.getElementById("noPost").style.display = "block";
+          document.getElementById("jumpBtn").addEventListener("click", function () {
+            var v = document.getElementById("jumpId").value.trim();
+            if (!/^[0-9]+$/.test(v)) {
+              flash("请输入数字文章 ID", false);
+              return;
+            }
+            location.href = "/admin-ext/revisions?post=" + v;
+          });
+        }
+      })();
+    </script>
+</AdminLayout>

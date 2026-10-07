@@ -1,0 +1,180 @@
+/* >>> ap-fonts >>> */
+/* 主题声明的 Web 字体。AstroPress 不会注入字体 <link>，只能由主题 CSS 自行 @import。
+   字体源为 fonts.loli.net（Google Fonts 国内镜像，海外同样可访问）；
+   如需官方源把域名改回 fonts.googleapis.com 即可；完全离线时删除本区块则回退系统字体。 */
+@import url("https://fonts.loli.net/css2?family=Inter:wght@400;700&display=swap");
+/* <<< ap-fonts <<< */
+
+:root {
+    --font-heading: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --color-primary: #166af4; --color-primary-hover: #2563eb; --color-accent: #a06707;
+    --color-bg: #ffffff; --color-surface: #f8fafc; --color-border: #e2e8f0; --color-text: #1e293b; --color-muted: #64748b;
+    --max-width: 1200px; --content-width: 800px; --sidebar-width: 300px; --radius: 8px; --transition: 0.3s ease;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { font-size: 16px; -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  body { margin: 0; font-family: var(--font-body); background: var(--color-bg); color: var(--color-text); line-height: 1.7; }
+  a { color: var(--color-primary); text-decoration: none; transition: color var(--transition); }
+  a:hover { color: var(--color-primary-hover); }
+  img { max-width: 100%; height: auto; display: block; }
+  .site-wrapper { max-width: var(--max-width); margin: 0 auto; padding: 0 20px; }
+  .site-header { background: var(--color-bg); border-bottom: 1px solid var(--color-border); padding: 20px; }
+  .post-content { font-size: 1rem; line-height: 1.8; }
+  .post-content h1, .post-content h2, .post-content h3 { font-family: var(--font-heading); color: var(--color-text); }
+  .post-content a { color: var(--color-primary); }
+  .post-content blockquote { border-left: 4px solid var(--color-primary); padding: 1rem 1.25rem; background: var(--color-surface); margin: 1.25rem 0; border-radius: 0 var(--radius) var(--radius) 0; }
+  .post-content pre { background: var(--color-surface); padding: 1rem; border-radius: var(--radius); overflow-x: auto; }
+  .pagination { display: flex; gap: 6px; justify-content: center; margin-top: 40px; flex-wrap: wrap; }
+  .pagination a, .pagination span { padding: 8px 14px; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: 0.875rem; color: var(--color-text); }
+  .pagination a:hover { color: var(--color-primary); border-color: var(--color-primary); }
+  .pagination .current { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+  .site-footer { border-top: 1px solid var(--color-border); padding: 24px 20px; margin-top: 48px; background: var(--color-surface); }
+
+
+/* >>> ap-adapter >>> */
+/* ap-traits-v2: {"card_style":"shadow","card_has_border":true,"card_shadow":"none","card_shadow_hover":"0 4px 12px rgba(59,130,246,0.1)","card_lift":"-2px","radius":"8px","transition":"0.3s ease","nav_height":"50px","title_weight":"700","title_color_kind":"text","title_color":"","heading_serif":true,"heading_spacing":"0","body_line_height":"1.7","link_underline":false,"quote_width":"4px","quote_color":"var(--color-primary)","quote_radius":"0","image_radius":true} */
+/* ═══════════════════════════════════════════════════════════════════════
+   AstroPress 适配层 v2（optimize-themes.py 按主题原始设计语言生成）
+
+   原 theme.css 的布局选择器来自 WordPress DOM，AstroPress 前台不输出，故不生效。
+   本层把每个主题的设计特征（卡片语言/导航高度/标题/引用块/圆角/阴影/行高）映射到
+   BlockRenderer 的真实 DOM（.ap-block-*）。设计特征均提取自本文件原始规则：
+     · 卡片语言 = shadow（阴影=none）
+     · 导航高度 = 50px   标题字重 = 700   正文行高 = 1.7
+   内联 style 已设置的性质（背景/边框/圆角/网格/高度）仅在必要处用 !important 覆盖。
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --ap-primary: #166af4;
+  --ap-primary-hover: #2563eb;
+  --ap-bg: #ffffff;
+  --ap-surface: #f8fafc;
+  --ap-border: #e2e8f0;
+  --ap-text: #1e293b;
+  --ap-muted: #64748b;
+  --ap-radius: var(--radius, 8px);
+  --ap-card-shadow: none;
+  --ap-card-shadow-hover: 0 4px 12px rgba(59,130,246,0.1);
+  --ap-card-lift: -2px;
+  --ap-nav-height: 50px;
+  --ap-transition: 0.3s ease;
+}
+
+/* ── 基础排版 ─────────────────────────────────────────────────────── */
+.ap-blocks { font-family: var(--font-body, 'Inter', -apple-system, BlinkMacSystemFont, sans-serif); color: var(--ap-text); line-height: 1.7; }
+.ap-block h1, .ap-block h2, .ap-block h3, .ap-block h4,
+.post-header h1 {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--ap-text);
+}
+.post-header h1 { font-size: clamp(1.8rem, 4vw, 2.4rem); line-height: 1.25; margin: 0 0 12px; }
+.ap-block img { border-radius: var(--ap-radius); }
+.ap-block a:hover { color: var(--ap-primary-hover); }
+
+/* ── 导航：主题原高度（内联固定 64px，需 !important）+ 吸顶 ──────── */
+body > .ap-blocks:has(> .ap-block-nav) {
+  position: sticky; top: 0; z-index: 90; background: var(--ap-bg);
+}
+.ap-block-nav { box-shadow: 0 1px 0 var(--ap-border); height: var(--ap-nav-height) !important; }
+.ap-block-nav nav ul li a {
+  border-radius: var(--ap-radius);
+  transition: color var(--ap-transition), background-color var(--ap-transition);
+}
+.ap-block-nav nav ul li a:hover { color: var(--ap-primary-hover); background: var(--ap-surface); }
+
+/* ── query-loop 卡片（设计语言：阴影卡） ── */
+.ap-block-query-loop article {
+  box-shadow: var(--ap-card-shadow);
+  transition: transform var(--ap-transition), box-shadow var(--ap-transition);
+}
+.ap-block-query-loop article:hover {
+  transform: translateY(var(--ap-card-lift));
+  box-shadow: var(--ap-card-shadow-hover);
+}
+.ap-block-query-loop article a { text-decoration: none; }
+.ap-block-query-loop article a:hover { color: var(--ap-primary-hover); }
+.ap-block-features > div > div > div {
+  box-shadow: var(--ap-card-shadow);
+  transition: transform var(--ap-transition), box-shadow var(--ap-transition);
+}
+.ap-block-features > div > div > div:hover {
+  transform: translateY(var(--ap-card-lift));
+  box-shadow: var(--ap-card-shadow-hover);
+}
+
+/* ── 富文本（text / columns / html 块内原生标签） ───────────────── */
+.ap-block-text h2, .ap-block-columns h2 { font-size: 1.5rem; margin: 1.75rem 0 0.75rem; }
+.ap-block-text h3, .ap-block-columns h3 { font-size: 1.25rem; margin: 1.5rem 0 0.6rem; }
+.ap-block-text ul, .ap-block-text ol,
+.ap-block-columns ul, .ap-block-columns ol { margin: 0 0 1.25rem; padding-left: 1.4rem; }
+.ap-block-text blockquote, .ap-block-columns blockquote, .ap-block-html blockquote,
+.post-content blockquote {
+  margin: 0 0 1.25rem;
+  padding: 1rem 1.25rem;
+  border-left: 4px solid var(--color-primary);
+  background: var(--ap-surface);
+  border-radius: 0;
+  color: var(--ap-muted);
+}
+.ap-block-text pre, .ap-block-columns pre, .ap-block-html pre, .post-content pre {
+  background: var(--ap-surface); padding: 1rem;
+  border-radius: var(--ap-radius); overflow-x: auto;
+}
+.ap-block-text code, .ap-block-columns code, .ap-block-html code, .post-content code {
+  background: var(--ap-surface); padding: 2px 6px; border-radius: 4px; font-size: 0.9em;
+}
+.ap-block-text a, .ap-block-columns a, .ap-block-html a,
+.read-more, .post-content a { color: var(--ap-primary); }
+.ap-block-html { font-size: 0.92rem; line-height: 1.75; color: var(--ap-muted); }
+
+/* ── 博客列表/正文 ────────────────────────────────────────────────── */
+.post-list-item h2 a, .post-list-item-title a { color: var(--ap-text); }
+.post-list-item h2 a:hover, .post-list-item-title a:hover,
+.post-list-item a:hover { color: var(--ap-primary-hover); }
+.post-meta, .post-list-item-meta { color: var(--ap-muted); }
+
+/* ── 品牌色细节 ───────────────────────────────────────────────────── */
+::selection { background: var(--ap-primary); color: #fff; }
+
+/* ── 响应式（内联 padding / grid-template-columns / height 必须 !important） ── */
+@media (max-width: 900px) {
+  .ap-block-hero, .ap-block-text, .ap-block-cta, .ap-block-features,
+  .ap-block-columns, .ap-block-image, .ap-block-form, .ap-block-divider {
+    padding-left: 24px !important; padding-right: 24px !important;
+  }
+  .ap-block-nav { padding-left: 20px !important; padding-right: 20px !important; }
+  .ap-block-query-loop { padding-left: 20px !important; padding-right: 20px !important; }
+  .ap-block-query-loop > div > div { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .ap-block-features > div > div { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .ap-block-columns > div { grid-template-columns: minmax(0, 1fr) !important; }
+}
+@media (max-width: 640px) {
+  .ap-block-query-loop > div > div,
+  .ap-block-features > div > div { grid-template-columns: minmax(0, 1fr) !important; }
+  .ap-block-nav {
+    height: auto !important; min-height: 56px; flex-wrap: wrap; row-gap: 2px;
+    padding-top: 8px !important; padding-bottom: 8px !important;
+  }
+  .ap-block-nav nav { width: 100%; }
+  .ap-block-nav nav ul { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ap-block-query-loop article, .ap-block-features > div > div > div { transition: none; }
+  [data-ap-animation] { animation: none !important; }
+}
+
+/* ── 暗色模式（默认注释掉：AstroPress 不会给 <html> 加 .dark，block 的
+      背景色也是内联字面量，直接启用会与内联色冲突导致对比度异常。
+      如需启用，请先在平台侧把 block 颜色改为变量驱动） ────────────────
+.dark {
+    --color-bg: #0f172a;
+    --color-surface: #1e293b;
+    --color-border: #334155;
+    --color-text: #e2e8f0;
+    --color-muted: #94a3b8;
+}
+*/
+/* <<< ap-adapter <<< */

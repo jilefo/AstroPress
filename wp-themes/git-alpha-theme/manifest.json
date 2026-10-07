@@ -1,0 +1,26 @@
+{
+  "name": "Git-alpha",
+  "version": "1.0.0",
+  "description": "Card-based CMS theme with green accent and grid layout",
+  "author": "Git-alpha",
+  "tokens": {
+    "fonts": {
+      "body": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      "heading": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    },
+    "spacing": {
+      "sectionY": "48px",
+      "borderRadius": "8px",
+      "containerMax": "1200px"
+    },
+    "colors": {
+      "textMuted": "#697576",
+      "surface": "#f8f9fa",
+      "background": "#ffffff",
+      "secondary": "#2077b2",
+      "border": "#e0e0e0",
+      "text": "#2c3e50",
+      "primary": "#1d8348"
+    }
+  }
+}

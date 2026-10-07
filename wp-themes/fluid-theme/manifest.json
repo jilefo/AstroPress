@@ -1,0 +1,26 @@
+{
+  "name": "Fluid",
+  "version": "1.9.9",
+  "description": "Hexo theme Fluid ported to AstroPress — floating white board with deep shadow over #eee, dark blue-grey navbar",
+  "author": "Fluid-dev (ported)",
+  "tokens": {
+    "fonts": {
+      "body": "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+      "heading": "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+    },
+    "spacing": {
+      "sectionY": "40px",
+      "borderRadius": "8px",
+      "containerMax": "1100px"
+    },
+    "colors": {
+      "textMuted": "#5d6b7d",
+      "surface": "#ffffff",
+      "background": "#eeeeee",
+      "secondary": "#1f86bd",
+      "border": "#eaecef",
+      "text": "#3c4858",
+      "primary": "#2f4154"
+    }
+  }
+}

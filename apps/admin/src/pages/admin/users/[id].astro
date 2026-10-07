@@ -1,0 +1,206 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { wpUsers, wpUsermeta } from "@astropress/core/schema";
+import { eq, and } from "drizzle-orm";
+
+const db = Astro.locals.db;
+const me = Astro.locals.user;
+if (!db || !me) return Astro.redirect("/login");
+
+const isNew = Astro.params.id === "new";
+const userId = isNew ? null : Number(Astro.params.id);
+
+let user: { id: number; userLogin: string; userEmail: string; displayName: string; userRegistered: string } | null = null;
+let currentRole = "subscriber";
+
+if (!isNew && userId) {
+  const [row] = await db.select().from(wpUsers).where(eq(wpUsers.id, userId)).limit(1);
+  if (!row) return Astro.redirect("/admin/users");
+  user = { id: row.id, userLogin: row.userLogin, userEmail: row.userEmail, displayName: row.displayName, userRegistered: row.userRegistered };
+
+  const [capRow] = await db
+    .select({ value: wpUsermeta.metaValue })
+    .from(wpUsermeta)
+    .where(and(eq(wpUsermeta.userId, userId), eq(wpUsermeta.metaKey, "wp_capabilities")))
+    .limit(1);
+  if (capRow?.value) {
+    try {
+      const caps = JSON.parse(capRow.value) as Record<string, boolean>;
+      for (const r of ["administrator","editor","author","contributor","subscriber"]) {
+        if (caps[r]) { currentRole = r; break; }
+      }
+    } catch {}
+  }
+}
+
+const ROLES = [
+  { value: "administrator", label: "管理员" },
+  { value: "editor",        label: "编辑" },
+  { value: "author",        label: "作者" },
+  { value: "contributor",   label: "贡献者" },
+  { value: "subscriber",    label: "订阅者" },
+];
+
+const pageTitle = isNew ? "添加新用户" : `编辑用户：${user?.userLogin}`;
+---
+<AdminLayout title={pageTitle}>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+    <h1 class="wp-heading-inline">{pageTitle}</h1>
+    <a href="/admin/users" class="page-title-action">← 返回用户列表</a>
+  </div>
+  <hr class="wp-header-end" />
+
+  <div style="display:grid;grid-template-columns:1fr 260px;gap:20px;align-items:start;max-width:900px">
+    <div>
+
+      <!-- Name & Login -->
+      <div class="postbox">
+        <div class="postbox-header"><h2 class="postbox-title">账户信息</h2></div>
+        <div class="postbox-inside" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div>
+            <label class="wp-form-label">用户名 {isNew && <span style="color:#d63638">*</span>}</label>
+            {isNew ? (
+              <input id="userLogin" type="text" class="wp-input" placeholder="用户名" autocomplete="off" required />
+            ) : (
+              <input type="text" class="wp-input" value={user?.userLogin} disabled style="background:#f6f7f7;color:#646970" />
+            )}
+            {isNew && <p style="font-size:11px;color:#646970;margin:3px 0 0">仅限小写字母、数字和下划线。</p>}
+          </div>
+
+          <div>
+            <label class="wp-form-label">显示名称</label>
+            <input id="displayName" type="text" class="wp-input" value={user?.displayName ?? ""} placeholder="显示名称" />
+          </div>
+
+          <div style="grid-column:1/-1">
+            <label class="wp-form-label">邮箱 <span style="color:#d63638">*</span></label>
+            <input id="userEmail" type="email" class="wp-input" value={user?.userEmail ?? ""} placeholder="email@example.com" required />
+          </div>
+        </div>
+      </div>
+
+      <!-- Password -->
+      <div class="postbox" style="margin-top:16px">
+        <div class="postbox-header"><h2 class="postbox-title">{isNew ? "密码" : "修改密码"}</h2></div>
+        <div class="postbox-inside">
+          {!isNew && <p style="font-size:12px;color:#646970;margin:0 0 10px">留空则保持当前密码不变。</p>}
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div>
+              <label class="wp-form-label">新密码 {isNew && <span style="color:#d63638">*</span>}</label>
+              <input id="password" type="password" class="wp-input" placeholder="••••••••" autocomplete="new-password" />
+            </div>
+            <div>
+              <label class="wp-form-label">确认密码</label>
+              <input id="passwordConfirm" type="password" class="wp-input" placeholder="••••••••" autocomplete="new-password" />
+            </div>
+          </div>
+          <p id="pw-match-hint" style="font-size:11px;color:#d63638;margin:6px 0 0;display:none">两次输入的密码不一致。</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Sidebar -->
+    <aside>
+      <div class="postbox">
+        <div class="postbox-header"><h2 class="postbox-title">角色</h2></div>
+        <div class="postbox-inside">
+          <label class="wp-form-label">角色</label>
+          <select id="userRole" class="wp-select" style="width:100%">
+            {ROLES.map(r => (
+              <option value={r.value} selected={r.value === currentRole}>{r.label}</option>
+            ))}
+          </select>
+          <p style="font-size:11px;color:#646970;margin:8px 0 0">
+            <strong>管理员</strong> — 拥有全部权限<br/>
+            <strong>编辑</strong> — 管理所有文章<br/>
+            <strong>作者</strong> — 仅管理自己的文章<br/>
+            <strong>贡献者</strong> — 可写作但不能发布<br/>
+            <strong>订阅者</strong> — 仅可阅读
+          </p>
+        </div>
+      </div>
+
+      <div class="postbox" style="margin-top:16px">
+        <div class="postbox-inside">
+          <div id="save-status" style="font-size:12px;color:#646970;margin-bottom:10px;min-height:16px"></div>
+          <button onclick="saveUser()" class="button-primary" style="width:100%;justify-content:center">
+            {isNew ? "添加用户" : "更新用户"}
+          </button>
+          {!isNew && user?.id !== me.id && (
+            <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--wp-gray-100)">
+              <button
+                onclick={`if(confirm('确定删除该用户吗？')) { fetch('/api/users/${user?.id}',{method:'DELETE'}).then(()=>location.href='/admin/users') }`}
+                class="button-link-delete"
+                style="font-size:12px"
+              >删除用户</button>
+            </div>
+          )}
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <script define:vars={{ isNew, userId: userId ?? null }}>
+    async function saveUser() {
+      const pw = document.getElementById("password").value;
+      const pwc = document.getElementById("passwordConfirm").value;
+      const hint = document.getElementById("pw-match-hint");
+
+      if (pw && pw !== pwc) {
+        hint.style.display = "block";
+        return;
+      }
+      hint.style.display = "none";
+
+      if (isNew && !pw) {
+        alert("新用户必须设置密码。");
+        return;
+      }
+
+      const userEmail = document.getElementById("userEmail").value.trim();
+      const displayName = document.getElementById("displayName").value.trim();
+      const role = document.getElementById("userRole").value;
+
+      if (!userEmail) { alert("请填写邮箱。"); return; }
+
+      document.getElementById("save-status").textContent = "保存中…";
+
+      try {
+        let res;
+        if (isNew) {
+          const userLogin = document.getElementById("userLogin").value.trim();
+          if (!userLogin) { alert("请填写用户名。"); document.getElementById("save-status").textContent = ""; return; }
+          res = await fetch("/api/users", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userLogin, userEmail, displayName, password: pw, role }),
+          });
+        } else {
+          const body = { userEmail, displayName, role };
+          if (pw) body.password = pw;
+          res = await fetch(`/api/users/${userId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+        }
+
+        if (res.ok) {
+          if (isNew) {
+            const data = await res.json();
+            location.href = `/admin/users/${data.id}`;
+          } else {
+            document.getElementById("save-status").textContent = "已保存 ✓";
+            setTimeout(() => document.getElementById("save-status").textContent = "", 3000);
+          }
+        } else {
+          const err = await res.json().catch(() => ({}));
+          document.getElementById("save-status").textContent = err.error || "保存失败";
+        }
+      } catch {
+        document.getElementById("save-status").textContent = "保存失败";
+      }
+    }
+  </script>
+</AdminLayout>

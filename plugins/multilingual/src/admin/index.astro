@@ -1,0 +1,241 @@
+---
+/**
+ * /admin-ext/multilingual — management UI for languages, translation groups
+ * and string bundles. Path prefix /admin-ext is session-protected by the
+ * admin middleware (startsWith("/admin")); we re-check locals.user below.
+ * 通过相对路径引入应用 AdminLayout
+ */
+if (!Astro.locals.user || !Astro.locals.db) return Astro.redirect("/login");
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+---
+<AdminLayout title="Multilingual">
+    <style is:global>
+      * { box-sizing: border-box; }
+      .wrap { max-width: 960px; margin: 0 auto; padding: 0 16px; display: grid; gap: 20px; }
+      .card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 20px; }
+      h1 { font-size: 20px; } h2 { font-size: 15px; margin: 0 0 12px; }
+      table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #f0f0f1; }
+      input, select, textarea { font-size: 13px; padding: 6px 8px; border: 1px solid #8c8f94; border-radius: 3px; }
+      textarea { width: 100%; min-height: 220px; font-family: monospace; }
+      button { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 6px 14px; cursor: pointer; font-size: 13px; }
+      button.ghost { background: #f0f0f1; color: #1d2327; border: 1px solid #c3c4c7; }
+      button.danger { background: #b32d2e; }
+      .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+      .msg { font-size: 13px; margin-top: 8px; min-height: 18px; }
+      .msg.err { color: #b32d2e; } .msg.ok { color: #00a32a; }
+      .preset-box { border: 1px dashed #c3c4c7; background: #f9f9fa; border-radius: 4px;
+        padding: 10px 12px; margin-bottom: 12px; }
+      .preset-title { font-size: 12px; color: #646970; margin-bottom: 8px; }
+      .lang-chip { display: inline-flex; align-items: center; gap: 5px;
+        background: #fff; border: 1px solid #c3c4c7; border-radius: 20px;
+        padding: 3px 11px; font-size: 12px; color: #2271b1; cursor: pointer;
+        font-family: inherit; transition: all .12s; }
+      .lang-chip:hover { border-color: #2271b1; background: #f0f6fc; }
+      .lang-chip.added { color: #00a32a; border-color: #00a32a; cursor: default;
+        background: #edfaef; }
+    </style>
+
+    <div class="wrap">
+      <section class="card">
+        <h2>语言管理</h2>
+        <div class="row" style="margin-bottom:10px;">
+          <label>默认语言 <select id="defaultLang"></select></label>
+          <label>URL 策略
+            <select id="urlStrategy">
+              <option value="prefix">子目录 /zh-hans/…</option>
+              <option value="param">查询参数 ?lang=</option>
+            </select>
+          </label>
+        </div>
+
+        <!-- 常用语言预置：一键添加（修复"语言列表为空"） -->
+        <div class="preset-box" id="presetBox">
+          <div class="preset-title">常用语言（点击快速添加）：</div>
+          <div class="row" id="presetChips" style="gap:6px;"></div>
+        </div>
+
+        <table id="langTable"><thead>
+          <tr><th>启用</th><th>代码（URL 前缀）</th><th>hreflang 区域</th><th>母语名称</th><th></th></tr>
+        </thead><tbody></tbody></table>
+        <div class="row" style="margin-top:10px;">
+          <input id="newCode" placeholder="代码 如 pt-br" style="width:130px" />
+          <input id="newLocale" placeholder="区域 如 pt-BR" style="width:130px" />
+          <input id="newLabel" placeholder="母语名称" style="width:150px" />
+          <button class="ghost" id="addLang">添加语言</button>
+          <button id="saveSettings">保存设置</button>
+        </div>
+        <div class="msg" id="msgSettings"></div>
+      </section>
+
+      <section class="card">
+        <h2>译文分组</h2>
+        <p style="font-size:12px;color:#646970;margin-top:0;">
+          每种语言对应一篇独立文章，成员之间共享 <code>_ml_group</code> ID。
+          可将基准文章（默认语言）与各语言译文关联起来。
+        </p>
+        <div class="row">
+          <input id="baseId" placeholder="基准文章 ID" style="width:120px" />
+          <button class="ghost" id="loadGroup">加载分组</button>
+        </div>
+        <table id="groupTable" style="margin-top:10px;"><tbody></tbody></table>
+        <div class="row" style="margin-top:10px;">
+          <input id="linkLang" placeholder="语言代码 如 zh-hans" style="width:150px" />
+          <input id="targetId" placeholder="译文文章 ID" style="width:140px" />
+          <button id="linkBtn">关联</button>
+        </div>
+        <div class="msg" id="msgGroup"></div>
+      </section>
+
+      <section class="card">
+        <h2>文案包（界面翻译字符串）</h2>
+        <div class="row" style="margin-bottom:10px;">
+          <input id="stringsCode" placeholder="语言代码 如 zh-hans" style="width:150px" />
+          <button class="ghost" id="loadStrings">加载</button>
+          <button id="saveStrings">保存</button>
+          <button class="ghost" id="exportStrings">导出 JSON</button>
+        </div>
+        <textarea id="stringsArea" spellcheck="false" placeholder='{ "nav.home": "首页" }'></textarea>
+        <div class="msg" id="msgStrings"></div>
+      </section>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const esc = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      const msg = (id, text, err) => { const el = $(id); el.textContent = text; el.className = "msg " + (err ? "err" : "ok"); };
+      let langs = [];
+
+      // ── 常用语言预置目录（code / hreflang locale / 母语名称） ──
+      const PRESETS = [
+        { code: "zh-hans", locale: "zh-Hans", nativeLabel: "简体中文" },
+        { code: "zh-hant", locale: "zh-Hant", nativeLabel: "繁體中文" },
+        { code: "en", locale: "en-US", nativeLabel: "English" },
+        { code: "en-gb", locale: "en-GB", nativeLabel: "English (UK)" },
+        { code: "ja", locale: "ja-JP", nativeLabel: "日本語" },
+        { code: "ko", locale: "ko-KR", nativeLabel: "한국어" },
+        { code: "fr", locale: "fr-FR", nativeLabel: "Français" },
+        { code: "de", locale: "de-DE", nativeLabel: "Deutsch" },
+        { code: "es", locale: "es-ES", nativeLabel: "Español" },
+        { code: "ru", locale: "ru-RU", nativeLabel: "Русский" },
+        { code: "pt-br", locale: "pt-BR", nativeLabel: "Português (Brasil)" },
+        { code: "it", locale: "it-IT", nativeLabel: "Italiano" },
+        { code: "ar", locale: "ar-SA", nativeLabel: "العربية" },
+        { code: "th", locale: "th-TH", nativeLabel: "ไทย" },
+        { code: "vi", locale: "vi-VN", nativeLabel: "Tiếng Việt" },
+        { code: "id", locale: "id-ID", nativeLabel: "Bahasa Indonesia" },
+        { code: "nl", locale: "nl-NL", nativeLabel: "Nederlands" },
+        { code: "pl", locale: "pl-PL", nativeLabel: "Polski" },
+        { code: "tr", locale: "tr-TR", nativeLabel: "Türkçe" },
+        { code: "hi", locale: "hi-IN", nativeLabel: "हिन्दी" },
+      ];
+
+      /** 渲染预置语言 chips：已添加的置灰 */
+      function renderPresets() {
+        $("presetChips").innerHTML = PRESETS.map((p) => {
+          const exists = langs.some((l) => l.code === p.code);
+          return `<button type="button" class="lang-chip${exists ? " added" : ""}" data-code="${esc(p.code)}">
+            ${exists ? "✓ " : "＋ "}${esc(p.nativeLabel)} <span style="color:#999;font-size:10px">${esc(p.code)}</span>
+          </button>`;
+        }).join("");
+        $("presetChips").querySelectorAll(".lang-chip").forEach((b) =>
+          b.addEventListener("click", () => {
+            if (b.classList.contains("added")) return;
+            const p = PRESETS.find((x) => x.code === b.dataset.code);
+            langs.push({ code: p.code, locale: p.locale, nativeLabel: p.nativeLabel, enabled: true });
+            // 首个语言自动设为默认语言
+            renderLangs();
+            renderPresets();
+          }));
+      }
+
+      async function loadSettings() {
+        const r = await fetch("/admin-ext/api/ml/settings").then((x) => x.json());
+        langs = r.languages ?? [];
+        $("defaultLang").innerHTML = langs.map((l) => `<option ${l.code === r.defaultLang ? "selected" : ""}>${esc(l.code)}</option>`).join("");
+        $("urlStrategy").value = r.urlStrategy ?? "prefix";
+        renderLangs();
+        renderPresets();
+      }
+      function renderLangs() {
+        $("langTable").tBodies[0].innerHTML = langs.map((l, i) => ` // ap-audit-ok: 全部插值经 esc()
+          <tr>
+            <td><input type="checkbox" data-i="${i}" data-k="enabled" ${l.enabled ? "checked" : ""}></td>
+            <td>${esc(l.code)}</td>
+            <td><input data-i="${i}" data-k="locale" value="${esc(l.locale ?? "")}" style="width:110px"></td>
+            <td><input data-i="${i}" data-k="nativeLabel" value="${esc(l.nativeLabel ?? "")}" style="width:140px"></td>
+            <td><button class="danger" data-del="${i}">移除</button></td>
+          </tr>`).join("");
+        $("langTable").querySelectorAll("input").forEach((inp) =>
+          inp.addEventListener("change", () => { langs[+inp.dataset.i][inp.dataset.k] = inp.type === "checkbox" ? inp.checked : inp.value; }));
+        $("langTable").querySelectorAll("[data-del]").forEach((b) =>
+          b.addEventListener("click", () => { langs.splice(+b.dataset.del, 1); renderLangs(); }));
+        // 保留当前默认语言选择
+        const curDefault = $("defaultLang").value;
+        $("defaultLang").innerHTML = langs.map((l) =>
+          `<option ${l.code === curDefault ? "selected" : ""}>${esc(l.code)}</option>`).join("");
+        renderPresets();
+      }
+      $("addLang").addEventListener("click", () => {
+        const code = $("newCode").value.trim().toLowerCase();
+        if (!/^[a-z]{2}(-[a-z0-9]{2,8})?$/.test(code))
+          return msg("msgSettings", "代码格式应为：en、pt-br、zh-hans", true);
+        if (langs.some((l) => l.code === code))
+          return msg("msgSettings", "该语言代码已存在", true);
+        langs.push({ code, locale: $("newLocale").value.trim() || code, nativeLabel: $("newLabel").value.trim() || code, enabled: true });
+        $("newCode").value = $("newLocale").value = $("newLabel").value = "";
+        renderLangs();
+      });
+      $("saveSettings").addEventListener("click", async () => {
+        if (!langs.length) return msg("msgSettings", "请至少添加一种语言", true);
+        if (!langs.some((l) => l.code === $("defaultLang").value))
+          $("defaultLang").value = langs[0].code;
+        const r = await fetch("/admin-ext/api/ml/settings", { method: "PUT", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ defaultLang: $("defaultLang").value, urlStrategy: $("urlStrategy").value, languages: langs }) });
+        msg("msgSettings", r.ok ? "已保存。" : "保存失败（HTTP " + r.status + "）", !r.ok);
+      });
+
+      $("loadGroup").addEventListener("click", async () => {
+        const r = await fetch("/admin-ext/api/ml/links?postId=" + $("baseId").value).then((x) => x.json());
+        const g = r.group;
+        $("groupTable").tBodies[0].innerHTML = g && Object.keys(g.members).length
+          ? Object.entries(g.members).map(([lang, id]) => `
+              <tr><td>${esc(lang)}</td><td>#${esc(String(id))}</td>
+              <td><button class="danger" data-un="${esc(String(id))}">解除关联</button></td></tr>`).join("")
+          : `<tr><td colspan="3" style="color:#646970">暂无成员。</td></tr>`;
+        $("groupTable").querySelectorAll("[data-un]").forEach((b) =>
+          b.addEventListener("click", async () => {
+            await fetch("/admin-ext/api/ml/links", { method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "unlink", targetId: +b.dataset.un }) });
+            $("loadGroup").click();
+          }));
+      });
+      $("linkBtn").addEventListener("click", async () => {
+        const r = await fetch("/admin-ext/api/ml/links", { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "link", baseId: +$("baseId").value, lang: $("linkLang").value.trim(), targetId: +$("targetId").value }) });
+        const j = await r.json();
+        msg("msgGroup", r.ok ? "已关联，groupId=" + j.groupId : j.error ?? "关联失败", !r.ok);
+        if (r.ok) $("loadGroup").click();
+      });
+
+      $("loadStrings").addEventListener("click", async () => {
+        const r = await fetch("/admin-ext/api/ml/strings?code=" + encodeURIComponent($("stringsCode").value.trim())).then((x) => x.json());
+        $("stringsArea").value = JSON.stringify(r.strings ?? {}, null, 2);
+      });
+      $("saveStrings").addEventListener("click", async () => {
+        let strings;
+        try { strings = JSON.parse($("stringsArea").value); } catch { return msg("msgStrings", "JSON 格式无效", true); }
+        const r = await fetch("/admin-ext/api/ml/strings", { method: "PUT", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: $("stringsCode").value.trim(), strings }) });
+        msg("msgStrings", r.ok ? "已保存。" : "保存失败", !r.ok);
+      });
+      $("exportStrings").addEventListener("click", () => {
+        const code = $("stringsCode").value.trim() || "xx";
+        const blob = new Blob([JSON.stringify({ $schema: "https://astropress.dev/schemas/ml-strings-1.0.json", code, strings: JSON.parse($("stringsArea").value || "{}") }, null, 2)], { type: "application/json" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob); a.download = `ml-strings-${code}.json`; a.click();
+      });
+
+      loadSettings();
+    </script>
+</AdminLayout>

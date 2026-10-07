@@ -1,0 +1,23 @@
+{
+  "name": "@astropress/plugin-revisions",
+  "version": "0.1.0",
+  "description": "文章版本历史：保存前自动快照旧版本（每文保留最近 20 版），后台可查看/对比/一键恢复，编辑页注入「版本历史」入口",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./integration.admin": "./src/integration.admin.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@astropress/core": "workspace:*",
+    "drizzle-orm": "^0.36.0"
+  },
+  "devDependencies": {
+    "astro": "^4.0.0",
+    "typescript": "^5.4.0",
+    "@cloudflare/workers-types": "^4.0.0"
+  }
+}

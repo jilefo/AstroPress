@@ -1,0 +1,20 @@
+﻿====================================================================
+plugins 插件静态审计（Python）
+====================================================================
+[I] I1  plugins\admin-i18n\src\integration.admin.ts:21 — /api/* 路由 /api/ap-i18n/script.js — 自带鉴权: False（核心中间件亦强制登录）
+[I] I1  plugins\admin-i18n\src\integration.admin.ts:22 — /api/* 路由 /api/ap-i18n/translate — 自带鉴权: True（核心中间件亦强制登录）
+[I] I1  plugins\ai-autofill\src\integration.admin.ts:19 — /api/* 路由 /api/ap-autofill/script.js — 自带鉴权: False（核心中间件亦强制登录）
+[I] I1  plugins\ai-autofill\src\integration.admin.ts:20 — /api/* 路由 /api/ap-autofill/generate — 自带鉴权: True（核心中间件亦强制登录）
+[I] I1  plugins\ai-autofill\src\integration.admin.ts:21 — /api/* 路由 /api/ap-autofill/write — 自带鉴权: True（核心中间件亦强制登录）
+[I] I1  plugins\editor-tools\src\integration.admin.ts:20 — /api/* 路由 /api/ap-etools/tools.js — 自带鉴权: False（核心中间件亦强制登录）
+[I] I1  plugins\editor-tools\src\integration.admin.ts:21 — /api/* 路由 /api/ap-etools/translate — 自带鉴权: True（核心中间件亦强制登录）
+[I] I1  plugins\editor-upload\src\integration.admin.ts:19 — /api/* 路由 /api/ap-media/upload — 自带鉴权: True（核心中间件亦强制登录）
+[I] I1  plugins\editor-upload\src\integration.admin.ts:20 — /api/* 路由 /api/ap-media/[id]/meta — 自带鉴权: True（核心中间件亦强制登录）
+[I] I1  plugins\editor-upload\src\integration.admin.ts:21 — /api/* 路由 /api/ap-media/editor-upload.js — 自带鉴权: False（核心中间件亦强制登录）
+[I] I1  plugins\image-mirror\src\integration.admin.ts:23 — /api/* 路由 /api/ap-mirror/image-mirror.js — 自带鉴权: False（核心中间件亦强制登录）
+[I] I1  plugins\media-av\src\integration.admin.ts:18 — /api/* 路由 /api/ap-media-av/upload — 自带鉴权: True（核心中间件亦强制登录）
+[I] I1  plugins\media-av\src\integration.admin.ts:19 — /api/* 路由 /api/ap-media-av/media-av.js — 自带鉴权: False（核心中间件亦强制登录）
+[I] I1  plugins\wp-editor\src\integration.admin.ts:18 — /api/* 路由 /api/ap-wp-editor/wp-editor.js — 自带鉴权: False（核心中间件亦强制登录）
+--------------------------------------------------------------------
+E: 0   W: 0   I: 14
+全部通过。

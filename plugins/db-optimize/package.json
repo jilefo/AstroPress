@@ -1,0 +1,23 @@
+{
+  "name": "@astropress/plugin-db-optimize",
+  "version": "0.1.0",
+  "description": "数据库优化：SQLite 数据库体积统计、ANALYZE、PRAGMA optimize、VACUUM 碎片回收、清理文章修订版本",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./integration.admin": "./src/integration.admin.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@astropress/core": "workspace:*",
+    "drizzle-orm": "^0.36.0"
+  },
+  "devDependencies": {
+    "astro": "^4.0.0",
+    "typescript": "^5.4.0",
+    "@cloudflare/workers-types": "^4.0.0"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "Volantis",
+  "version": "6.8.3",
+  "description": "Hexo theme Volantis ported to AstroPress — material design cards, teal-green accent, generous shadows",
+  "author": "xaoxuu (ported)",
+  "tokens": {
+    "fonts": {
+      "body": "'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', Helvetica, Arial, Menlo, Monaco, monospace, 'Lucida Console', sans-serif",
+      "heading": "'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', Helvetica, Arial, Menlo, Monaco, monospace, 'Lucida Console', sans-serif"
+    },
+    "spacing": {
+      "sectionY": "32px",
+      "borderRadius": "12px",
+      "containerMax": "1080px"
+    },
+    "colors": {
+      "textMuted": "#6e6e6e",
+      "surface": "#ffffff",
+      "background": "#f4f4f4",
+      "secondary": "#1565c0",
+      "border": "#e0e0e0",
+      "text": "#444444",
+      "primary": "#0f766e"
+    }
+  }
+}

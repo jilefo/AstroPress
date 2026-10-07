@@ -1,0 +1,134 @@
+---
+/**
+ * /admin-ext/redirects — 重定向管理页。
+ * 规则列表（来源 / 目标 / 类型 / 命中 / 启停 / 删除）+ 新增表单。
+ */
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+if (!Astro.locals.user || !Astro.locals.db) return Astro.redirect("/login");
+---
+<AdminLayout title="重定向">
+    <style is:global>
+      * { box-sizing: border-box; }
+      .wrap { max-width: 960px; margin: 0 auto; padding: 0 16px; display: grid; gap: 20px; }
+      .card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 20px; }
+      h1 { font-size: 20px; } h2 { font-size: 15px; margin: 0 0 12px; }
+      button { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 6px 14px; cursor: pointer; font-size: 13px; }
+      button.danger { background: #b32d2e; }
+      .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+      .msg { font-size: 13px; margin-top: 8px; min-height: 18px; color: #646970; }
+      .err { color: #b32d2e; }
+      input[type="text"] { font-size: 13px; padding: 6px 8px; border: 1px solid #8c8f94; border-radius: 3px; }
+      select { font-size: 13px; padding: 6px 8px; border: 1px solid #8c8f94; border-radius: 3px; }
+      label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 4px; }
+      table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      th, td { padding: 8px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+      th { font-weight: 600; color: #646970; }
+      code { font-family: Consolas, Monaco, monospace; font-size: 12px; background: #f0f0f1; padding: 2px 6px; border-radius: 3px; word-break: break-all; }
+      .hint { font-size: 12px; color: #646970; margin-top: 6px; }
+      .type-badge { display: inline-block; padding: 1px 8px; border-radius: 3px; font-size: 12px; background: #f0f0f1; }
+    </style>
+
+    <div class="wrap">
+      <section class="card">
+        <h1>重定向</h1>
+        <p class="hint">来源路径支持精确匹配（如 <code>/old-page</code>）或通配前缀（以 <code>/*</code> 结尾，如 <code>/blog/*</code>）。目标可以是站内路径（<code>/new-page</code>）或完整 URL（<code>https://…</code>）。</p>
+        <div class="row" style="margin-top:12px">
+          <input type="text" id="newFrom" placeholder="来源（/old-path 或 /old/*）" style="flex:1;min-width:220px" />
+          <input type="text" id="newTo" placeholder="目标（/new-path 或 https://…）" style="flex:1;min-width:220px" />
+          <select id="newType">
+            <option value="301">301（永久）</option>
+            <option value="302">302（临时）</option>
+          </select>
+          <button id="addBtn">新增</button>
+        </div>
+        <div class="msg" id="formMsg"></div>
+      </section>
+
+      <section class="card">
+        <h2>规则列表</h2>
+        <table id="rulesTable">
+          <thead><tr><th>来源</th><th>目标</th><th>类型</th><th>命中</th><th>启用</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="msg" id="listMsg"></div>
+      </section>
+    </div>
+
+    <script>
+      var $ = function (id) { return document.getElementById(id); };
+      function esc(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+
+      function loadRules() {
+        fetch("/admin-ext/api/redirects", { credentials: "same-origin" })
+          .then(function (r) { return r.json(); })
+          .then(function (list) {
+            var tbody = $("rulesTable").querySelector("tbody");
+            tbody.innerHTML = "";
+            if (!Array.isArray(list) || !list.length) {
+              $("listMsg").textContent = "暂无重定向规则，使用上方表单新增一条。";
+              return;
+            }
+            $("listMsg").textContent = "";
+            list.forEach(function (r) {
+              var tr = document.createElement("tr");
+              tr.innerHTML =
+                "<td><code>" + esc(r.from) + "</code></td>" +
+                "<td><code>" + esc(r.to) + "</code></td>" +
+                "<td><span class='type-badge'>" + esc(r.type) + "</span></td>" +
+                "<td>" + esc(r.hits) + "</td>" +
+                "<td><input type='checkbox' " + (r.enabled ? "checked" : "") + " onchange='toggleRule(\"" + esc(r.id) + "\", this.checked)' /></td>" +
+                "<td><button class='danger' onclick='deleteRule(\"" + esc(r.id) + "\")'>删除</button></td>";
+              tbody.appendChild(tr);
+            });
+          })
+          .catch(function () { $("listMsg").textContent = "加载失败"; $("listMsg").className = "msg err"; });
+      }
+
+      $("addBtn").addEventListener("click", function () {
+        var from = $("newFrom").value.trim();
+        var to = $("newTo").value.trim();
+        var type = parseInt($("newType").value, 10);
+        $("formMsg").className = "msg";
+        if (!from || !to) { $("formMsg").textContent = "请填写来源与目标"; $("formMsg").className = "msg err"; return; }
+        fetch("/admin-ext/api/redirects", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ from: from, to: to, type: type })
+        }).then(function (r) { return r.json(); }).then(function (d) {
+          if (d.ok) {
+            $("formMsg").textContent = "已添加";
+            $("newFrom").value = "";
+            $("newTo").value = "";
+            loadRules();
+          } else {
+            $("formMsg").textContent = "添加失败: " + (d.error || "unknown");
+            $("formMsg").className = "msg err";
+          }
+        });
+      });
+
+      window.toggleRule = function (id, enabled) {
+        fetch("/admin-ext/api/redirects", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ id: id, enabled: enabled })
+        }).then(function (r) { return r.json(); }).then(function (d) {
+          if (!d.ok) { $("listMsg").textContent = "更新失败"; $("listMsg").className = "msg err"; loadRules(); }
+        });
+      };
+
+      window.deleteRule = function (id) {
+        if (!confirm("确定删除此重定向规则？")) return;
+        fetch("/admin-ext/api/redirects?id=" + encodeURIComponent(id), { method: "DELETE", credentials: "same-origin" })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d.ok) { $("listMsg").textContent = "已删除"; loadRules(); }
+            else { $("listMsg").textContent = "删除失败"; $("listMsg").className = "msg err"; }
+          });
+      };
+
+      loadRules();
+    </script>
+</AdminLayout>

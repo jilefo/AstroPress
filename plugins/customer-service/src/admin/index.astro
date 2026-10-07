@@ -1,0 +1,137 @@
+---
+/**
+ * /admin-ext/customer-service — 在线客服插件设置页
+ */
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+if (!Astro.locals.user || !Astro.locals.db) return Astro.redirect("/login");
+---
+<AdminLayout title="在线客服">
+    <style is:global>
+      * { box-sizing: border-box; }
+      .cs-wrap { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+      .cs-card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 20px; }
+      .cs-card h1 { font-size: 20px; margin: 0 0 16px; }
+      .cs-card label { display: block; font-size: 13px; font-weight: 600; margin: 16px 0 4px; }
+      .cs-card input[type="text"], .cs-card input[type="email"], .cs-card input[type="tel"], .cs-card select { width: 100%; font-size: 13px; padding: 6px 8px; border: 1px solid #8c8f94; border-radius: 3px; }
+      .cs-card input[type="color"] { width: 60px; height: 32px; padding: 2px; border: 1px solid #8c8f94; border-radius: 3px; background: #fff; cursor: pointer; }
+      .cs-card button { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 8px 16px; cursor: pointer; font-size: 13px; margin-top: 20px; }
+      .cs-msg { font-size: 13px; margin-top: 10px; min-height: 18px; }
+      .cs-ok { color: #00a32a; }
+      .cs-err { color: #b32d2e; }
+      .cs-hint { font-size: 12px; color: #646970; margin-top: 4px; }
+      .cs-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .cs-check { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+    </style>
+
+    <div class="cs-wrap">
+      <div class="cs-card">
+        <h1>在线客服设置</h1>
+        <div class="cs-check">
+          <input type="checkbox" id="enabled" checked />
+          <label for="enabled" style="margin:0">在前台启用浮动客服按钮</label>
+        </div>
+
+        <label for="title">面板标题</label>
+        <input type="text" id="title" value="联系客服" />
+
+        <div class="cs-row">
+          <div>
+            <label for="qq">QQ 号</label>
+            <input type="text" id="qq" placeholder="例如 123456789" />
+            <div class="cs-hint">点击可复制并尝试唤起 QQ 对话</div>
+          </div>
+          <div>
+            <label for="wechat">微信号</label>
+            <input type="text" id="wechat" placeholder="例如 my-wechat-id" />
+            <div class="cs-hint">点击可复制</div>
+          </div>
+        </div>
+
+        <div class="cs-row">
+          <div>
+            <label for="telegram">Telegram</label>
+            <input type="text" id="telegram" placeholder="@username 或 https://t.me/username" />
+            <div class="cs-hint">支持 @用户名 或 t.me 链接</div>
+          </div>
+          <div>
+            <label for="email">邮箱</label>
+            <input type="email" id="email" placeholder="support@example.com" />
+          </div>
+          <div>
+            <label for="phone">电话</label>
+            <input type="tel" id="phone" placeholder="400-000-0000" />
+          </div>
+        </div>
+
+        <label for="workingHours">工作时间文本</label>
+        <input type="text" id="workingHours" placeholder="周一至周五 9:00-18:00" />
+        <div class="cs-hint">包含 HH:MM-HH:MM 时段时，面板会显示在线/离线状态</div>
+
+        <div class="cs-row">
+          <div>
+            <label for="position">按钮位置</label>
+            <select id="position">
+              <option value="bottom-right">右下角</option>
+              <option value="bottom-left">左下角</option>
+            </select>
+          </div>
+          <div>
+            <label for="primaryColor">主题色</label>
+            <input type="color" id="primaryColor" value="#2271b1" />
+          </div>
+        </div>
+
+        <button id="save">保存设置</button>
+        <div class="cs-msg" id="msg"></div>
+      </div>
+    </div>
+
+    <script>
+      (async () => {
+        const msg = document.getElementById("msg");
+        const $ = (id) => document.getElementById(id);
+
+        async function load() {
+          const r = await fetch("/admin-ext/api/customer-service/settings");
+          if (!r.ok) return;
+          const s = await r.json();
+          $("enabled").checked = !!s.enabled;
+          $("title").value = s.title || "联系客服";
+          $("qq").value = s.qq || "";
+          $("wechat").value = s.wechat || "";
+          $("telegram").value = s.telegram || "";
+          $("email").value = s.email || "";
+          $("phone").value = s.phone || "";
+          $("workingHours").value = s.workingHours || "";
+          $("position").value = s.position === "bottom-left" ? "bottom-left" : "bottom-right";
+          $("primaryColor").value = s.primaryColor || "#2271b1";
+        }
+
+        $("save").addEventListener("click", async () => {
+          const payload = {
+            enabled: $("enabled").checked,
+            title: $("title").value.trim(),
+            qq: $("qq").value.trim(),
+            wechat: $("wechat").value.trim(),
+            telegram: $("telegram").value.trim(),
+            email: $("email").value.trim(),
+            phone: $("phone").value.trim(),
+            workingHours: $("workingHours").value.trim(),
+            position: $("position").value,
+            primaryColor: $("primaryColor").value,
+          };
+          const r = await fetch("/admin-ext/api/customer-service/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const d = await r.json();
+          msg.className = "cs-msg " + (r.ok ? "cs-ok" : "cs-err");
+          msg.textContent = r.ok ? "已保存。" : (d.error || "保存失败");
+          setTimeout(() => (msg.textContent = ""), 3000);
+        });
+
+        load();
+      })();
+    </script>
+</AdminLayout>

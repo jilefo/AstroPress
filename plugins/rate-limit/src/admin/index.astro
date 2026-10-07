@@ -1,0 +1,308 @@
+---
+/**
+ * /admin-ext/rate-limit — 全局限流设置页
+ */
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+if (!Astro.locals.user || !Astro.locals.db) return Astro.redirect("/login");
+---
+<AdminLayout title="全局限流">
+    <style is:global>
+      * { box-sizing: border-box; }
+      .wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+      .card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 20px; margin-bottom: 20px; }
+      h1 { font-size: 20px; margin: 0 0 16px; }
+      h2 { font-size: 15px; margin: 0 0 12px; }
+      button { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 8px 16px; cursor: pointer; font-size: 13px; }
+      button:hover { background: #135e96; }
+      .btn-secondary { background: #f6f7f7; color: #2c3338; border: 1px solid #c3c4c7; }
+      .btn-secondary:hover { background: #eceeef; }
+      .btn-danger { background: #d63638; }
+      .btn-danger:hover { background: #b32d2e; }
+      .btn-small { padding: 4px 10px; margin: 0; }
+      .msg { font-size: 13px; margin-top: 10px; min-height: 18px; }
+      .ok { color: #00a32a; }
+      .err { color: #b32d2e; }
+      .hint { font-size: 12px; color: #646970; margin-top: 4px; }
+      .check { display: flex; align-items: center; gap: 6px; font-size: 13px; margin: 10px 0; }
+      .check label { margin: 0; font-weight: 400; }
+      table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #e5e7eb; vertical-align: middle; }
+      th { background: #f6f7f7; font-weight: 600; white-space: nowrap; }
+      td input[type="text"], td input[type="number"], td select { font-size: 13px; padding: 4px 6px; border: 1px solid #8c8f94; border-radius: 3px; }
+      td input[type="text"].in-name { width: 110px; }
+      td input[type="text"].in-prefix { width: 100%; min-width: 180px; font-family: Consolas, Monaco, monospace; }
+      td input[type="number"] { width: 76px; }
+      .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+      .stat-box { background: #f6f7f7; border: 1px solid #dcdcdd; border-radius: 4px; padding: 12px; text-align: center; }
+      .stat-num { font-size: 22px; font-weight: 600; color: #2271b1; }
+      .stat-label { font-size: 12px; color: #646970; margin-top: 4px; }
+      .list-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 12px; flex-wrap: wrap; }
+      .list-head h2 { margin: 0; }
+      .hit-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+      .hit-chip { background: #f6f7f7; border: 1px solid #dcdcdd; border-radius: 3px; padding: 4px 10px; font-size: 12px; color: #2c3338; }
+      .hit-chip b { color: #d63638; font-weight: 600; }
+      .actions { display: flex; gap: 8px; margin-top: 16px; align-items: center; }
+    </style>
+
+    <div class="wrap">
+      <div class="card">
+        <h1>全局限流</h1>
+
+        <div class="check" style="margin-top:0">
+          <input type="checkbox" id="enabled" checked />
+          <label for="enabled">启用 IP 令牌桶限流</label>
+        </div>
+
+        <div class="list-head" style="margin-top:16px">
+          <h2>限流规则</h2>
+          <button type="button" class="btn-secondary btn-small" id="addRule">+ 新增规则</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>规则名</th>
+              <th>路径前缀</th>
+              <th>方法</th>
+              <th>上限</th>
+              <th>窗口(秒)</th>
+              <th>启用</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="rulesBody"></tbody>
+        </table>
+        <div class="hint">按顺序匹配，首个命中的规则生效。上限范围 1～100000，窗口范围 1～3600 秒，最多 30 条规则。路径前缀需以 / 开头。</div>
+
+        <div class="actions">
+          <button id="save">保存设置</button>
+        </div>
+        <div class="msg" id="msg"></div>
+      </div>
+
+      <div class="card">
+        <h2>运行状态</h2>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="stat-num" id="statBuckets">–</div>
+            <div class="stat-label">活跃限流桶</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="statBlockedTotal">–</div>
+            <div class="stat-label">累计拦截</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="statRules">–</div>
+            <div class="stat-label">启用规则数</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="statSwitch">–</div>
+            <div class="stat-label">总开关</div>
+          </div>
+        </div>
+        <div class="hit-chips" id="hitChips"></div>
+        <div class="actions">
+          <button type="button" class="btn-secondary" id="refreshStats">刷新状态</button>
+          <button type="button" class="btn-danger" id="reset">清空限流状态</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        var msg = document.getElementById("msg");
+        var rulesBody = document.getElementById("rulesBody");
+        var hitChips = document.getElementById("hitChips");
+
+        function setText(id, text) {
+          var el = document.getElementById(id);
+          if (el) el.textContent = text;
+        }
+
+        function showMsg(ok, text) {
+          msg.className = "msg " + (ok ? "ok" : "err");
+          msg.textContent = text;
+          setTimeout(function () { msg.textContent = ""; }, 3000);
+        }
+
+        function makeInput(cls, value) {
+          var input = document.createElement("input");
+          input.type = "text";
+          input.setAttribute("class", cls);
+          input.value = value;
+          return input;
+        }
+
+        function makeNumber(value) {
+          var input = document.createElement("input");
+          input.type = "number";
+          input.min = "1";
+          input.value = String(value);
+          return input;
+        }
+
+        function makeMethodSelect(value) {
+          var sel = document.createElement("select");
+          var opts = ["ALL", "GET", "POST"];
+          for (var i = 0; i < opts.length; i++) {
+            var o = document.createElement("option");
+            o.value = opts[i];
+            o.textContent = opts[i];
+            if (opts[i] === value) o.selected = true;
+            sel.appendChild(o);
+          }
+          return sel;
+        }
+
+        function addRow(rule) {
+          var tr = document.createElement("tr");
+
+          var tdName = document.createElement("td");
+          tdName.appendChild(makeInput("in-name", rule.name || ""));
+          tr.appendChild(tdName);
+
+          var tdPrefix = document.createElement("td");
+          tdPrefix.appendChild(makeInput("in-prefix", rule.prefix || "/"));
+          tr.appendChild(tdPrefix);
+
+          var tdMethod = document.createElement("td");
+          tdMethod.appendChild(makeMethodSelect(rule.method || "ALL"));
+          tr.appendChild(tdMethod);
+
+          var tdLimit = document.createElement("td");
+          tdLimit.appendChild(makeNumber(rule.limit || 10));
+          tr.appendChild(tdLimit);
+
+          var tdWindow = document.createElement("td");
+          tdWindow.appendChild(makeNumber(rule.windowSec || 60));
+          tr.appendChild(tdWindow);
+
+          var tdEnabled = document.createElement("td");
+          var cb = document.createElement("input");
+          cb.type = "checkbox";
+          cb.checked = rule.enabled !== false;
+          tdEnabled.appendChild(cb);
+          tr.appendChild(tdEnabled);
+
+          var tdOp = document.createElement("td");
+          var del = document.createElement("button");
+          del.type = "button";
+          del.setAttribute("class", "btn-danger btn-small");
+          del.textContent = "删除";
+          del.addEventListener("click", function () {
+            tr.parentNode.removeChild(tr);
+          });
+          tdOp.appendChild(del);
+          tr.appendChild(tdOp);
+
+          rulesBody.appendChild(tr);
+        }
+
+        function renderRules(rules) {
+          while (rulesBody.firstChild) rulesBody.removeChild(rulesBody.firstChild);
+          (rules || []).forEach(function (r) { addRow(r); });
+        }
+
+        function collectRules() {
+          var rules = [];
+          var rows = rulesBody.querySelectorAll("tr");
+          for (var i = 0; i < rows.length; i++) {
+            var inputs = rows[i].querySelectorAll("input");
+            var sel = rows[i].querySelector("select");
+            rules.push({
+              name: inputs[0].value.trim(),
+              prefix: inputs[1].value.trim(),
+              method: sel ? sel.value : "ALL",
+              limit: parseInt(inputs[2].value, 10),
+              windowSec: parseInt(inputs[3].value, 10),
+              enabled: inputs[4].checked,
+            });
+          }
+          return rules;
+        }
+
+        async function loadSettings() {
+          var r = await fetch("/admin-ext/api/rate-limit/settings");
+          if (!r.ok) return;
+          var s = await r.json();
+          (document.getElementById("enabled") as HTMLInputElement).checked = !!s.enabled;
+          renderRules(s.rules);
+        }
+
+        async function refreshStats() {
+          var r = await fetch("/admin-ext/api/rate-limit/stats");
+          if (!r.ok) return;
+          var d = await r.json();
+          setText("statBuckets", String(d.buckets ?? 0));
+          var blocked = d.blocked || {};
+          var total = 0;
+          var names = Object.keys(blocked);
+          names.forEach(function (n) { total += Number(blocked[n]) || 0; });
+          setText("statBlockedTotal", String(total));
+          var enabledRules = (d.settings && Array.isArray(d.settings.rules))
+            ? d.settings.rules.filter(function (x) { return x.enabled; }).length
+            : 0;
+          setText("statRules", String(enabledRules));
+          setText("statSwitch", d.settings && d.settings.enabled ? "开" : "关");
+
+          while (hitChips.firstChild) hitChips.removeChild(hitChips.firstChild);
+          names.forEach(function (n) {
+            var chip = document.createElement("span");
+            chip.setAttribute("class", "hit-chip");
+            chip.textContent = n + " ";
+            var b = document.createElement("b");
+            b.textContent = String(blocked[n]);
+            chip.appendChild(b);
+            hitChips.appendChild(chip);
+          });
+        }
+
+        document.getElementById("addRule")!.addEventListener("click", function () {
+          addRow({ name: "", prefix: "/", method: "ALL", limit: 10, windowSec: 60, enabled: true });
+        });
+
+        document.getElementById("save")!.addEventListener("click", async function () {
+          var payload = {
+            enabled: (document.getElementById("enabled") as HTMLInputElement).checked,
+            rules: collectRules(),
+          };
+          var r = await fetch("/admin-ext/api/rate-limit/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          var d = await r.json().catch(function () { return {}; });
+          if (r.ok && d.settings) {
+            showMsg(true, "已保存。");
+            renderRules(d.settings.rules);
+            refreshStats();
+          } else {
+            showMsg(false, d.error || "保存失败");
+          }
+        });
+
+        document.getElementById("refreshStats")!.addEventListener("click", function () {
+          refreshStats();
+        });
+
+        document.getElementById("reset")!.addEventListener("click", async function () {
+          if (!window.confirm("确认清空全部限流桶与命中计数？被限制的访客将立即恢复访问。")) return;
+          var r = await fetch("/admin-ext/api/rate-limit/reset", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ confirm: true }),
+          });
+          var d = await r.json().catch(function () { return {}; });
+          if (r.ok) {
+            showMsg(true, "已清空 " + String(d.cleared ?? 0) + " 个限流桶。");
+            refreshStats();
+          } else {
+            showMsg(false, d.error || "清空失败");
+          }
+        });
+
+        loadSettings();
+        refreshStats();
+        setInterval(refreshStats, 5000);
+      })();
+    </script>
+</AdminLayout>

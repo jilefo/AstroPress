@@ -1,0 +1,321 @@
+/* >>> ap-fonts >>> */
+/* 主题声明的 Web 字体。AstroPress 不会注入字体 <link>，只能由主题 CSS 自行 @import。
+   字体源为 fonts.loli.net（Google Fonts 国内镜像，海外同样可访问）；
+   如需官方源把域名改回 fonts.googleapis.com 即可；完全离线时删除本区块则回退系统字体。
+   Lato 来自源码 var.styl 默认字体栈（$default-font-family）；中文走系统字体。 */
+@import url("https://fonts.loli.net/css2?family=Lato:wght@400;700&display=swap");
+/* <<< ap-fonts <<< */
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Hexo Theme Butterfly — AstroPress 移植版
+   设计语言来源：hexo-theme-butterfly dev 分支（source/css/var.styl,
+   source/css/_global/index.styl, source/css/_global/function.styl）
+     · 页面/卡片底色均为 #fff，卡片无描边、仅靠阴影区分（$body-bg / $card-bg）
+     · 主题色 #49b1f5（亮蓝 $bright-blue），分页器 #00c4b6（青绿 $strong-cyan）
+     · 正文 #4c4948（$font-black），标题 #1f2d3d（$font-color），弱化 #858585
+     · 圆角 8px（rounded_corners_ui=true, addBorderRadius(8)）
+     · 卡片阴影 0 3px 8px 6px rgba(7,17,27,.05)，hover 上浮 4px 阴影加深
+   注：注入块（.ap-block-*）使用适配层 AA 快照色（见文件末尾说明）。
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --butterfly-bg: #ffffff;
+  --butterfly-card: #ffffff;
+  --butterfly-theme: #49b1f5;
+  --butterfly-paginator: #00c4b6;
+  --butterfly-text: #4c4948;
+  --butterfly-text-heading: #1f2d3d;
+  --butterfly-text-muted: #858585;
+  --butterfly-border: #eeeeee;
+  --butterfly-radius: 8px;
+  --butterfly-shadow: 0 3px 8px 6px rgba(7, 17, 27, 0.05);
+  --butterfly-shadow-hover: 0 3px 8px 6px rgba(7, 17, 27, 0.09);
+  --butterfly-blockquote-bg: rgba(73, 177, 245, 0.1);
+  --butterfly-code-bg: rgba(27, 31, 35, 0.05);
+  --butterfly-pre-bg: #f6f8fa;
+  --butterfly-table-border: #eeeeee;
+  --butterfly-tr-even: #f8f8f8;
+}
+
+/* ── 基础 ─────────────────────────────────────────────────────────── */
+html { scroll-behavior: smooth; }
+body { background: var(--butterfly-bg) !important; color: var(--butterfly-text); font-size: 14px; line-height: 2; }
+
+::selection { background: var(--butterfly-theme); color: #fff; }
+
+.site-wrapper { max-width: 1200px; }
+.site-main { padding: 40px 0; }
+
+/* ── 顶部导航（源码 #nav：半透明白底 + 阴影，position:fixed; z-index:91）── */
+.site-header {
+  background: rgba(255, 255, 255, 0.8);
+  border-bottom: none;
+  box-shadow: var(--butterfly-shadow);
+  height: auto;
+  min-height: 60px;
+  position: sticky;
+  top: 0;
+  z-index: 90;
+}
+.site-header .site-wrapper { padding: 10px 24px; }
+.site-branding a {
+  color: var(--butterfly-text-heading) !important;
+  font-weight: 700;
+  font-size: 1.4rem;
+  letter-spacing: 0.02em;
+}
+.site-branding a:hover { color: var(--butterfly-theme) !important; }
+.site-description { color: var(--butterfly-text-muted); font-size: 0.85rem; }
+.site-nav a {
+  color: var(--butterfly-text);
+  padding: 8px 14px;
+  border-radius: 5px;
+  font-size: 0.92rem;
+  transition: color 0.3s ease, background-color 0.3s ease;
+}
+.site-nav a:hover { color: var(--butterfly-theme); background: var(--butterfly-bg); }
+
+/* ── 文章列表：白色卡片悬浮（.cardHover：无描边+阴影，hover 仅加深阴影）── */
+.post-list { display: flex; flex-direction: column; gap: 30px; }
+.post-list-item {
+  background: var(--butterfly-card);
+  border: none;
+  border-radius: var(--butterfly-radius);
+  box-shadow: var(--butterfly-shadow);
+  padding: 28px 32px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.post-list-item:first-child { padding-top: 28px; }
+.post-list-item:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--butterfly-shadow-hover);
+}
+.post-list-item h2 {
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.post-list-item h2 a { color: var(--butterfly-text-heading) !important; text-decoration: none; }
+.post-list-item h2 a:hover { color: var(--butterfly-theme) !important; }
+.post-meta { color: var(--butterfly-text-muted); font-size: 0.8rem; }
+.post-excerpt { color: var(--butterfly-text); font-size: 0.95rem; line-height: 1.8; }
+.read-more {
+  color: var(--butterfly-theme);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+.read-more:hover { color: #ff7242; }
+
+/* ── 单篇文章：整页白卡 ───────────────────────────────────────────── */
+main .site-wrapper > article {
+  background: var(--butterfly-card);
+  border-radius: var(--butterfly-radius);
+  box-shadow: var(--butterfly-shadow);
+  padding: 32px 36px;
+  overflow: hidden;
+}
+.post-header h1 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: var(--butterfly-text-heading);
+  line-height: 1.4;
+}
+.post-header .post-meta { margin: 0; }
+
+.post-content {
+  font-size: 0.95rem;
+  line-height: 2;
+  color: var(--butterfly-text);
+}
+.post-content h1, .post-content h2, .post-content h3,
+.post-content h4, .post-content h5, .post-content h6 {
+  font-weight: 600;
+  color: var(--butterfly-text-heading);
+}
+.post-content a {
+  color: var(--butterfly-theme);
+  text-decoration: none;
+  border-bottom: 1px solid var(--butterfly-theme);
+  padding-bottom: 1px;
+  transition: all 0.3s ease;
+  word-break: break-word;
+}
+.post-content a:hover { color: #ff7242; border-bottom-color: #ff7242; }
+.post-content blockquote {
+  margin: 0 0 20px;
+  padding: 7px 15px;
+  border-left: 4px solid var(--butterfly-theme);
+  background: var(--butterfly-blockquote-bg);
+  color: var(--butterfly-text);
+  border-radius: 0 var(--butterfly-radius) var(--butterfly-radius) 0;
+}
+.post-content pre {
+  background: var(--butterfly-pre-bg);
+  border-radius: var(--butterfly-radius);
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  font-size: 0.875rem;
+}
+.post-content code {
+  background: var(--butterfly-code-bg);
+  color: #f47466;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.875em;
+}
+.post-content pre code { background: none; color: inherit; padding: 0; }
+.post-content img { border-radius: var(--butterfly-radius); }
+.post-content table { border-collapse: separate; border-spacing: 0; width: 100%; margin: 1.5rem 0; }
+.post-content th, .post-content td { border: 1px solid var(--butterfly-table-border); padding: 6px 12px; }
+.post-content tr:nth-child(even) { background: var(--butterfly-tr-even); }
+
+/* ── 分页：白色小方块，当前青绿，hover 橙色（源码 pagination.styl）── */
+.pagination { gap: 6px; margin-top: 36px; }
+.pagination a, .pagination span {
+  background: var(--butterfly-card);
+  border: none;
+  border-radius: 5px;
+  box-shadow: var(--butterfly-shadow);
+  color: var(--butterfly-text);
+  width: 2.5em;
+  height: 2.5em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+.pagination a:hover { background: #ff7242; color: #fff; box-shadow: var(--butterfly-shadow-hover); }
+.pagination .current { background: var(--butterfly-paginator); color: #fff; }
+
+/* ── 页脚 ─────────────────────────────────────────────────────────── */
+.site-footer {
+  border-top: none;
+  color: var(--butterfly-text-muted);
+  font-size: 0.85rem;
+}
+.site-footer a { color: var(--butterfly-theme); }
+
+/* ── 404 ──────────────────────────────────────────────────────────── */
+.not-found h1 { color: var(--butterfly-border); }
+
+/* ── 返回链接 ─────────────────────────────────────────────────────── */
+main .site-wrapper > nav {
+  border-top: none !important;
+  background: var(--butterfly-card);
+  border-radius: var(--butterfly-radius);
+  box-shadow: var(--butterfly-shadow);
+  padding: 16px 32px !important;
+  margin-top: 36px !important;
+}
+main .site-wrapper > nav a { color: var(--butterfly-theme); text-decoration: none; }
+main .site-wrapper > nav a:hover { color: #ff7242; }
+
+/* ── 响应式 ───────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .post-list { gap: 20px; }
+  .post-list-item { padding: 20px 22px; }
+  .site-main { padding: 24px 0; }
+}
+
+/* >>> ap-adapter >>> */
+/* ═══════════════════════════════════════════════════════════════════════
+   AstroPress 适配层：把 Butterfly 设计语言映射到 BlockRenderer 的真实 DOM。
+   下方 :root 为注入块配色快照（.ap-block-* 实际吃到的值）。源码主色
+   #49b1f5 / #00c4b6 / #858585 在白底上的对比度分别仅 2.36 / 2.19 / 3.69:1，
+   不满足 WCAG AA（正文/链接 4.5:1、UI 3:1），故快照按同色相最小幅度加深：
+     #49b1f5 → #0c78c2(4.69:1)，hover #0a5f9e(6.68:1)
+     #00c4b6 → #008f83(3.99:1，UI)，#858585 → #767676(4.54:1)
+   快照 8 组配色对全部达标（verify-themes.py 复核）。
+   ═══════════════════════════════════════════════════════════════════════ */
+:root {
+  --ap-primary: #0c78c2;
+  --ap-primary-hover: #0a5f9e;
+  --ap-bg: #ffffff;
+  --ap-surface: #ffffff;
+  --ap-border: #eeeeee;
+  --ap-text: #4c4948;
+  --ap-muted: #767676;
+  --ap-radius: 8px;
+}
+
+/* 页面与正文底色 */
+body { background: var(--ap-bg) !important; }
+.ap-blocks { color: var(--ap-text); }
+
+/* 标题用源码深色 #1f2d3d；正文/弱化用快照色 */
+.ap-block h1, .ap-block h2, .ap-block h3, .ap-block h4,
+.post-header h1 { color: #1f2d3d; }
+
+/* 链接：亮蓝（AA 加深版） */
+.ap-block-text a, .ap-block-columns a, .ap-block-html a,
+.post-content a, .read-more { color: var(--ap-primary); }
+.ap-block a:hover, .post-content a:hover, .read-more:hover { color: var(--ap-primary-hover); }
+
+/* 弱化信息（meta / 摘要 / 配图说明） */
+.post-meta, .post-list-item-meta,
+.ap-block-image figcaption, .ap-block .ap-muted { color: var(--ap-muted); }
+
+/* 导航：白底 + 卡片阴影、无描边 */
+.ap-block-nav {
+  position: sticky; top: 0; z-index: 90;
+  background: var(--ap-bg) !important;
+  border-bottom: none !important;
+  box-shadow: 0 3px 8px 6px rgba(7, 17, 27, 0.05);
+}
+.ap-block-nav > a { color: #1f2d3d !important; }
+.ap-block-nav nav ul li a {
+  border-radius: 5px;
+  transition: color 0.3s ease, background-color 0.3s ease;
+}
+.ap-block-nav nav ul li a:hover {
+  color: var(--ap-primary) !important;
+  background: var(--ap-surface);
+}
+
+/* query-loop 卡片：无描边 + 源码卡片阴影，hover 上浮 4px */
+.ap-block-query-loop article {
+  border-color: transparent !important;
+  border-radius: var(--ap-radius) !important;
+  box-shadow: 0 3px 8px 6px rgba(7, 17, 27, 0.05);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.ap-block-query-loop article:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 3px 8px 6px rgba(7, 17, 27, 0.09);
+}
+.ap-block-query-loop article a { text-decoration: none; }
+.ap-block img { border-radius: var(--ap-radius); }
+
+/* 分隔线：源码 $light-grey #eee */
+.ap-block-divider hr { border-top-color: var(--ap-border) !important; }
+
+/* 引用块：亮蓝左边框 + 10% 蓝底 */
+.ap-block-text blockquote, .ap-block-columns blockquote, .ap-block-html blockquote {
+  border-left: 4px solid var(--ap-primary);
+  background: rgba(12, 120, 194, 0.1);
+  border-radius: 0 var(--ap-radius) var(--ap-radius) 0;
+  color: var(--ap-text);
+}
+
+/* 行内代码 / 代码块沿用源码底色 */
+.ap-block-text code, .ap-block-columns code, .ap-block-html code {
+  background: rgba(27, 31, 35, 0.05);
+  border-radius: 3px;
+  padding: 2px 6px;
+}
+.ap-block-text pre, .ap-block-columns pre, .ap-block-html pre {
+  background: #f6f8fa;
+  border-radius: var(--ap-radius);
+}
+
+::selection { background: var(--ap-primary); color: #fff; }
+
+@media (max-width: 640px) {
+  .ap-block-nav { height: auto !important; min-height: 56px; flex-wrap: wrap; padding: 8px 20px !important; row-gap: 4px; }
+  .ap-block-nav nav { width: 100%; }
+  .ap-block-nav nav ul { flex-wrap: wrap; }
+}
+/* <<< ap-adapter <<< */

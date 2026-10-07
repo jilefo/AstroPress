@@ -1,0 +1,422 @@
+---
+/**
+ * /admin-ext/comments — 评论审核管理页
+ */
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+if (!Astro.locals.user || !Astro.locals.db) return Astro.redirect("/login");
+const db = Astro.locals.db as any;
+
+const { ensureSchema } = await import("../lib/schema");
+const { loadSettings } = await import("../lib/settings");
+const { getStatusCounts, isCommentStatus, listComments } = await import("../lib/comments");
+
+await ensureSchema(db);
+const settings = await loadSettings(db);
+
+const sp = Astro.url.searchParams;
+const statusParam = sp.get("status") ?? "pending";
+const status = isCommentStatus(statusParam) ? statusParam : "pending";
+const pageRaw = parseInt(sp.get("page") ?? "1", 10);
+const page = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1;
+const q = (sp.get("q") ?? "").slice(0, 100);
+const postIdRaw = parseInt(sp.get("postId") ?? "", 10);
+const postId = Number.isFinite(postIdRaw) && postIdRaw > 0 ? postIdRaw : undefined;
+
+const [{ items, total }, counts] = await Promise.all([
+  listComments(db, { status, postId, q, page, perPage: settings.perPage }),
+  getStatusCounts(db),
+]);
+
+// 防止评论内容中的 "</script>" 击穿数据岛
+const initial = JSON.stringify({
+  items, total, counts, page, perPage: settings.perPage, settings, status, q,
+}).replace(/</g, "\\u003c");
+---
+<AdminLayout title="评论管理">
+    <style is:global>
+      * { box-sizing: border-box; }
+      .wrap { max-width: 1100px; margin: 0 auto; padding: 0 16px; display: grid; gap: 20px; }
+      .card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 18px 20px; }
+      h1 { font-size: 20px; margin: 0 0 14px; }
+      .tabs { display: flex; gap: 4px; border-bottom: 1px solid #c3c4c7; margin: -4px 0 16px; flex-wrap: wrap; }
+      .tab { padding: 8px 14px; cursor: pointer; border: 1px solid transparent; border-bottom: none; border-radius: 4px 4px 0 0; color: #2271b1; background: none; font-size: 13px; }
+      .tab .n { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 4px; border-radius: 9px; background: #f0f0f1; color: #50575e; font-size: 11px; line-height: 18px; text-align: center; }
+      .tab.active { background: #fff; border-color: #c3c4c7; color: #1d2327; font-weight: 600; position: relative; top: 1px; }
+      .tab.active .n { background: #2271b1; color: #fff; }
+      .tab .n.zero { background: transparent; color: #a7aaad; }
+      .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+      .toolbar input[type="search"] { padding: 6px 8px; border: 1px solid #8c8f94; border-radius: 3px; min-width: 220px; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #f0f0f1; vertical-align: top; }
+      th { font-size: 12px; color: #646970; font-weight: 600; }
+      .cell-author { font-weight: 600; word-break: break-all; }
+      .cell-email { color: #646970; word-break: break-all; }
+      .cell-excerpt { max-width: 340px; }
+      .cell-excerpt .c { white-space: pre-wrap; word-break: break-word; }
+      .cell-post a { color: #2271b1; text-decoration: none; }
+      .cell-post a:hover { text-decoration: underline; }
+      .cell-post .edit { color: #646970; font-size: 12px; margin-left: 6px; }
+      .cell-meta { color: #646970; font-size: 12px; white-space: nowrap; }
+      .row-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+      .row-actions button, .btn { border: 1px solid #2271b1; background: #2271b1; color: #fff; border-radius: 3px; padding: 4px 10px; cursor: pointer; font-size: 12px; }
+      .row-actions button.secondary { background: #f6f7f7; color: #2271b1; border-color: #2271b1; }
+      .row-actions button.danger { background: #f6f7f7; color: #b32d2e; border-color: #b32d2e; }
+      .bulkbar { display: flex; gap: 8px; align-items: center; margin: 12px 0 4px; flex-wrap: wrap; }
+      .bulkbar select, .bulkbar button { padding: 6px 8px; border: 1px solid #8c8f94; border-radius: 3px; font-size: 13px; }
+      .bulkbar button { background: #2271b1; color: #fff; border-color: #2271b1; cursor: pointer; }
+      .pager { display: flex; gap: 10px; align-items: center; justify-content: flex-end; margin-top: 14px; }
+      .pager button { padding: 5px 12px; border: 1px solid #2271b1; background: #fff; color: #2271b1; border-radius: 3px; cursor: pointer; }
+      .pager button:disabled { opacity: .5; cursor: default; }
+      .empty { text-align: center; color: #646970; padding: 30px 0; }
+      .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 24px; }
+      .check { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+      .check input { margin: 0; }
+      label.flabel { display: block; font-size: 13px; font-weight: 600; margin: 0 0 4px; }
+      .field input[type="number"] { width: 100px; padding: 6px 8px; border: 1px solid #8c8f94; border-radius: 3px; }
+      .hint { font-size: 12px; color: #646970; margin-top: 4px; }
+      .msg { font-size: 13px; margin-top: 12px; min-height: 18px; }
+      .msg.ok { color: #00a32a; }
+      .msg.err { color: #b32d2e; }
+      .save { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 8px 18px; cursor: pointer; font-size: 13px; margin-top: 16px; }
+    </style>
+
+    <div class="wrap">
+      <div class="card">
+        <h1>评论管理</h1>
+        <div class="tabs" id="tabs">
+          <button class="tab" data-status="pending">待审核<span class="n" data-count="pending">0</span></button>
+          <button class="tab" data-status="approved">已批准<span class="n" data-count="approved">0</span></button>
+          <button class="tab" data-status="spam">垃圾<span class="n" data-count="spam">0</span></button>
+          <button class="tab" data-status="trash">回收站<span class="n" data-count="trash">0</span></button>
+        </div>
+
+        <div class="toolbar">
+          <form id="search-form" style="display:flex;gap:8px;margin:0">
+            <input type="search" id="q" name="q" placeholder="搜索作者 / 邮箱 / 内容…" />
+            <button class="btn" type="submit">搜索</button>
+          </form>
+        </div>
+
+        <div class="bulkbar">
+          <label class="check"><input type="checkbox" id="select-all" /> 全选</label>
+          <select id="bulk-action">
+            <option value="">批量操作…</option>
+            <option value="approve">批准</option>
+            <option value="spam">标为垃圾</option>
+            <option value="trash">移入回收站</option>
+            <option value="delete">永久删除</option>
+          </select>
+          <button id="bulk-apply">应用</button>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th style="width:30px"></th>
+              <th style="width:150px">作者</th>
+              <th style="width:180px">邮箱</th>
+              <th>评论</th>
+              <th style="width:170px">所属文章</th>
+              <th style="width:130px">日期 / IP</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+        <div class="empty" id="empty" hidden>暂无评论</div>
+
+        <div class="pager">
+          <span id="page-info"></span>
+          <button id="prev-page">上一页</button>
+          <button id="next-page">下一页</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h1>评论设置</h1>
+        <div class="settings-grid">
+          <div>
+            <label class="check"><input type="checkbox" id="s-enabled" /> 启用评论功能</label>
+            <div class="hint">关闭后前台文章页不再注入评论区块与表单</div>
+          </div>
+          <div>
+            <label class="check"><input type="checkbox" id="s-auto" /> 新评论自动批准</label>
+            <div class="hint">默认进入待审核队列</div>
+          </div>
+          <div>
+            <label class="check"><input type="checkbox" id="s-desc" /> 评论倒序排列</label>
+            <div class="hint">默认按发布时间正序</div>
+          </div>
+          <div class="field">
+            <label class="flabel" for="s-perpage">后台每页条数</label>
+            <input type="number" id="s-perpage" min="5" max="100" />
+          </div>
+          <div>
+            <label class="flabel">关闭评论的文章类型</label>
+            <label class="check"><input type="checkbox" class="s-closed" value="post" /> 文章（post）</label>
+            <label class="check" style="margin-top:6px"><input type="checkbox" class="s-closed" value="page" /> 页面（page）</label>
+            <div class="hint">均不勾选 = 全部类型开放评论</div>
+          </div>
+        </div>
+        <button class="save" id="save-settings">保存设置</button>
+        <div class="msg" id="settings-msg"></div>
+      </div>
+    </div>
+
+    <script type="application/json" id="ap-c-admin-data" set:html={initial}></script>
+    <script>
+      (function () {
+        var data = JSON.parse(document.getElementById("ap-c-admin-data").textContent);
+        var state = {
+          status: data.status,
+          page: data.page || 1,
+          q: data.q || "",
+          items: data.items || [],
+          total: data.total || 0,
+          counts: data.counts || { pending: 0, approved: 0, spam: 0, trash: 0 },
+          perPage: data.perPage || 20,
+          settings: data.settings || {},
+        };
+
+        var rowsEl = document.getElementById("rows");
+        var emptyEl = document.getElementById("empty");
+        var pageInfo = document.getElementById("page-info");
+        var selectAll = document.getElementById("select-all");
+
+        function excerpt(s) {
+          s = String(s || "").replace(/[ \t\n\r\v\f]+/g, " ").trim();
+          return s.length > 80 ? s.slice(0, 80) + "…" : s;
+        }
+        function fmtDate(iso) {
+          var d = new Date(iso);
+          if (isNaN(d.getTime())) return "";
+          var p = function (n) { return (n < 10 ? "0" : "") + n; };
+          return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
+        }
+        function el(tag, cls, text) {
+          var e = document.createElement(tag);
+          if (cls) e.className = cls;
+          if (text !== undefined) e.textContent = text;
+          return e;
+        }
+        function api(path, opts) {
+          return fetch(path, Object.assign({ credentials: "same-origin", headers: {} }, opts)).then(function (r) {
+            return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, status: r.status, data: d }; });
+          });
+        }
+
+        function renderTabs() {
+          var tabs = document.querySelectorAll("#tabs .tab");
+          for (var i = 0; i < tabs.length; i++) {
+            var t = tabs[i];
+            var s = t.getAttribute("data-status");
+            t.classList.toggle("active", s === state.status);
+            var badge = t.querySelector(".n");
+            badge.textContent = String(state.counts[s] || 0);
+            badge.classList.toggle("zero", !(state.counts[s] > 0));
+          }
+        }
+
+        function actionButtons(item) {
+          var wrap = el("div", "row-actions");
+          function btn(label, act, cls, confirmText) {
+            var b = el("button", cls || "secondary", label);
+            b.addEventListener("click", function () {
+              if (confirmText && !window.confirm(confirmText)) return;
+              doAction(act, [item.id]).then(function () {
+                if (act === "delete") load();
+                else load();
+              });
+            });
+            return b;
+          }
+          if (state.status !== "approved") wrap.appendChild(btn("批准", "approve"));
+          if (state.status !== "spam") wrap.appendChild(btn("标垃圾", "spam"));
+          if (state.status !== "trash") wrap.appendChild(btn("移回收站", "trash"));
+          wrap.appendChild(btn("永久删除", "delete", "danger", "永久删除不可恢复，确定删除该评论？"));
+          if (state.status !== "spam" && state.status !== "trash") {
+            var rb = el("button", "", "回复");
+            rb.addEventListener("click", function () {
+              var content = window.prompt("回复评论（将以站点名称发布并直接显示）：", "");
+              if (content === null) return;
+              if (!content.trim()) return;
+              api("/admin-ext/api/comments/reply", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: item.id, content: content }),
+              }).then(function (res) {
+                window.alert(res.ok ? "回复已发布" : (res.data.error || "回复失败"));
+              });
+            });
+            wrap.appendChild(rb);
+          }
+          return wrap;
+        }
+
+        function renderRows() {
+          rowsEl.innerHTML = "";
+          emptyEl.hidden = state.items.length !== 0;
+          selectAll.checked = false;
+          state.items.forEach(function (item) {
+            var tr = el("tr");
+
+            var tdCb = el("td");
+            var cb = el("input");
+            cb.type = "checkbox";
+            cb.className = "row-check";
+            cb.value = String(item.id);
+            tdCb.appendChild(cb);
+
+            var tdAuthor = el("td");
+            tdAuthor.appendChild(el("div", "cell-author", item.author || "(无昵称)"));
+
+            var tdEmail = el("td");
+            tdEmail.appendChild(el("div", "cell-email", item.email || ""));
+
+            var tdBody = el("td", "cell-excerpt");
+            tdBody.appendChild(el("div", "c", excerpt(item.content)));
+            tdBody.appendChild(actionButtons(item));
+
+            var tdPost = el("td", "cell-post");
+            if (item.postName) {
+              var a = el("a", "", item.postTitle || item.postName);
+              a.href = "/blog/" + item.postName;
+              a.target = "_blank";
+              a.rel = "noopener";
+              tdPost.appendChild(a);
+            } else {
+              tdPost.appendChild(el("span", "", "#" + item.postId));
+            }
+            var editPath = item.postType === "page" ? "/admin/pages/" + item.postId : "/admin/posts/" + item.postId;
+            var edit = el("a", "edit", "编辑");
+            edit.href = editPath;
+            tdPost.appendChild(edit);
+
+            var tdMeta = el("td", "cell-meta");
+            tdMeta.appendChild(el("div", "", fmtDate(item.createdAt)));
+            tdMeta.appendChild(el("div", "", item.ip || ""));
+
+            tr.appendChild(tdCb);
+            tr.appendChild(tdAuthor);
+            tr.appendChild(tdEmail);
+            tr.appendChild(tdBody);
+            tr.appendChild(tdPost);
+            tr.appendChild(tdMeta);
+            rowsEl.appendChild(tr);
+          });
+
+          var pages = Math.max(1, Math.ceil(state.total / state.perPage));
+          pageInfo.textContent = "第 " + state.page + " / " + pages + " 页（共 " + state.total + " 条）";
+          document.getElementById("prev-page").disabled = state.page <= 1;
+          document.getElementById("next-page").disabled = state.page >= pages;
+        }
+
+        function load() {
+          var params = new URLSearchParams();
+          params.set("status", state.status);
+          params.set("page", String(state.page));
+          if (state.q) params.set("q", state.q);
+          return api("/admin-ext/api/comments/list?" + params.toString()).then(function (res) {
+            if (!res.ok) return;
+            state.items = res.data.items || [];
+            state.total = res.data.total || 0;
+            state.counts = res.data.counts || state.counts;
+            state.perPage = res.data.perPage || state.perPage;
+            renderTabs();
+            renderRows();
+          });
+        }
+
+        function doAction(action, ids) {
+          if (!ids.length) return Promise.resolve();
+          return api("/admin-ext/api/comments/action", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ids: ids, action: action }),
+          }).then(function (res) {
+            if (!res.ok) window.alert(res.data.error || "操作失败");
+            return res;
+          });
+        }
+
+        // 标签切换
+        document.getElementById("tabs").addEventListener("click", function (e) {
+          var t = e.target.closest ? e.target.closest(".tab") : null;
+          if (!t) return;
+          state.status = t.getAttribute("data-status");
+          state.page = 1;
+          load();
+        });
+        // 搜索
+        document.getElementById("search-form").addEventListener("submit", function (e) {
+          e.preventDefault();
+          state.q = document.getElementById("q").value.trim();
+          state.page = 1;
+          load();
+        });
+        document.getElementById("q").value = state.q;
+        // 分页
+        document.getElementById("prev-page").addEventListener("click", function () {
+          if (state.page > 1) { state.page--; load(); }
+        });
+        document.getElementById("next-page").addEventListener("click", function () {
+          state.page++; load();
+        });
+        // 全选
+        selectAll.addEventListener("change", function () {
+          var cbs = rowsEl.querySelectorAll(".row-check");
+          for (var i = 0; i < cbs.length; i++) cbs[i].checked = selectAll.checked;
+        });
+        // 批量
+        document.getElementById("bulk-apply").addEventListener("click", function () {
+          var action = document.getElementById("bulk-action").value;
+          if (!action) return;
+          var ids = [];
+          rowsEl.querySelectorAll(".row-check:checked").forEach(function (cb) { ids.push(parseInt(cb.value, 10)); });
+          if (!ids.length) { window.alert("请先勾选评论"); return; }
+          if (action === "delete" && !window.confirm("永久删除不可恢复，确定删除选中的 " + ids.length + " 条评论？")) return;
+          doAction(action, ids).then(function (res) {
+            if (res.ok) { document.getElementById("bulk-action").value = ""; load(); }
+          });
+        });
+
+        // 设置区
+        function fillSettings() {
+          var s = state.settings;
+          document.getElementById("s-enabled").checked = !!s.enabled;
+          document.getElementById("s-auto").checked = !!s.autoApprove;
+          document.getElementById("s-desc").checked = s.order === "desc";
+          document.getElementById("s-perpage").value = String(s.perPage || 20);
+          var closed = s.closedTypes || [];
+          document.querySelectorAll(".s-closed").forEach(function (cb) {
+            cb.checked = closed.indexOf(cb.value) >= 0;
+          });
+        }
+        document.getElementById("save-settings").addEventListener("click", function () {
+          var closed = [];
+          document.querySelectorAll(".s-closed:checked").forEach(function (cb) { closed.push(cb.value); });
+          var payload = {
+            enabled: document.getElementById("s-enabled").checked,
+            autoApprove: document.getElementById("s-auto").checked,
+            order: document.getElementById("s-desc").checked ? "desc" : "asc",
+            perPage: parseInt(document.getElementById("s-perpage").value, 10) || 20,
+            closedTypes: closed,
+          };
+          var msg = document.getElementById("settings-msg");
+          api("/admin-ext/api/comments/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          }).then(function (res) {
+            msg.className = "msg " + (res.ok ? "ok" : "err");
+            msg.textContent = res.ok ? "已保存。" : (res.data.error || "保存失败");
+            if (res.ok && res.data.settings) state.settings = res.data.settings;
+            setTimeout(function () { msg.textContent = ""; }, 3000);
+          });
+        });
+
+        renderTabs();
+        renderRows();
+        fillSettings();
+      })();
+    </script>
+</AdminLayout>

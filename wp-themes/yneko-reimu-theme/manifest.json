@@ -1,0 +1,26 @@
+{
+  "name": "Yneko-Reimu",
+  "version": "1.0.0",
+  "description": "Reimu-style ACG blog theme with red accent and rounded cards",
+  "author": "Yneko",
+  "tokens": {
+    "fonts": {
+      "body": "'LXGW WenKai', -apple-system, sans-serif",
+      "heading": "'LXGW WenKai', -apple-system, sans-serif"
+    },
+    "spacing": {
+      "sectionY": "48px",
+      "borderRadius": "16px",
+      "containerMax": "1100px"
+    },
+    "colors": {
+      "textMuted": "#896666",
+      "surface": "#fff0f0",
+      "background": "#fff8f8",
+      "secondary": "#8a6900",
+      "border": "#ffc0c0",
+      "text": "#333333",
+      "primary": "#e10000"
+    }
+  }
+}

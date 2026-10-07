@@ -1,0 +1,28 @@
+{
+    "name":  "@astropress/plugin-ops-suite",
+    "version":  "1.0.0",
+    "private":  true,
+    "type":  "module",
+    "description":  "合并套件：Webhook发布 · 数据库控制台 · 网站目录 · 文件管理 · WebDAV存储 · 数据库优化",
+    "exports":  {
+                    ".":  "./src/index.ts",
+                    "./integration":  "./src/integration.ts"
+                },
+    "scripts":  {
+                    "typecheck":  "tsc --noEmit"
+                },
+    "dependencies":  {
+                         "@astropress/core":  "workspace:*",
+                         "@astropress/plugin-webhook-publisher":  "workspace:*",
+                         "@astropress/plugin-db-console":  "workspace:*",
+                         "@astropress/plugin-link-directory":  "workspace:*",
+                         "@astropress/plugin-file-manager":  "workspace:*",
+                         "@astropress/plugin-webdav":  "workspace:*",
+                         "@astropress/plugin-db-optimize":  "workspace:*"
+                     },
+    "devDependencies":  {
+                            "astro":  "^4.0.0",
+                            "typescript":  "^5.4.0",
+                            "@cloudflare/workers-types":  "^4.0.0"
+                        }
+}

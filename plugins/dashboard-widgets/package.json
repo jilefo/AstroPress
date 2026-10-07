@@ -1,0 +1,21 @@
+{
+  "name": "@astropress/plugin-dashboard-widgets",
+  "version": "0.1.0",
+  "description": "仪表盘增强：在最近文章、草稿箱、系统健康、活动摘要等 widget 注入到 Dashboard",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./integration.admin": "./src/integration.admin.ts"
+  },
+  "scripts": { "typecheck": "tsc --noEmit" },
+  "dependencies": {
+    "@astropress/core": "workspace:*",
+    "drizzle-orm": "^0.36.0"
+  },
+  "devDependencies": {
+    "astro": "^4.0.0",
+    "typescript": "^5.4.0",
+    "@cloudflare/workers-types": "^4.0.0"
+  }
+}

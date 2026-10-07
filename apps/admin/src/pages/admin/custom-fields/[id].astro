@@ -1,0 +1,9 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import FieldGroupEditor from "../../../islands/FieldGroupEditor";
+
+const groupId = Astro.params.id!;
+---
+<AdminLayout title="编辑字段组">
+  <FieldGroupEditor client:only="react" groupId={groupId} />
+</AdminLayout>

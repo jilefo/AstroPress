@@ -1,0 +1,26 @@
+{
+  "name": "VitePress Theme Ninc",
+  "version": "1.0.0",
+  "description": "Blog and documentation theme from VitePress with indigo accent",
+  "author": "Ninc",
+  "tokens": {
+    "fonts": {
+      "body": "'Inter', -apple-system, sans-serif",
+      "heading": "'Inter', -apple-system, sans-serif"
+    },
+    "spacing": {
+      "sectionY": "48px",
+      "borderRadius": "6px",
+      "containerMax": "1100px"
+    },
+    "colors": {
+      "textMuted": "#717171",
+      "surface": "#f6f6f7",
+      "background": "#ffffff",
+      "secondary": "#357f49",
+      "border": "#e5e5e5",
+      "text": "#333333",
+      "primary": "#3451b2"
+    }
+  }
+}

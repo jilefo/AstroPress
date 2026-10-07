@@ -1,0 +1,29 @@
+name = "astropress-v2"
+main = "./dist/_worker.js/index.js"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# Serves static assets from dist/ and SSR from _worker.js
+[assets]
+binding = "ASSETS"
+directory = "./dist"
+not_found_handling = "404-page"
+
+[build]
+command = "pnpm --filter @astropress/admin run build:cf"
+
+[observability]
+enabled = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "astropress-v2"
+database_id = "a8b18a2e-cb65-4d27-9685-18104cc09c04"
+
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "astropress-media-v2"
+
+# Workers AI — enables Cloudflare-hosted LLM inference (AI 写作/助手)
+[ai]
+binding = "AI"

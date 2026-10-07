@@ -1,0 +1,104 @@
+---
+/**
+ * /admin-ext/related-posts — 相关文章插件设置页
+ */
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+if (!Astro.locals.user || !Astro.locals.db) return Astro.redirect("/login");
+---
+<AdminLayout title="相关文章">
+    <style is:global>
+      * { box-sizing: border-box; }
+      .wrap { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+      .card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 20px; }
+      h1 { font-size: 20px; margin: 0 0 16px; }
+      label { display: block; font-size: 13px; font-weight: 600; margin: 16px 0 4px; }
+      input[type="number"], input[type="text"], textarea { width: 100%; font-size: 13px; padding: 6px 8px; border: 1px solid #8c8f94; border-radius: 3px; }
+      textarea { font-family: Consolas, Monaco, monospace; resize: vertical; }
+      button { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 8px 16px; cursor: pointer; font-size: 13px; margin-top: 20px; }
+      .msg { font-size: 13px; margin-top: 10px; min-height: 18px; }
+      .ok { color: #00a32a; }
+      .err { color: #b32d2e; }
+      .hint { font-size: 12px; color: #646970; margin-top: 4px; }
+      .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+      .check { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+    </style>
+
+    <div class="wrap">
+      <div class="card">
+        <h1>相关文章设置</h1>
+        <div class="check">
+          <input type="checkbox" id="enabled" checked />
+          <label for="enabled" style="margin:0">在文章页启用推荐区块</label>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="related">相关文章数量</label>
+            <input type="number" id="related" min="0" max="12" value="4" />
+            <div class="hint">0 = 关闭</div>
+          </div>
+          <div>
+            <label for="random">随机推荐数量</label>
+            <input type="number" id="random" min="0" max="12" value="4" />
+            <div class="hint">0 = 关闭</div>
+          </div>
+          <div>
+            <label for="popular">热门文章数量</label>
+            <input type="number" id="popular" min="0" max="12" value="4" />
+            <div class="hint">0 = 关闭</div>
+          </div>
+        </div>
+
+        <label for="heading">区块总标题（留空则不显示）</label>
+        <input type="text" id="heading" value="更多阅读" />
+
+        <label for="css">自定义 CSS（可选）</label>
+        <textarea id="css" rows="5" placeholder=".related-posts-section h3 { color: red; }"></textarea>
+        <div class="hint">CSS 会直接内联到文章页，作用于 .related-posts-section 容器。</div>
+
+        <button id="save">保存设置</button>
+        <div class="msg" id="msg"></div>
+      </div>
+    </div>
+
+    <script>
+      (async () => {
+        const msg = document.getElementById("msg");
+        const fields = ["enabled", "related", "random", "popular", "heading", "css"];
+
+        async function load() {
+          const r = await fetch("/admin-ext/api/related-posts/settings");
+          if (!r.ok) return;
+          const s = await r.json();
+          document.getElementById("enabled").checked = s.enabled;
+          document.getElementById("related").value = s.related;
+          document.getElementById("random").value = s.random;
+          document.getElementById("popular").value = s.popular;
+          document.getElementById("heading").value = s.heading;
+          document.getElementById("css").value = s.css;
+        }
+
+        document.getElementById("save").addEventListener("click", async () => {
+          const payload = {
+            enabled: document.getElementById("enabled").checked,
+            related: parseInt(document.getElementById("related").value, 10) || 0,
+            random: parseInt(document.getElementById("random").value, 10) || 0,
+            popular: parseInt(document.getElementById("popular").value, 10) || 0,
+            heading: document.getElementById("heading").value.trim(),
+            css: document.getElementById("css").value,
+          };
+          const r = await fetch("/admin-ext/api/related-posts/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const d = await r.json();
+          msg.className = "msg " + (r.ok ? "ok" : "err");
+          msg.textContent = r.ok ? "已保存。" : (d.error || "保存失败");
+          setTimeout(() => (msg.textContent = ""), 3000);
+        });
+
+        load();
+      })();
+    </script>
+</AdminLayout>

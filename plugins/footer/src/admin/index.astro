@@ -1,0 +1,156 @@
+---
+/**
+ * /admin-ext/footer — 页脚插件设置页
+ */
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+if (!Astro.locals.user || !Astro.locals.db) return Astro.redirect("/login");
+---
+<AdminLayout title="页脚设置">
+    <style is:global>
+      * { box-sizing: border-box; }
+      .wrap { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+      .card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 20px; }
+      h1 { font-size: 20px; margin: 0 0 16px; }
+      h2 { font-size: 15px; margin: 24px 0 12px; padding-top: 16px; border-top: 1px solid #e5e7eb; }
+      label { display: block; font-size: 13px; font-weight: 600; margin: 16px 0 4px; }
+      input[type="text"], textarea { width: 100%; font-size: 13px; padding: 6px 8px; border: 1px solid #8c8f94; border-radius: 3px; }
+      textarea { font-family: Consolas, Monaco, monospace; resize: vertical; }
+      button { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 8px 16px; cursor: pointer; font-size: 13px; margin-top: 20px; }
+      .btn-secondary { background: #f6f7f7; color: #2c3338; border: 1px solid #c3c4c7; }
+      .btn-danger { background: #d63638; }
+      .msg { font-size: 13px; margin-top: 10px; min-height: 18px; }
+      .ok { color: #00a32a; }
+      .err { color: #b32d2e; }
+      .hint { font-size: 12px; color: #646970; margin-top: 4px; }
+      .check { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+      .links-list { margin-top: 8px; }
+      .link-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+      .link-row button { margin-top: 0; padding: 6px 12px; }
+    </style>
+
+    <div class="wrap">
+      <div class="card">
+        <h1>页脚设置</h1>
+
+        <div class="check">
+          <input type="checkbox" id="enabled" checked />
+          <label for="enabled" style="margin:0">启用页脚注入</label>
+        </div>
+
+        <label for="copyright">版权信息</label>
+        <input type="text" id="copyright" placeholder="© 2026 My Blog" />
+
+        <label for="icp">ICP备案号</label>
+        <input type="text" id="icp" placeholder="京ICP备12345678号" />
+        <div class="hint">将链接至 https://beian.miit.gov.cn/</div>
+
+        <label for="police">公安备案号</label>
+        <input type="text" id="police" placeholder="京公网安备11010502099999号" />
+        <div class="hint">将链接至 http://www.beian.gov.cn/portal/registerSystemInfo</div>
+
+        <h2>自定义链接</h2>
+        <div class="hint">最多 5 个，外部链接将在新标签页打开</div>
+        <div class="links-list" id="linksList"></div>
+        <button type="button" class="btn-secondary" id="addLink" style="margin-top:4px">+ 添加链接</button>
+
+        <h2>高级</h2>
+        <label for="customHtml">自定义 HTML（可选）</label>
+        <textarea id="customHtml" rows="4" placeholder="&lt;span&gt;额外内容&lt;/span&gt;"></textarea>
+        <div class="hint">支持原始 HTML，但 &lt;script&gt;、&lt;iframe&gt;、on* 事件属性会被自动过滤。</div>
+
+        <div class="check" style="margin-top:16px">
+          <input type="checkbox" id="showPoweredBy" checked />
+          <label for="showPoweredBy" style="margin:0">显示 "Powered by AstroPress"</label>
+        </div>
+
+        <button id="save">保存设置</button>
+        <div class="msg" id="msg"></div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        var msg = document.getElementById("msg");
+        var linksList = document.getElementById("linksList");
+        var MAX_LINKS = 5;
+        var links = [];
+
+        function renderLinks() {
+          linksList.innerHTML = "";
+          links.forEach(function (link, idx) {
+            var row = document.createElement("div");
+            row.className = "link-row";
+            row.innerHTML = // ap-audit-ok: 动态值经 escapeAttr，其余为静态串
+              '<input type="text" class="link-label" placeholder="文字" value="' + escapeAttr(link.label) + '" />' +
+              '<input type="text" class="link-url" placeholder="https://..." value="' + escapeAttr(link.url) + '" />' +
+              '<button type="button" class="btn-danger" data-idx="' + idx + '">删除</button>';
+            linksList.appendChild(row);
+          });
+          linksList.querySelectorAll(".btn-danger").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+              var i = parseInt(btn.getAttribute("data-idx"), 10);
+              links.splice(i, 1);
+              renderLinks();
+            });
+          });
+          linksList.querySelectorAll(".link-label").forEach(function (input, idx) {
+            input.addEventListener("input", function () {
+              links[idx].label = input.value;
+            });
+          });
+          linksList.querySelectorAll(".link-url").forEach(function (input, idx) {
+            input.addEventListener("input", function () {
+              links[idx].url = input.value;
+            });
+          });
+        }
+
+        function escapeAttr(s) {
+          return String(s || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+        }
+
+        document.getElementById("addLink").addEventListener("click", function () {
+          if (links.length >= MAX_LINKS) return;
+          links.push({ label: "", url: "" });
+          renderLinks();
+        });
+
+        async function load() {
+          var r = await fetch("/admin-ext/api/footer/settings");
+          if (!r.ok) return;
+          var s = await r.json();
+          document.getElementById("enabled").checked = s.enabled;
+          document.getElementById("copyright").value = s.copyright;
+          document.getElementById("icp").value = s.icp;
+          document.getElementById("police").value = s.police;
+          document.getElementById("customHtml").value = s.customHtml;
+          document.getElementById("showPoweredBy").checked = s.showPoweredBy;
+          links = Array.isArray(s.links) ? s.links.slice(0, MAX_LINKS) : [];
+          renderLinks();
+        }
+
+        document.getElementById("save").addEventListener("click", async function () {
+          var payload = {
+            enabled: document.getElementById("enabled").checked,
+            copyright: document.getElementById("copyright").value.trim(),
+            icp: document.getElementById("icp").value.trim(),
+            police: document.getElementById("police").value.trim(),
+            customHtml: document.getElementById("customHtml").value,
+            showPoweredBy: document.getElementById("showPoweredBy").checked,
+            links: links.filter(function (l) { return l.label.trim() && l.url.trim(); }),
+          };
+          var r = await fetch("/admin-ext/api/footer/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          var d = await r.json();
+          msg.className = "msg " + (r.ok ? "ok" : "err");
+          msg.textContent = r.ok ? "已保存。" : (d.error || "保存失败");
+          setTimeout(function () { msg.textContent = ""; }, 3000);
+        });
+
+        load();
+      })();
+    </script>
+</AdminLayout>

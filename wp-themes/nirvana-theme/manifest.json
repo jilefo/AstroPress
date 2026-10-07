@@ -1,0 +1,26 @@
+{
+  "name": "niRvana",
+  "version": "1.0.0",
+  "description": "Photo portfolio theme with grid layout and Play font headings",
+  "author": "niRvana",
+  "tokens": {
+    "fonts": {
+      "body": "'Microsoft YaHei', -apple-system, sans-serif",
+      "heading": "'Play', -apple-system, sans-serif"
+    },
+    "spacing": {
+      "sectionY": "48px",
+      "borderRadius": "8px",
+      "containerMax": "1200px"
+    },
+    "colors": {
+      "textMuted": "#6e7178",
+      "surface": "#f5f7fa",
+      "background": "#ffffff",
+      "secondary": "#e50000",
+      "border": "#e4e7ed",
+      "text": "#2c3e50",
+      "primary": "#0074c9"
+    }
+  }
+}

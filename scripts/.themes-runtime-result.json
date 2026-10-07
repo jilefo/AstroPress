@@ -1,0 +1,866 @@
+{
+  "time": "2026-10-03T19:12:09.886875",
+  "total": 143,
+  "passed": 143,
+  "failed": 0,
+  "results": [
+    {
+      "theme": "Base Theme",
+      "item": "激活",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Base Theme",
+      "item": "首页 200",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "theme": "Base Theme",
+      "item": "首页含主题 CSS 注入",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Base Theme",
+      "item": "首页无致命错误文本",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Base Theme",
+      "item": "文章页 200",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "theme": "Base Theme",
+      "item": "文章页插件注入: comments(#ap-comments)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Base Theme",
+      "item": "文章页插件注入: share(.ap-share)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Base Theme",
+      "item": "文章页插件注入: donation(#ap-donation)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Base Theme",
+      "item": "文章页插件注入: customer-service(#apcs-root)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Base Theme",
+      "item": "文章页插件注入: search-fab(#ap-search-fab)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Base Theme",
+      "item": "文章页插件注入: related-posts(#related-posts-block)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Base Theme",
+      "item": "文章页无致命错误文本",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Base Theme",
+      "item": "主题 CSS 未隐藏插件节点",
+      "status": "PASS",
+      "detail": "hidden=[]"
+    },
+    {
+      "theme": "Stack",
+      "item": "激活",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Stack",
+      "item": "首页 200",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "theme": "Stack",
+      "item": "首页含主题 CSS 注入",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Stack",
+      "item": "首页无致命错误文本",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Stack",
+      "item": "文章页 200",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "theme": "Stack",
+      "item": "文章页插件注入: comments(#ap-comments)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Stack",
+      "item": "文章页插件注入: share(.ap-share)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Stack",
+      "item": "文章页插件注入: donation(#ap-donation)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Stack",
+      "item": "文章页插件注入: customer-service(#apcs-root)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Stack",
+      "item": "文章页插件注入: search-fab(#ap-search-fab)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Stack",
+      "item": "文章页插件注入: related-posts(#related-posts-block)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Stack",
+      "item": "文章页无致命错误文本",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Stack",
+      "item": "主题 CSS 未隐藏插件节点",
+      "status": "PASS",
+      "detail": "hidden=[]"
+    },
+    {
+      "theme": "Ayer",
+      "item": "激活",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Ayer",
+      "item": "首页 200",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "theme": "Ayer",
+      "item": "首页含主题 CSS 注入",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Ayer",
+      "item": "首页无致命错误文本",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Ayer",
+      "item": "文章页 200",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "theme": "Ayer",
+      "item": "文章页插件注入: comments(#ap-comments)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Ayer",
+      "item": "文章页插件注入: share(.ap-share)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Ayer",
+      "item": "文章页插件注入: donation(#ap-donation)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Ayer",
+      "item": "文章页插件注入: customer-service(#apcs-root)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Ayer",
+      "item": "文章页插件注入: search-fab(#ap-search-fab)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Ayer",
+      "item": "文章页插件注入: related-posts(#related-posts-block)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Ayer",
+      "item": "文章页无致命错误文本",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Ayer",
+      "item": "主题 CSS 未隐藏插件节点",
+      "status": "PASS",
+      "detail": "hidden=[]"
+    },
+    {
+      "theme": "Butterfly",
+      "item": "激活",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Butterfly",
+      "item": "首页 200",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "theme": "Butterfly",
+      "item": "首页含主题 CSS 注入",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Butterfly",
+      "item": "首页无致命错误文本",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Butterfly",
+      "item": "文章页 200",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "theme": "Butterfly",
+      "item": "文章页插件注入: comments(#ap-comments)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Butterfly",
+      "item": "文章页插件注入: share(.ap-share)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Butterfly",
+      "item": "文章页插件注入: donation(#ap-donation)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Butterfly",
+      "item": "文章页插件注入: customer-service(#apcs-root)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Butterfly",
+      "item": "文章页插件注入: search-fab(#ap-search-fab)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Butterfly",
+      "item": "文章页插件注入: related-posts(#related-posts-block)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Butterfly",
+      "item": "文章页无致命错误文本",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Butterfly",
+      "item": "主题 CSS 未隐藏插件节点",
+      "status": "PASS",
+      "detail": "hidden=[]"
+    },
+    {
+      "theme": "Fluid",
+      "item": "激活",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Fluid",
+      "item": "首页 200",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "theme": "Fluid",
+      "item": "首页含主题 CSS 注入",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Fluid",
+      "item": "首页无致命错误文本",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Fluid",
+      "item": "文章页 200",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "theme": "Fluid",
+      "item": "文章页插件注入: comments(#ap-comments)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Fluid",
+      "item": "文章页插件注入: share(.ap-share)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Fluid",
+      "item": "文章页插件注入: donation(#ap-donation)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Fluid",
+      "item": "文章页插件注入: customer-service(#apcs-root)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Fluid",
+      "item": "文章页插件注入: search-fab(#ap-search-fab)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Fluid",
+      "item": "文章页插件注入: related-posts(#related-posts-block)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Fluid",
+      "item": "文章页无致命错误文本",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Fluid",
+      "item": "主题 CSS 未隐藏插件节点",
+      "status": "PASS",
+      "detail": "hidden=[]"
+    },
+    {
+      "theme": "Icarus",
+      "item": "激活",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Icarus",
+      "item": "首页 200",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "theme": "Icarus",
+      "item": "首页含主题 CSS 注入",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Icarus",
+      "item": "首页无致命错误文本",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Icarus",
+      "item": "文章页 200",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "theme": "Icarus",
+      "item": "文章页插件注入: comments(#ap-comments)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Icarus",
+      "item": "文章页插件注入: share(.ap-share)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Icarus",
+      "item": "文章页插件注入: donation(#ap-donation)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Icarus",
+      "item": "文章页插件注入: customer-service(#apcs-root)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Icarus",
+      "item": "文章页插件注入: search-fab(#ap-search-fab)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Icarus",
+      "item": "文章页插件注入: related-posts(#related-posts-block)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Icarus",
+      "item": "文章页无致命错误文本",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Icarus",
+      "item": "主题 CSS 未隐藏插件节点",
+      "status": "PASS",
+      "detail": "hidden=[]"
+    },
+    {
+      "theme": "Keep",
+      "item": "激活",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Keep",
+      "item": "首页 200",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "theme": "Keep",
+      "item": "首页含主题 CSS 注入",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Keep",
+      "item": "首页无致命错误文本",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Keep",
+      "item": "文章页 200",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "theme": "Keep",
+      "item": "文章页插件注入: comments(#ap-comments)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Keep",
+      "item": "文章页插件注入: share(.ap-share)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Keep",
+      "item": "文章页插件注入: donation(#ap-donation)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Keep",
+      "item": "文章页插件注入: customer-service(#apcs-root)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Keep",
+      "item": "文章页插件注入: search-fab(#ap-search-fab)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Keep",
+      "item": "文章页插件注入: related-posts(#related-posts-block)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Keep",
+      "item": "文章页无致命错误文本",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Keep",
+      "item": "主题 CSS 未隐藏插件节点",
+      "status": "PASS",
+      "detail": "hidden=[]"
+    },
+    {
+      "theme": "MengD",
+      "item": "激活",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "MengD",
+      "item": "首页 200",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "theme": "MengD",
+      "item": "首页含主题 CSS 注入",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "MengD",
+      "item": "首页无致命错误文本",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "MengD",
+      "item": "文章页 200",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "theme": "MengD",
+      "item": "文章页插件注入: comments(#ap-comments)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "MengD",
+      "item": "文章页插件注入: share(.ap-share)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "MengD",
+      "item": "文章页插件注入: donation(#ap-donation)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "MengD",
+      "item": "文章页插件注入: customer-service(#apcs-root)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "MengD",
+      "item": "文章页插件注入: search-fab(#ap-search-fab)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "MengD",
+      "item": "文章页插件注入: related-posts(#related-posts-block)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "MengD",
+      "item": "文章页无致命错误文本",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "MengD",
+      "item": "主题 CSS 未隐藏插件节点",
+      "status": "PASS",
+      "detail": "hidden=[]"
+    },
+    {
+      "theme": "NexT",
+      "item": "激活",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "NexT",
+      "item": "首页 200",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "theme": "NexT",
+      "item": "首页含主题 CSS 注入",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "NexT",
+      "item": "首页无致命错误文本",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "NexT",
+      "item": "文章页 200",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "theme": "NexT",
+      "item": "文章页插件注入: comments(#ap-comments)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "NexT",
+      "item": "文章页插件注入: share(.ap-share)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "NexT",
+      "item": "文章页插件注入: donation(#ap-donation)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "NexT",
+      "item": "文章页插件注入: customer-service(#apcs-root)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "NexT",
+      "item": "文章页插件注入: search-fab(#ap-search-fab)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "NexT",
+      "item": "文章页插件注入: related-posts(#related-posts-block)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "NexT",
+      "item": "文章页无致命错误文本",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "NexT",
+      "item": "主题 CSS 未隐藏插件节点",
+      "status": "PASS",
+      "detail": "hidden=[]"
+    },
+    {
+      "theme": "Redefine",
+      "item": "激活",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Redefine",
+      "item": "首页 200",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "theme": "Redefine",
+      "item": "首页含主题 CSS 注入",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Redefine",
+      "item": "首页无致命错误文本",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Redefine",
+      "item": "文章页 200",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "theme": "Redefine",
+      "item": "文章页插件注入: comments(#ap-comments)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Redefine",
+      "item": "文章页插件注入: share(.ap-share)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Redefine",
+      "item": "文章页插件注入: donation(#ap-donation)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Redefine",
+      "item": "文章页插件注入: customer-service(#apcs-root)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Redefine",
+      "item": "文章页插件注入: search-fab(#ap-search-fab)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Redefine",
+      "item": "文章页插件注入: related-posts(#related-posts-block)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Redefine",
+      "item": "文章页无致命错误文本",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Redefine",
+      "item": "主题 CSS 未隐藏插件节点",
+      "status": "PASS",
+      "detail": "hidden=[]"
+    },
+    {
+      "theme": "Volantis",
+      "item": "激活",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Volantis",
+      "item": "首页 200",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "theme": "Volantis",
+      "item": "首页含主题 CSS 注入",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Volantis",
+      "item": "首页无致命错误文本",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Volantis",
+      "item": "文章页 200",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "theme": "Volantis",
+      "item": "文章页插件注入: comments(#ap-comments)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Volantis",
+      "item": "文章页插件注入: share(.ap-share)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Volantis",
+      "item": "文章页插件注入: donation(#ap-donation)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Volantis",
+      "item": "文章页插件注入: customer-service(#apcs-root)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Volantis",
+      "item": "文章页插件注入: search-fab(#ap-search-fab)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Volantis",
+      "item": "文章页插件注入: related-posts(#related-posts-block)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Volantis",
+      "item": "文章页无致命错误文本",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "theme": "Volantis",
+      "item": "主题 CSS 未隐藏插件节点",
+      "status": "PASS",
+      "detail": "hidden=[]"
+    }
+  ]
+}

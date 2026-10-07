@@ -1,0 +1,992 @@
+{
+  "time": "2026-10-03T19:48:47.130680",
+  "total": 164,
+  "passed": 164,
+  "failed": 0,
+  "results": [
+    {
+      "plugin": "_auth",
+      "feature": "管理员登录",
+      "status": "PASS",
+      "detail": "HTTP status"
+    },
+    {
+      "plugin": "plugin-manager",
+      "feature": "GET /admin-ext/api/plugin-manager/state",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "plugin-manager",
+      "feature": "返回插件列表",
+      "status": "PASS",
+      "detail": "count=52"
+    },
+    {
+      "plugin": "plugin-manager",
+      "feature": "GET /admin-ext/plugin-manager 页面",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "core-admin",
+      "feature": "仪表盘 (/admin/dashboard)",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "core-admin",
+      "feature": "文章列表 (/admin/posts)",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "core-admin",
+      "feature": "新建文章 (/admin/posts/new)",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "core-admin",
+      "feature": "页面列表 (/admin/pages)",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "core-admin",
+      "feature": "媒体库 (/admin/medias)",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "core-admin",
+      "feature": "用户管理 (/admin/users)",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "core-admin",
+      "feature": "系统设置 (/admin/settings)",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "core-admin",
+      "feature": "表单管理 (/admin/forms)",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "core-admin",
+      "feature": "导航菜单 (/admin/menus)",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "core-admin",
+      "feature": "主题管理 (/admin/themes)",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "core-admin",
+      "feature": "自定义字段 (/admin/custom-fields)",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "core-admin",
+      "feature": "内容类型 (/admin/post-types)",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "core-api",
+      "feature": "GET /api/posts",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "core-api",
+      "feature": "GET /api/themes",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "core-api",
+      "feature": "GET /api/users",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "core-api",
+      "feature": "GET /api/media",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "core-api",
+      "feature": "GET /api/ai/settings",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "core-api",
+      "feature": "GET /api/post-types",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "core-api",
+      "feature": "GET /api/taxonomies",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "core-api",
+      "feature": "GET /api/custom-fields",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "core-api",
+      "feature": "GET /api/menus（仅 POST，GET 应拒绝）",
+      "status": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "plugin": "core-api",
+      "feature": "GET /api/forms",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "activity-log",
+      "feature": "GET list API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "activity-log",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "admin-i18n",
+      "feature": "GET settings API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "admin-i18n",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "ads-manager",
+      "feature": "GET slots API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "ads-manager",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "ai-autofill",
+      "feature": "GET script.js",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "ai-chat",
+      "feature": "GET status API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "ai-chat",
+      "feature": "GET providers API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "ai-chat",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "asset-cache",
+      "feature": "GET settings API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "asset-cache",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "backup",
+      "feature": "GET list API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "backup",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "cache-warmer",
+      "feature": "GET settings API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "cache-warmer",
+      "feature": "GET status API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "cache-warmer",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "comments",
+      "feature": "GET list API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "comments",
+      "feature": "GET settings API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "comments",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "config-io",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "customer-service",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "dashboard-widgets",
+      "feature": "GET stats API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "dashboard-widgets",
+      "feature": "stats 含 posts/drafts/users",
+      "status": "PASS",
+      "detail": "['posts', 'drafts', 'pages', 'media', 'users', 'comments', 'forms', 'plugins', 'dbSize']"
+    },
+    {
+      "plugin": "db-console",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "db-optimize",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "donation",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "editor-tools",
+      "feature": "POST translate API (参数校验)",
+      "status": "PASS",
+      "detail": "HTTP 400"
+    },
+    {
+      "plugin": "editor-upload",
+      "feature": "设置页可访问",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "error-monitor",
+      "feature": "GET list API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "error-monitor",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "file-manager",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "file-manager",
+      "feature": "GET files list API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "footer",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "gist-sync",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "git-sync",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "gitalk-comment",
+      "feature": "GET settings API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "gitalk-comment",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "html-opt",
+      "feature": "GET settings API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "html-opt",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "image-lazy",
+      "feature": "GET settings API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "image-lazy",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "image-mirror",
+      "feature": "GET image-mirror.js",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "link-directory",
+      "feature": "GET cats API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "link-directory",
+      "feature": "GET links API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "link-directory",
+      "feature": "GET settings API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "link-directory",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "maintenance-mode",
+      "feature": "GET settings API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "maintenance-mode",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "media-av",
+      "feature": "GET media-av.js",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "media-folders",
+      "feature": "GET list API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "media-folders",
+      "feature": "POST create 文件夹",
+      "status": "PASS",
+      "detail": "HTTP 200, id=6"
+    },
+    {
+      "plugin": "media-folders",
+      "feature": "POST rename 文件夹",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "media-folders",
+      "feature": "POST delete 文件夹",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "media-folders",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "multilingual",
+      "feature": "GET settings API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "multilingual",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "notification-center",
+      "feature": "GET unread-count API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "notification-center",
+      "feature": "GET list API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "notification-center",
+      "feature": "POST read-all",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "notification-center",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "page-cache",
+      "feature": "GET stats API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "page-cache",
+      "feature": "GET settings API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "page-cache",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "permalink",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "rate-limit",
+      "feature": "GET settings API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "rate-limit",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "redirect",
+      "feature": "GET list API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "redirect",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "related-posts",
+      "feature": "GET settings API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "related-posts",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "revisions",
+      "feature": "GET list API (带 post 参数)",
+      "status": "PASS",
+      "detail": "HTTP 200 post=25"
+    },
+    {
+      "plugin": "revisions",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "search",
+      "feature": "GET settings API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "search",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "search",
+      "feature": "GET /search 前台页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "security-headers",
+      "feature": "GET settings API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "security-headers",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "seo",
+      "feature": "第一方插件已在注册表标记",
+      "status": "PASS",
+      "detail": "SEO（核心）"
+    },
+    {
+      "plugin": "seo-tools",
+      "feature": "GET settings API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "seo-tools",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "seo-tools",
+      "feature": "GET /sitemap.xml",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "seo-tools",
+      "feature": "GET /robots.txt",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "seo-tools",
+      "feature": "GET /rss.xml",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "share",
+      "feature": "GET settings API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "share",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "sitemap",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "static-html",
+      "feature": "GET settings API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "static-html",
+      "feature": "GET status API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "static-html",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "two-factor-auth",
+      "feature": "GET status API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "two-factor-auth",
+      "feature": "POST setup (生成密钥)",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "two-factor-auth",
+      "feature": "POST verify (错误码被拒绝)",
+      "status": "PASS",
+      "detail": "HTTP 400"
+    },
+    {
+      "plugin": "two-factor-auth",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "user-roles",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "user-roles",
+      "feature": "页面含角色矩阵内容",
+      "status": "PASS",
+      "detail": "body[:100]=b'<!DOCTYPE html><html lang=\"en\"> <head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=dev'"
+    },
+    {
+      "plugin": "webdav",
+      "feature": "GET token API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "webdav",
+      "feature": "GET stats API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "webdav",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "webhook-publisher",
+      "feature": "GET keys API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "webhook-publisher",
+      "feature": "GET logs API",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "webhook-publisher",
+      "feature": "GET 管理页",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "wp-editor",
+      "feature": "GET wp-editor.js",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "frontend",
+      "feature": "首页 /",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "frontend",
+      "feature": "博客列表 /blog/",
+      "status": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "plugin": "frontend",
+      "feature": "搜索页 /search",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "frontend",
+      "feature": "目录页 /directory",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "frontend",
+      "feature": "sitemap.xml",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "frontend",
+      "feature": "robots.txt",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "frontend",
+      "feature": "rss.xml",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "plugin": "injection",
+      "feature": "Dashboard 含 widget 注入",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "plugin": "injection",
+      "feature": "Dashboard 含通知铃铛注入",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "plugin": "injection",
+      "feature": "文章页含侧边栏注入",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "plugin": "injection",
+      "feature": "安全响应头 (3/3)",
+      "status": "PASS",
+      "detail": "found=['x-content-type-options', 'x-frame-options', 'referrer-policy']"
+    },
+    {
+      "plugin": "registry-fix",
+      "feature": "11 插件全部出现「设置」按钮",
+      "status": "PASS",
+      "detail": "missing=[]"
+    },
+    {
+      "plugin": "registry-fix",
+      "feature": "11 插件全部可启停（非 system）",
+      "status": "PASS",
+      "detail": "system=[]"
+    },
+    {
+      "plugin": "activity-log",
+      "feature": "禁用后路由全部 404",
+      "status": "PASS",
+      "detail": "codes=[404, 404]"
+    },
+    {
+      "plugin": "activity-log",
+      "feature": "启用后路由恢复",
+      "status": "PASS",
+      "detail": "codes=[200, 200]"
+    },
+    {
+      "plugin": "asset-cache",
+      "feature": "禁用后路由全部 404",
+      "status": "PASS",
+      "detail": "codes=[404, 404]"
+    },
+    {
+      "plugin": "asset-cache",
+      "feature": "启用后路由恢复",
+      "status": "PASS",
+      "detail": "codes=[200, 200]"
+    },
+    {
+      "plugin": "cache-warmer",
+      "feature": "禁用后路由全部 404",
+      "status": "PASS",
+      "detail": "codes=[404, 404]"
+    },
+    {
+      "plugin": "cache-warmer",
+      "feature": "启用后路由恢复",
+      "status": "PASS",
+      "detail": "codes=[200, 200]"
+    },
+    {
+      "plugin": "maintenance-mode",
+      "feature": "禁用后路由全部 404",
+      "status": "PASS",
+      "detail": "codes=[404, 404]"
+    },
+    {
+      "plugin": "maintenance-mode",
+      "feature": "启用后路由恢复",
+      "status": "PASS",
+      "detail": "codes=[200, 200]"
+    },
+    {
+      "plugin": "media-folders",
+      "feature": "禁用后路由全部 404",
+      "status": "PASS",
+      "detail": "codes=[404, 404]"
+    },
+    {
+      "plugin": "media-folders",
+      "feature": "启用后路由恢复",
+      "status": "PASS",
+      "detail": "codes=[200, 200]"
+    },
+    {
+      "plugin": "notification-center",
+      "feature": "禁用后路由全部 404",
+      "status": "PASS",
+      "detail": "codes=[404, 404]"
+    },
+    {
+      "plugin": "notification-center",
+      "feature": "启用后路由恢复",
+      "status": "PASS",
+      "detail": "codes=[200, 200]"
+    },
+    {
+      "plugin": "rate-limit",
+      "feature": "禁用后路由全部 404",
+      "status": "PASS",
+      "detail": "codes=[404, 404]"
+    },
+    {
+      "plugin": "rate-limit",
+      "feature": "启用后路由恢复",
+      "status": "PASS",
+      "detail": "codes=[200, 200]"
+    },
+    {
+      "plugin": "revisions",
+      "feature": "禁用后路由全部 404",
+      "status": "PASS",
+      "detail": "codes=[404, 404]"
+    },
+    {
+      "plugin": "revisions",
+      "feature": "启用后路由恢复",
+      "status": "PASS",
+      "detail": "codes=[200, 400]"
+    },
+    {
+      "plugin": "two-factor-auth",
+      "feature": "禁用后路由全部 404",
+      "status": "PASS",
+      "detail": "codes=[404, 404]"
+    },
+    {
+      "plugin": "two-factor-auth",
+      "feature": "启用后路由恢复",
+      "status": "PASS",
+      "detail": "codes=[200, 200]"
+    },
+    {
+      "plugin": "user-roles",
+      "feature": "禁用后路由全部 404",
+      "status": "PASS",
+      "detail": "codes=[404]"
+    },
+    {
+      "plugin": "user-roles",
+      "feature": "启用后路由恢复",
+      "status": "PASS",
+      "detail": "codes=[200]"
+    },
+    {
+      "plugin": "dashboard-widgets",
+      "feature": "禁用后路由全部 404",
+      "status": "PASS",
+      "detail": "codes=[404]"
+    },
+    {
+      "plugin": "dashboard-widgets",
+      "feature": "启用后路由恢复",
+      "status": "PASS",
+      "detail": "codes=[200]"
+    }
+  ]
+}

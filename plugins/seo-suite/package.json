@@ -1,0 +1,28 @@
+{
+    "name":  "@astropress/plugin-seo-suite",
+    "version":  "1.0.0",
+    "private":  true,
+    "type":  "module",
+    "description":  "合并套件：相关文章 · SEO工具 · 全站搜索 · 重定向 · 固定链接 · 版本历史",
+    "exports":  {
+                    ".":  "./src/index.ts",
+                    "./integration":  "./src/integration.ts"
+                },
+    "scripts":  {
+                    "typecheck":  "tsc --noEmit"
+                },
+    "dependencies":  {
+                         "@astropress/core":  "workspace:*",
+                         "@astropress/plugin-related-posts":  "workspace:*",
+                         "@astropress/plugin-seo-tools":  "workspace:*",
+                         "@astropress/plugin-search":  "workspace:*",
+                         "@astropress/plugin-redirect":  "workspace:*",
+                         "@astropress/plugin-permalink":  "workspace:*",
+                         "@astropress/plugin-revisions":  "workspace:*"
+                     },
+    "devDependencies":  {
+                            "astro":  "^4.0.0",
+                            "typescript":  "^5.4.0",
+                            "@cloudflare/workers-types":  "^4.0.0"
+                        }
+}

@@ -1,0 +1,25 @@
+{
+    "name":  "@astropress/plugin-admin-suite",
+    "version":  "1.0.0",
+    "private":  true,
+    "type":  "module",
+    "description":  "合并套件：仪表盘增强 · 通知中心 · 主题槽位同步",
+    "exports":  {
+                    ".":  "./src/index.ts",
+                    "./integration":  "./src/integration.ts"
+                },
+    "scripts":  {
+                    "typecheck":  "tsc --noEmit"
+                },
+    "dependencies":  {
+                         "@astropress/core":  "workspace:*",
+                         "@astropress/plugin-dashboard-widgets":  "workspace:*",
+                         "@astropress/plugin-notification-center":  "workspace:*",
+                         "@astropress/plugin-theme-slot-sync":  "workspace:*"
+                     },
+    "devDependencies":  {
+                            "astro":  "^4.0.0",
+                            "typescript":  "^5.4.0",
+                            "@cloudflare/workers-types":  "^4.0.0"
+                        }
+}

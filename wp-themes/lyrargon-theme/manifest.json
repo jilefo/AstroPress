@@ -1,0 +1,26 @@
+{
+  "name": "Lyrargon",
+  "version": "1.0.0",
+  "description": "Lightweight frosted glass blog theme with large radius cards",
+  "author": "Lyrargon",
+  "tokens": {
+    "fonts": {
+      "body": "'Open Sans', -apple-system, sans-serif",
+      "heading": "'Open Sans', -apple-system, sans-serif"
+    },
+    "spacing": {
+      "sectionY": "48px",
+      "borderRadius": "16px",
+      "containerMax": "1200px"
+    },
+    "colors": {
+      "textMuted": "#5d737e",
+      "surface": "#f0f4f8",
+      "background": "#ffffff",
+      "secondary": "#dd004b",
+      "border": "#e0e6ed",
+      "text": "#37474f",
+      "primary": "#0b72c4"
+    }
+  }
+}

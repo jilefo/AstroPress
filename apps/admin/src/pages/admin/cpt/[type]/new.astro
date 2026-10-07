@@ -1,0 +1,23 @@
+---
+import { createPost } from "../../../../lib/posts";
+import { getPostType } from "@astropress/core/registry";
+
+const db = Astro.locals.db;
+const user = Astro.locals.user;
+const type = Astro.params.type!;
+
+if (!db || !user) return Astro.redirect("/login");
+
+const postTypeConfig = getPostType(type);
+if (!postTypeConfig) return Astro.redirect("/admin/dashboard");
+
+const id = await createPost(db, {
+  title: "",
+  content: "",
+  status: "auto-draft",
+  type,
+  authorId: user.id,
+});
+
+return Astro.redirect(`/admin/cpt/${type}/${id}`);
+---

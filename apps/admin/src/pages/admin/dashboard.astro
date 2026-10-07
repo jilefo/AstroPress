@@ -1,0 +1,155 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+
+const user = Astro.locals.user;
+const db = Astro.locals.db;
+
+let postCount = 0;
+let pageCount = 0;
+let formCount = 0;
+
+if (db) {
+  const { wpPosts, wpOptions } = await import("@astropress/core/schema");
+  const { eq, and, count } = await import("drizzle-orm");
+
+  const [posts] = await db.select({ c: count() }).from(wpPosts).where(and(eq(wpPosts.postType, "post"), eq(wpPosts.postStatus, "publish")));
+  const [pages] = await db.select({ c: count() }).from(wpPosts).where(and(eq(wpPosts.postType, "page"), eq(wpPosts.postStatus, "publish")));
+  postCount = posts?.c ?? 0;
+  pageCount = pages?.c ?? 0;
+
+  const formsRow = await db.select().from(wpOptions).where(eq(wpOptions.optionName, "astropress_forms")).get();
+  if (formsRow?.optionValue) {
+    try { formCount = JSON.parse(formsRow.optionValue).length; } catch {}
+  }
+}
+
+const stats = [
+  { label: "文章", value: postCount, href: "/admin/posts" },
+  { label: "页面", value: pageCount, href: "/admin/pages" },
+  { label: "表单", value: formCount, href: "/admin/forms" },
+];
+---
+<AdminLayout title="仪表盘">
+  <h1 class="wp-page-title">仪表盘</h1>
+
+  <div class="wp-dashboard-stats">
+    {stats.map((s) => (
+      <a href={s.href} class="wp-stat-box">
+        <div class="wp-stat-num">{s.value}</div>
+        <div class="wp-stat-label">{s.label}</div>
+      </a>
+    ))}
+  </div>
+
+  <div class="postbox">
+    <div class="postbox-inside" style="padding:16px 20px">
+      <h2 style="margin:0 0 6px;font-size:15px;font-weight:600">
+        欢迎{user ? `，${user.displayName}` : ""}！
+      </h2>
+      <p style="margin:0;color:var(--wp-gray-500);font-size:13px">
+        AstroPress CMS 已在运行。使用（右下角的）AI 助手快速上手。
+      </p>
+    </div>
+  </div>
+
+  <!-- Quick links -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px">
+    <div class="postbox" style="margin:0">
+      <div class="postbox-header"><h2 class="postbox-title">快捷操作</h2></div>
+      <div class="postbox-inside" style="display:flex;flex-direction:column;gap:8px">
+        <a href="/admin/posts/new" class="button" style="justify-content:center">新建文章</a>
+        <a href="/admin/pages/new" class="button" style="justify-content:center">新建页面</a>
+        <a href="/admin/forms/new" class="button" style="justify-content:center">新建表单</a>
+      </div>
+    </div>
+
+    <div class="postbox" style="margin:0">
+      <div class="postbox-header"><h2 class="postbox-title">AI 助手</h2></div>
+      <div class="postbox-inside">
+        <p style="margin:0 0 10px;font-size:12px;color:var(--wp-gray-500);line-height:1.5">
+          点击（右下角的）闪光按钮，用自然语言撰写内容、生成标题或管理站点。
+        </p>
+        <a href="/admin/settings/ai" style="font-size:12px;color:var(--wp-blue)">配置 AI 服务商 →</a>
+      </div>
+    </div>
+
+    <div class="postbox" style="margin:0">
+      <div class="postbox-header"><h2 class="postbox-title">页面缓存</h2></div>
+      <div class="postbox-inside" id="apCacheCard">
+        <p style="margin:0;font-size:12px;color:var(--wp-gray-500)">加载中…</p>
+      </div>
+    </div>
+
+    <div class="postbox" style="margin:0">
+      <div class="postbox-header"><h2 class="postbox-title">站点健康</h2></div>
+      <div class="postbox-inside" id="apHealthCard">
+        <p style="margin:0;font-size:12px;color:var(--wp-gray-500)">加载中…</p>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline>
+    (function () {
+      var card = document.getElementById("apCacheCard");
+      if (!card) return;
+      fetch("/admin-ext/api/page-cache/stats", { credentials: "same-origin" })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+          if (!d) { card.innerHTML = '<p style="margin:0;font-size:12px;color:var(--wp-gray-500)">缓存插件未启用或无数据</p>'; return; }
+          var total = (d.hits || 0) + (d.misses || 0);
+          var rate = total ? Math.round(((d.hits || 0) / total) * 100) : 0;
+          var on = d.settings && d.settings.enabled;
+          card.innerHTML =
+            '<div style="display:flex;gap:14px;font-size:12px;line-height:1.6">' +
+            '<div><div style="font-size:20px;font-weight:600;color:var(--wp-blue)">' + rate + '%</div><div style="color:var(--wp-gray-500)">命中率</div></div>' +
+            '<div><div style="font-size:20px;font-weight:600">' + (d.hits || 0) + '</div><div style="color:var(--wp-gray-500)">HIT</div></div>' +
+            '<div><div style="font-size:20px;font-weight:600">' + (d.misses || 0) + '</div><div style="color:var(--wp-gray-500)">MISS</div></div>' +
+            '<div><div style="font-size:20px;font-weight:600">' + (d.entries || 0) + '</div><div style="color:var(--wp-gray-500)">条目</div></div>' +
+            '</div>' +
+            '<p style="margin:8px 0 0;font-size:11px;color:var(--wp-gray-500)">状态：' + (on ? '已启用' : '已停用') +
+            ' · <a href="/admin-ext/page-cache" style="color:var(--wp-blue)">管理缓存 →</a></p>';
+        })
+        .catch(function () {
+          card.innerHTML = '<p style="margin:0;font-size:12px;color:var(--wp-gray-500)">缓存数据加载失败</p>';
+        });
+    })();
+  </script>
+
+  <script is:inline>
+    (function () {
+      var hcard = document.getElementById("apHealthCard");
+      if (!hcard) return;
+      fetch("/ap-health", { credentials: "same-origin" })
+        .then(function (r) { return r.json().then(function (d) { return { httpOk: r.ok, d: d }; }); })
+        .then(function (res) {
+          var d = res.d;
+          if (!d || typeof d !== "object") { hcard.innerHTML = '<p style="margin:0;font-size:12px;color:var(--wp-gray-500)">健康端点返回异常</p>'; return; }
+          var ok = !!d.ok;
+          var badge = ok
+            ? '<span style="display:inline-block;padding:1px 10px;border-radius:10px;font-size:12px;font-weight:600;background:#e7f6ec;color:#1a7f37">正常</span>'
+            : '<span style="display:inline-block;padding:1px 10px;border-radius:10px;font-size:12px;font-weight:600;background:#fdeaea;color:#b32d2e">异常</span>';
+          var c = d.checks || {};
+          function mark(v) {
+            return v === "ok" || v === true
+              ? '<span style="color:#1a7f37">✓</span>'
+              : '<span style="color:#b32d2e">✗ ' + String(v == null ? "未知" : v) + '</span>';
+          }
+          hcard.innerHTML =
+            '<div style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:8px">' + badge +
+            '<span style="color:var(--wp-gray-500);font-size:12px">' + (d.latencyMs != null ? d.latencyMs + 'ms' : '') +
+            (d.environment ? ' · ' + d.environment : '') + (d.version ? ' · v' + d.version : '') + '</span></div>' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:12px;line-height:1.7">' +
+            '<div>数据库 ' + mark(c.database) + '</div>' +
+            '<div>存储 ' + mark(c.storage) + '</div>' +
+            '<div>AI ' + mark(c.ai) + '</div>' +
+            '<div>安装完成 ' + mark(c.setupComplete) + '</div>' +
+            '</div>' +
+            (c.schemaVersion ? '<p style="margin:8px 0 0;font-size:11px;color:var(--wp-gray-500)">Schema 版本：' + c.schemaVersion + '</p>' : '') +
+            '<p style="margin:6px 0 0;font-size:11px;color:var(--wp-gray-500)">公开端点：<code style="font-size:11px">/ap-health</code>（可接 UptimeRobot）</p>';
+        })
+        .catch(function () {
+          hcard.innerHTML = '<p style="margin:0;font-size:12px;color:var(--wp-gray-500)">健康数据加载失败</p>';
+        });
+    })();
+  </script>
+</AdminLayout>

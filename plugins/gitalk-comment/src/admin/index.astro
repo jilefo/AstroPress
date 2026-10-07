@@ -1,0 +1,173 @@
+---
+/**
+ * /admin-ext/gitalk — Gitalk 评论插件设置页
+ */
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+if (!Astro.locals.user || !Astro.locals.db) return Astro.redirect("/login");
+---
+<AdminLayout title="Gitalk 评论">
+  <style is:global>
+    * { box-sizing: border-box; }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+    .card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 16px; }
+    label { display: block; font-size: 13px; font-weight: 600; margin: 16px 0 4px; }
+    input[type="text"], input[type="password"], input[type="number"], select { width: 100%; font-size: 13px; padding: 6px 8px; border: 1px solid #8c8f94; border-radius: 3px; }
+    button { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 8px 16px; cursor: pointer; font-size: 13px; margin-top: 20px; }
+    .msg { font-size: 13px; margin-top: 10px; min-height: 18px; }
+    .ok { color: #00a32a; }
+    .err { color: #b32d2e; }
+    .hint { font-size: 12px; color: #646970; margin-top: 4px; line-height: 1.6; }
+    .hint code { background: #f0f0f1; padding: 1px 4px; border-radius: 2px; }
+    .check { display: flex; align-items: center; gap: 6px; font-size: 13px; margin-top: 16px; }
+    .check input { margin: 0; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+    .notice { background: #fcf9e8; border: 1px solid #dcdcde; border-left: 4px solid #dba617; padding: 10px 12px; font-size: 13px; border-radius: 3px; margin-bottom: 4px; }
+  </style>
+
+  <div class="wrap">
+    <div class="card">
+      <h1>Gitalk 评论设置</h1>
+
+      <div class="notice">
+        Gitalk 是基于 GitHub Issue 的评论组件。使用前需到
+        GitHub → Settings → Developer settings → OAuth Apps 新建应用，
+        <strong>Authorization callback URL</strong> 填写本站首页地址（如 <code>https://example.com</code>）。
+        评论数据存放在指定仓库的 Issue 中，首次访问某篇文章时会以该文章自动创建 Issue（需管理员账号首次打开页面授权）。
+      </div>
+
+      <div class="check">
+        <input type="checkbox" id="enabled" />
+        <label for="enabled" style="margin:0">在文章页启用 Gitalk 评论</label>
+      </div>
+      <div class="hint">与内置「评论」插件相互独立，可同时启用（页面会出现两套评论），建议只启用其一。</div>
+
+      <div class="grid2">
+        <div>
+          <label for="clientID">Client ID</label>
+          <input type="text" id="clientID" placeholder="GitHub OAuth App Client ID" />
+        </div>
+        <div>
+          <label for="clientSecret">Client Secret</label>
+          <input type="password" id="clientSecret" placeholder="留空表示不修改" />
+          <div class="hint">为安全起见不回显；填入新值才会覆盖。</div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div>
+          <label for="owner">仓库所有者（owner）</label>
+          <input type="text" id="owner" placeholder="例如：your-github-name" />
+        </div>
+        <div>
+          <label for="repo">仓库名（repo）</label>
+          <input type="text" id="repo" placeholder="例如：blog-comments" />
+        </div>
+      </div>
+
+      <label for="admin">管理员账号</label>
+      <input type="text" id="admin" placeholder="GitHub 用户名，多个用英文逗号分隔" />
+      <div class="hint">这些账号首次打开文章页时可初始化对应 Issue；留空则自动使用仓库所有者。</div>
+
+      <div class="grid2">
+        <div>
+          <label for="idMode">Issue ID 策略</label>
+          <select id="idMode">
+            <option value="pathname" selected>页面路径（location.pathname）</option>
+            <option value="slug">文章 slug</option>
+          </select>
+          <div class="hint">Issue 唯一标识，超过 50 字符会自动降级/哈希。</div>
+        </div>
+        <div>
+          <label for="language">语言</label>
+          <select id="language">
+            <option value="zh-CN" selected>简体中文（zh-CN）</option>
+            <option value="zh-TW">繁體中文（zh-TW）</option>
+            <option value="en">English（en）</option>
+            <option value="ja">日本語（ja）</option>
+            <option value="ko">한국어（ko）</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div>
+          <label for="perPage">每页评论数（5-50）</label>
+          <input type="number" id="perPage" min="5" max="50" value="10" />
+        </div>
+        <div>
+          <label for="proxy">OAuth 代理（可选）</label>
+          <input type="text" id="proxy" placeholder="留空使用 Gitalk 默认代理" />
+          <div class="hint">解决 GitHub 登录 CORS，默认 <code>https://cors-anywhere.azm.workers.dev/...</code></div>
+        </div>
+      </div>
+
+      <div class="check">
+        <input type="checkbox" id="distractionFreeMode" />
+        <label for="distractionFreeMode" style="margin:0">无干扰模式（全屏评论框，Facebook 风格）</label>
+      </div>
+      <div class="check">
+        <input type="checkbox" id="titleFromPage" checked />
+        <label for="titleFromPage" style="margin:0">创建 Issue 时使用页面标题作为 Issue 标题</label>
+      </div>
+
+      <button id="save">保存设置</button>
+      <div class="msg" id="msg"></div>
+    </div>
+  </div>
+
+  <script>
+    (async () => {
+      const msg = document.getElementById("msg");
+      const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+
+      async function load() {
+        const r = await fetch("/admin-ext/api/gitalk/settings");
+        if (!r.ok) return;
+        const s = await r.json();
+        $("enabled").checked = s.enabled;
+        $("clientID").value = s.clientID || "";
+        $("clientSecret").value = "";
+        $("clientSecret").placeholder = s.clientSecret ? "已配置（留空保持不变）" : "未配置";
+        $("owner").value = s.owner || "";
+        $("repo").value = s.repo || "";
+        $("admin").value = s.admin || "";
+        $("idMode").value = s.idMode || "pathname";
+        $("language").value = s.language || "zh-CN";
+        $("perPage").value = String(s.perPage || 10);
+        $("proxy").value = s.proxy || "";
+        $("distractionFreeMode").checked = !!s.distractionFreeMode;
+        $("titleFromPage").checked = s.titleFromPage !== false;
+      }
+
+      document.getElementById("save")!.addEventListener("click", async () => {
+        const payload = {
+          enabled: $("enabled").checked,
+          clientID: $("clientID").value.trim(),
+          clientSecret: $("clientSecret").value,
+          owner: $("owner").value.trim(),
+          repo: $("repo").value.trim(),
+          admin: $("admin").value.trim(),
+          idMode: $("idMode").value,
+          language: $("language").value,
+          perPage: parseInt($("perPage").value, 10) || 10,
+          proxy: $("proxy").value.trim(),
+          distractionFreeMode: $("distractionFreeMode").checked,
+          titleFromPage: $("titleFromPage").checked,
+        };
+        const r = await fetch("/admin-ext/api/gitalk/settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const d = await r.json();
+        msg.className = "msg " + (r.ok ? "ok" : "err");
+        msg.textContent = r.ok ? "已保存。" : (d.error || "保存失败");
+        setTimeout(() => (msg.textContent = ""), 3000);
+        if (r.ok) load();
+      });
+
+      load();
+    })();
+  </script>
+</AdminLayout>

@@ -1,0 +1,26 @@
+{
+  "name": "Sakurairo",
+  "version": "3.0.10",
+  "description": "Colorful anime-style blog theme with pink accent and serif headings",
+  "author": "Sakurairo",
+  "tokens": {
+    "fonts": {
+      "body": "system-ui, -apple-system, 'Noto Serif SC', sans-serif",
+      "heading": "system-ui, -apple-system, 'Noto Serif SC', serif"
+    },
+    "spacing": {
+      "sectionY": "48px",
+      "borderRadius": "12px",
+      "containerMax": "1200px"
+    },
+    "colors": {
+      "textMuted": "#727272",
+      "surface": "#fff5f7",
+      "background": "#ffffff",
+      "secondary": "#dd006f",
+      "border": "#ffd6e7",
+      "text": "#333333",
+      "primary": "#505050"
+    }
+  }
+}

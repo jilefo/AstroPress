@@ -1,0 +1,234 @@
+/* >>> ap-fonts >>> */
+/* 主题声明的 Web 字体。AstroPress 不会注入字体 <link>，只能由主题 CSS 自行 @import。
+   字体源为 fonts.loli.net（Google Fonts 国内镜像，海外同样可访问）；
+   如需官方源把域名改回 fonts.googleapis.com 即可；完全离线时删除本区块则回退系统字体。 */
+@import url("https://fonts.loli.net/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap");
+/* <<< ap-fonts <<< */
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Hexo Theme Volantis — AstroPress 移植版
+   设计语言来源：hexo-theme-volantis v6.8.3（_config.yml + _defines/）
+     · 页面底色 #f4f4f4，白色卡片 + 12px 圆角 + 明显阴影
+     · 主题色 #0f766e（深青绿，AA 加深；原薄荷绿在浅底上对比度仅 1.6:1），链接 #1565c0（AA 深蓝），hover #ff5722（橙）
+     · Material Design 风格，代码块 #fff7ea，区块底 #f6f6f6
+     · 根字号 16px / 1.7 行高，PingFang SC + Microsoft YaHei 字体栈（fonts.styl $fontfamily）
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --volantis-bg: #f4f4f4;
+  --volantis-card: #ffffff;
+  --volantis-theme: #0f766e;
+  --volantis-link: #1565c0;
+  --volantis-hover: #ff5722;
+  --volantis-text: #444444;
+  --volantis-text-heading: #3a3a3a;
+  --volantis-text-muted: #6e6e6e;
+  --volantis-border: #e0e0e0;
+  --volantis-radius: 12px;
+  --volantis-radius-small: 4px;
+  --volantis-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.06);
+  --volantis-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.12), 0 8px 24px rgba(0, 0, 0, 0.1);
+  --volantis-block: #f6f6f6;
+  --volantis-codeblock-bg: #fff7ea;
+  --volantis-inlinecode: #c74f00;
+  --volantis-table-border: #e0e0e0;
+  --volantis-tr-even: #f8f8f8;
+}
+
+/* ── 基础 ─────────────────────────────────────────────────────────── */
+html { scroll-behavior: smooth; }
+body { background: var(--volantis-bg) !important; font-size: 16px; }
+
+::selection { background: rgba(33, 150, 243, 0.2); }
+
+.site-wrapper { max-width: 1080px; }
+.site-main { padding: 32px 0; }
+
+/* ── 顶部导航：Material 卡片风 ────────────────────────────────────── */
+.site-header {
+  background: var(--volantis-card);
+  border-bottom: none;
+  box-shadow: var(--volantis-shadow);
+  height: auto;
+  min-height: 64px;
+  position: sticky;
+  top: 0;
+  z-index: 90;
+}
+.site-header .site-wrapper { padding: 12px 20px; }
+.site-branding a {
+  color: var(--volantis-text-heading) !important;
+  font-weight: 700;
+  font-size: 1.4rem;
+  letter-spacing: 0.02em;
+}
+.site-branding a:hover { color: var(--volantis-theme) !important; }
+.site-description { color: var(--volantis-text-muted); font-size: 0.85rem; }
+.site-nav a {
+  color: var(--volantis-text);
+  padding: 8px 14px;
+  border-radius: var(--volantis-radius-small);
+  font-size: 0.92rem;
+  transition: color 0.3s ease, background-color 0.3s ease;
+}
+.site-nav a:hover { color: var(--volantis-theme); background: rgba(15, 118, 110, 0.08); }
+
+/* ── 文章列表：Material 卡片 ──────────────────────────────────────── */
+.post-list { display: flex; flex-direction: column; gap: 16px; }
+.post-list-item {
+  background: var(--volantis-card);
+  border: none;
+  border-radius: var(--volantis-radius);
+  box-shadow: var(--volantis-shadow);
+  padding: 28px 32px;
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+.post-list-item:first-child { padding-top: 28px; }
+.post-list-item:hover { box-shadow: var(--volantis-shadow-hover); transform: translateY(-2px); }
+.post-list-item h2 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--volantis-text-heading);
+}
+.post-list-item h2 a { color: var(--volantis-text-heading) !important; text-decoration: none; }
+.post-list-item h2 a:hover { color: var(--volantis-theme) !important; }
+.post-meta { color: var(--volantis-text-muted); font-size: 0.85rem; }
+.post-excerpt { color: var(--volantis-text); font-size: 0.95rem; line-height: 1.7; }
+.read-more {
+  color: var(--volantis-link);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+.read-more:hover { color: var(--volantis-hover); }
+
+/* ── 单篇文章：Material 卡片 ──────────────────────────────────────── */
+main .site-wrapper > article {
+  background: var(--volantis-card);
+  border-radius: var(--volantis-radius);
+  box-shadow: var(--volantis-shadow);
+  padding: 32px 36px;
+  overflow: hidden;
+}
+.post-header h1 {
+  font-size: 1.7rem;
+  font-weight: 600;
+  color: var(--volantis-text-heading);
+  line-height: 1.4;
+}
+.post-header .post-meta { margin: 0; }
+
+.post-content {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--volantis-text);
+}
+.post-content h1, .post-content h2, .post-content h3,
+.post-content h4, .post-content h5, .post-content h6 {
+  font-weight: 600;
+  color: var(--volantis-text-heading);
+}
+.post-content a {
+  color: var(--volantis-link);
+  text-decoration: none;
+  transition: color 0.3s ease;
+  word-break: break-word;
+}
+.post-content a:hover { color: var(--volantis-hover); }
+.post-content blockquote {
+  margin: 1.5rem 0;
+  padding: 16px;
+  border-left: 4px solid var(--volantis-theme);
+  background: var(--volantis-block);
+  color: var(--volantis-text);
+  border-radius: var(--volantis-radius-small);
+}
+.post-content pre {
+  background: var(--volantis-codeblock-bg);
+  border-radius: var(--volantis-radius-small);
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  font-size: 0.875rem;
+}
+.post-content code {
+  color: var(--volantis-inlinecode);
+  padding: 2px 4px;
+  border-radius: 2px;
+  font-size: 0.875em;
+  word-break: break-word;
+}
+.post-content pre code { background: none; color: inherit; padding: 0; }
+.post-content img { border-radius: var(--volantis-radius); }
+.post-content table { border-collapse: collapse; width: 100%; margin: 1.5rem 0; }
+.post-content th, .post-content td { border: 1px solid var(--volantis-table-border); padding: 8px 12px; }
+.post-content tr:nth-child(even) { background: var(--volantis-tr-even); }
+
+/* ── 分页：青绿 Material 按钮 ─────────────────────────────────────── */
+.pagination { gap: 8px; margin-top: 32px; }
+.pagination a, .pagination span {
+  background: var(--volantis-card);
+  border: none;
+  border-radius: var(--volantis-radius-small);
+  box-shadow: var(--volantis-shadow);
+  color: var(--volantis-text);
+  padding: 8px 16px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+.pagination a:hover { color: var(--volantis-theme); box-shadow: var(--volantis-shadow-hover); }
+.pagination .current { background: var(--volantis-theme); color: #fff; }
+
+/* ── 页脚 ─────────────────────────────────────────────────────────── */
+.site-footer {
+  border-top: none;
+  color: var(--volantis-text-muted);
+  font-size: 0.85rem;
+}
+.site-footer a { color: var(--volantis-link); }
+
+/* ── 404 ──────────────────────────────────────────────────────────── */
+.not-found h1 { color: var(--volantis-border); }
+
+/* ── 返回链接 ─────────────────────────────────────────────────────── */
+main .site-wrapper > nav {
+  border-top: none !important;
+  background: var(--volantis-card);
+  border-radius: var(--volantis-radius);
+  box-shadow: var(--volantis-shadow);
+  padding: 16px 32px !important;
+  margin-top: 32px !important;
+}
+main .site-wrapper > nav a { color: var(--volantis-link); text-decoration: none; }
+main .site-wrapper > nav a:hover { color: var(--volantis-hover); }
+
+/* ── 响应式 ───────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .post-list { gap: 12px; }
+  .post-list-item { padding: 20px 22px; }
+  .site-main { padding: 20px 0; }
+}
+
+/* >>> ap-adapter >>> */
+/* 块渲染页头适配：当模板槽位输出 .ap-block-nav 时套用本主题设计语言 */
+.ap-block-nav {
+  position: sticky; top: 0; z-index: 90;
+  border-bottom: none !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.ap-block-nav > a { color: #444444 !important; }
+.ap-block-nav nav ul li a {
+  border-radius: 12px;
+  transition: color 0.3s ease, background-color 0.3s ease;
+}
+.ap-block-nav nav ul li a:hover {
+  color: var(--volantis-theme) !important;
+  background: #ffffff;
+}
+@media (max-width: 640px) {
+  .ap-block-nav { height: auto !important; min-height: 56px; flex-wrap: wrap; padding: 8px 20px !important; row-gap: 4px; }
+  .ap-block-nav nav { width: 100%; }
+  .ap-block-nav nav ul { flex-wrap: wrap; }
+}
+/* <<< ap-adapter <<< */

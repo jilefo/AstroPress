@@ -1,0 +1,179 @@
+---
+/**
+ * /admin-ext/i18n — Admin UI i18n management page.
+ * /admin-ext prefix is session-protected by admin middleware; locals.user
+ * re-checked below. 通过相对路径引入应用 AdminLayout
+ */
+import { DICTIONARY } from "../lib/dictionary";
+import { effectiveWebhook, loadSettings } from "../lib/settings";
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+
+if (!Astro.locals.user || !Astro.locals.db) return Astro.redirect("/login");
+const db = Astro.locals.db;
+
+const settings = await loadSettings(db);
+const webhook = effectiveWebhook(settings);
+const envWebhook = (process.env.AP_N8N_WEBHOOK_URL ?? "").trim();
+const dictCount = Object.keys(DICTIONARY).length;
+---
+<AdminLayout title="界面翻译">
+    <style is:global>
+      * { box-sizing: border-box; }
+      .wrap { max-width: 860px; margin: 0 auto; padding: 0 16px; display: grid; gap: 20px; }
+      .card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 20px; }
+      h1 { font-size: 20px; } h2 { font-size: 15px; margin: 0 0 12px; }
+      label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 4px; }
+      input[type="text"] { width: 100%; font-size: 13px; padding: 6px 8px; border: 1px solid #8c8f94; border-radius: 3px; }
+      button { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 6px 14px; cursor: pointer; font-size: 13px; }
+      button.ghost { background: #f0f0f1; color: #1d2327; border: 1px solid #c3c4c7; }
+      button.danger { background: #b32d2e; }
+      .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+      .msg { font-size: 13px; margin-top: 8px; min-height: 18px; color: #646970; }
+      .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; background: #f0f0f1; }
+      .badge.ok { background: #c6e1c6; }
+      .badge.warn { background: #fff3cd; }
+      code, pre { font-family: Consolas, Monaco, monospace; font-size: 12px; }
+      pre { background: #f6f7f7; border: 1px solid #dcdcde; border-radius: 3px; padding: 10px; overflow: auto; max-height: 260px; }
+      .hint { font-size: 12px; color: #646970; margin-top: 6px; }
+      ul.missed { font-size: 12px; color: #50575e; margin: 6px 0 0; padding-left: 18px; max-height: 220px; overflow: auto; }
+    </style>
+
+    <div class="wrap">
+      <section class="card">
+        <h2>翻译设置</h2>
+        <div class="row" style="margin-bottom:8px">
+          <span class="badge">内置词典 {dictCount} 条</span>
+          <span class="badge">目标语言 {settings.target}</span>
+          <span class={webhook ? "badge ok" : "badge warn"}>
+            {webhook ? "n8n Webhook 已配置" : "n8n Webhook 未配置（未翻译串仅记录不翻译）"}
+          </span>
+        </div>
+
+        <label style="font-weight:600">
+          <input type="checkbox" id="enabled" checked={settings.enabled} style="margin-right:6px" />
+          启用后台界面翻译
+        </label>
+        <label for="target">目标语言（BCP-47，如 zh-CN）</label>
+        <input type="text" id="target" value={settings.target} />
+        <label for="webhookUrl">n8n Webhook URL（留空则使用环境变量 AP_N8N_WEBHOOK_URL{envWebhook ? "，当前已配置" : "，当前未配置"}）</label>
+        <input type="text" id="webhookUrl" value={settings.webhookUrl} placeholder={envWebhook ? "（使用环境变量中的 Webhook）" : "https://your-n8n.example.com/webhook/translate"} />
+
+        <div class="row" style="margin-top:14px">
+          <button id="save">保存设置</button>
+          <button class="ghost" id="test">测试 Webhook</button>
+        </div>
+        <div class="msg" id="msg"></div>
+        <pre id="result" style="display:none"></pre>
+      </section>
+
+      <section class="card">
+        <h2>浏览器缓存</h2>
+        <p class="hint" style="margin-top:0">
+          n8n 返回的翻译按字符串缓存在浏览器 localStorage（ap-i18n-cache-v1），清空后会重新询问。
+          未命中的字符串记录在 ap-i18n-missed-v1。
+        </p>
+        <div class="row">
+          <span class="badge" id="cacheCount">缓存 — 条</span>
+          <span class="badge" id="missedCount">未命中 — 条</span>
+          <button class="danger" id="clear">清空缓存</button>
+          <button class="ghost" id="reload">刷新页面</button>
+        </div>
+        <div id="missedWrap" style="display:none">
+          <p class="hint" style="margin-bottom:0">最近未翻译命中的字符串（发给 n8n 但无结果，可在 n8n 侧补充词典）：</p>
+          <ul class="missed" id="missedList"></ul>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>n8n Webhook 契约</h2>
+        <pre>{`POST <url>
+{ "texts": ["Dashboard", "Add New"], "target": "zh-CN" }
+
+→ 200
+{ "translations": { "Dashboard": "仪表盘", "Add New": "新建" } }`}</pre>
+        <p class="hint">{`也兼容扁平 map、{"data":{...}} 包装或 [{original, translation}] 行数组。翻译结果按请求原文精确回填，仅未收录字符串会发送。`}</p>
+      </section>
+    </div>
+
+    <script>
+      // Inline page logic — deliberately no backslash regexes (Astro inline
+      // script escaping pitfall documented in project lessons).
+      var $ = function (id) { return document.getElementById(id); };
+      var msg = $("msg");
+
+      function setMsg(t, isErr) {
+        msg.textContent = t;
+        msg.style.color = isErr ? "#b32d2e" : "#646970";
+      }
+
+      function refreshCacheStats() {
+        var api = window.__apI18n;
+        if (!api) return;
+        $("cacheCount").textContent = "缓存 " + api.cacheSize() + " 条";
+        $("missedCount").textContent = "未命中 " + api.missedSize() + " 条";
+        var keys = api.missedKeys();
+        if (keys.length) {
+          $("missedWrap").style.display = "block";
+          var ul = $("missedList");
+          ul.textContent = "";
+          keys.slice(-50).forEach(function (k) {
+            var li = document.createElement("li");
+            li.textContent = k;
+            ul.appendChild(li);
+          });
+        }
+      }
+      refreshCacheStats();
+
+      $("save").addEventListener("click", function () {
+        var payload = {
+          enabled: $("enabled").checked,
+          target: $("target").value.trim(),
+          webhookUrl: $("webhookUrl").value.trim()
+        };
+        setMsg("保存中…");
+        fetch("/admin-ext/api/i18n/settings", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify(payload)
+        }).then(function (r) { return r.json(); }).then(function (d) {
+          if (d && d.ok) {
+            setMsg("已保存。脚本配置随下次页面加载生效（脚本为 no-store，直接刷新即可）。");
+          } else {
+            setMsg("保存失败：" + ((d && d.error) || "未知错误"), true);
+          }
+        }).catch(function (e) { setMsg("保存失败：" + e, true); });
+      });
+
+      $("test").addEventListener("click", function () {
+        setMsg("调用 n8n 中…");
+        var pre = $("result");
+        pre.style.display = "none";
+        fetch("/admin-ext/api/i18n/test", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({})
+        }).then(function (r) { return r.json(); }).then(function (d) {
+          pre.style.display = "block";
+          pre.textContent = JSON.stringify(d, null, 2);
+          if (d && d.error) setMsg("Webhook 调用出错，详情见下方。" + (d.configured ? "" : "（未配置 Webhook）"), true);
+          else setMsg("完成，耗时 " + (d && d.latencyMs != null ? d.latencyMs : "?") + " ms。");
+        }).catch(function (e) { setMsg("调用失败：" + e, true); });
+      });
+
+      $("clear").addEventListener("click", function () {
+        var api = window.__apI18n;
+        if (api) api.clearCache();
+        try {
+          localStorage.removeItem("ap-i18n-cache-v1");
+          localStorage.removeItem("ap-i18n-missed-v1");
+        } catch (e) { /* ignore */ }
+        refreshCacheStats();
+        setMsg("已清空。刷新页面后会按需重新向 n8n 请求。");
+      });
+
+      $("reload").addEventListener("click", function () { location.reload(); });
+    </script>
+</AdminLayout>

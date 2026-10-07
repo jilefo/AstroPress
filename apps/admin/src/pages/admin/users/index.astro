@@ -1,0 +1,82 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { wpUsers, wpUsermeta } from "@astropress/core/schema";
+import { eq, and } from "drizzle-orm";
+
+const db = Astro.locals.db;
+const me = Astro.locals.user;
+if (!db || !me) return Astro.redirect("/login");
+
+async function getRole(userId: number): Promise<string> {
+  const [row] = await db!
+    .select({ value: wpUsermeta.metaValue })
+    .from(wpUsermeta)
+    .where(and(eq(wpUsermeta.userId, userId), eq(wpUsermeta.metaKey, "wp_capabilities")))
+    .limit(1);
+  if (!row?.value) return "subscriber";
+  try {
+    const caps = JSON.parse(row.value) as Record<string, boolean>;
+    for (const role of ["administrator","editor","author","contributor","subscriber"]) {
+      if (caps[role]) return role;
+    }
+  } catch {}
+  return "subscriber";
+}
+
+const rawUsers = await db.select().from(wpUsers).orderBy(wpUsers.id);
+const users = await Promise.all(rawUsers.map(async (u: any) => ({ ...u, role: await getRole(u.id) })));
+
+const roleLabel: Record<string, string> = {
+  administrator: "管理员",
+  editor: "编辑",
+  author: "作者",
+  contributor: "贡献者",
+  subscriber: "订阅者",
+};
+---
+<AdminLayout title="用户">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+    <h1 class="wp-heading-inline">用户</h1>
+    <a href="/admin/users/new" class="page-title-action">添加新用户</a>
+  </div>
+  <hr class="wp-header-end" />
+
+  <table class="wp-list-table widefat fixed striped">
+    <thead>
+      <tr>
+        <th style="width:22%">用户名</th>
+        <th style="width:24%">姓名</th>
+        <th style="width:26%">邮箱</th>
+        <th style="width:16%">角色</th>
+        <th style="width:12%">注册时间</th>
+      </tr>
+    </thead>
+    <tbody>
+      {users.length === 0 ? (
+        <tr><td colspan="5" style="text-align:center;padding:24px;color:#646970">暂无用户。</td></tr>
+      ) : users.map((u) => (
+        <tr>
+          <td class="column-primary">
+            <strong><a href={`/admin/users/${u.id}`} style="color:#2271b1;text-decoration:none">{u.userLogin}</a></strong>
+            {u.id === me.id && <span style="font-size:11px;color:#646970;margin-left:4px">（本人）</span>}
+            <div class="row-actions">
+              <span><a href={`/admin/users/${u.id}`}>编辑</a></span>
+              {u.id !== me.id && (
+                <span class="delete">
+                  <button
+                    class="ap-row-delete-btn"
+                    onclick={`if(confirm('确定删除用户“${u.userLogin}”吗？')) { fetch('/api/users/${u.id}',{method:'DELETE'}).then(r=>r.ok?location.reload():alert('删除失败')) }`}
+                  >删除</button>
+                </span>
+              )}
+            </div>
+          </td>
+          <td>{u.displayName}</td>
+          <td><a href={`mailto:${u.userEmail}`} style="color:#2271b1;text-decoration:none">{u.userEmail}</a></td>
+          <td>{roleLabel[u.role] ?? u.role}</td>
+          <td style="font-size:12px;color:#646970">{u.userRegistered?.slice(0, 10)}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</AdminLayout>

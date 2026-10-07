@@ -1,0 +1,59 @@
+---
+/**
+ * 文章列表页 /blog。
+ *
+ * 与首页的区别：即使设置了静态首页（show_on_front=page），/blog 始终展示
+ * 文章列表。核心 seed 的默认 header/footer 均链接到 /blog，该页保证不出现断链。
+ */
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getPublishedPosts } from "../../lib/public-query";
+import { loadPermalinkSettings, postPath } from "@astropress/core/permalink";
+
+const db = Astro.locals.db;
+const permalinkSettings = db ? await loadPermalinkSettings(db) : undefined;
+
+const page = Number(Astro.url.searchParams.get("page") ?? "1");
+const perPage = 10;
+const { posts, total } = db
+  ? await getPublishedPosts(db, { page, perPage })
+  : { posts: [], total: 0 };
+const totalPages = Math.ceil(total / perPage);
+
+function formatDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric" });
+}
+
+function plainExcerpt(post: { excerpt: string; content: string }): string {
+  if (post.excerpt) return post.excerpt;
+  return post.content.replace(/<!--.*?-->/gs, "").replace(/<[^>]+>/g, "").slice(0, 200).trim() + (post.content.length > 200 ? "…" : "");
+}
+---
+<BaseLayout title="博客">
+  {posts.length === 0 ? (
+    <div style="text-align:center;padding:60px 0">
+      <p style="color:var(--color-muted);font-size:1.1rem">暂无文章，敬请期待！</p>
+    </div>
+  ) : (
+    <ul class="post-list">
+      {posts.map((post) => (
+        <li class="post-list-item">
+          <h2><a href={postPath(post.slug, permalinkSettings)}>{post.title}</a></h2>
+          <p class="post-meta">{formatDate(post.date)}</p>
+          <p class="post-excerpt">{plainExcerpt(post)}</p>
+          <a href={postPath(post.slug, permalinkSettings)} class="read-more">阅读全文 →</a>
+        </li>
+      ))}
+    </ul>
+  )}
+  {totalPages > 1 && (
+    <nav class="pagination" aria-label="分页">
+      {page > 1 && <a href={`/blog?page=${page - 1}`}>← 上一页</a>}
+      {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+        p === page
+          ? <span class="current">{p}</span>
+          : <a href={`/blog?page=${p}`}>{p}</a>
+      ))}
+      {page < totalPages && <a href={`/blog?page=${page + 1}`}>下一页 →</a>}
+    </nav>
+  )}
+</BaseLayout>

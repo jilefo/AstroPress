@@ -1,0 +1,23 @@
+{
+  "name": "@astropress/plugin-donation",
+  "version": "0.1.0",
+  "description": "文章打赏：在文章页末尾注入打赏按钮，点击弹出微信/支付宝收款二维码弹窗，后台可配置文案与二维码图片",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./integration.admin": "./src/integration.admin.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@astropress/core": "workspace:*",
+    "drizzle-orm": "^0.36.0"
+  },
+  "devDependencies": {
+    "astro": "^4.0.0",
+    "typescript": "^5.4.0",
+    "@cloudflare/workers-types": "^4.0.0"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "@astropress/plugin-page-cache",
+  "version": "0.1.0",
+  "description": "页面缓存：全页 HTML 内存缓存（类似 WP Super Cache），可配置 TTL、最大条目、404 缓存、排除路径，支持手动清空与命中统计",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./integration.admin": "./src/integration.admin.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@astropress/core": "workspace:*",
+    "drizzle-orm": "^0.36.0"
+  },
+  "devDependencies": {
+    "astro": "^4.0.0",
+    "typescript": "^5.4.0",
+    "@cloudflare/workers-types": "^4.0.0"
+  }
+}

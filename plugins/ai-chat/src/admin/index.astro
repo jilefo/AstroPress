@@ -1,0 +1,454 @@
+---
+/**
+ * /admin-ext/ai-chat — AI Chat Assistant（内嵌登录视图版）
+ * 不弹外部浏览器：headless Chromium 实时画面以图片流显示在本页，
+ * 直接点击画面操作，支持扫码、账号密码、验证码；登录态持久化在服务器。
+ */
+import { PROVIDERS } from "../lib/providers";
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+
+if (!Astro.locals.user || !Astro.locals.db) return Astro.redirect("/login");
+---
+<AdminLayout title="AI 助手">
+    <style is:global>
+      * { box-sizing: border-box; }
+      .wrap { max-width: 1180px; margin: 0 auto; padding: 0 16px; display: grid; gap: 20px; }
+      .card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 20px; }
+      h1 { font-size: 20px; } h2 { font-size: 15px; margin: 0 0 12px; }
+      button { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 6px 12px; cursor: pointer; font-size: 13px; }
+      button:hover { background: #135e96; }
+      button.ghost { background: #f6f7f7; color: #1d2327; border: 1px solid #c3c4c7; }
+      button.ghost:hover { background: #f0f0f1; }
+      button.danger { background: #b32d2e; }
+      button:disabled { opacity: .45; cursor: not-allowed; }
+      .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+      .msg { font-size: 13px; margin-top: 8px; min-height: 18px; color: #646970; }
+      .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; background: #f0f0f1; }
+      .badge.ok { background: #c6e1c6; color: #135e06; }
+      .badge.warn { background: #fff3cd; color: #7a5b00; }
+      .badge.err { background: #f7dcdc; color: #8a1f1f; }
+      textarea { width: 100%; font-size: 13px; padding: 8px; border: 1px solid #8c8f94; border-radius: 3px; font-family: inherit; min-height: 80px; resize: vertical; }
+      input[type=text], input[type=password], input[type=tel], input[type=email] { font-size: 13px; padding: 6px 8px; border: 1px solid #8c8f94; border-radius: 3px; font-family: inherit; }
+      .reply { background: #f6f7f7; border: 1px solid #dcdcde; border-radius: 3px; padding: 12px; margin-top: 12px; white-space: pre-wrap; font-size: 13px; line-height: 1.6; max-height: 420px; overflow: auto; }
+      .provider-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; margin-bottom: 16px; }
+      .provider-btn { padding: 12px; border: 2px solid #c3c4c7; border-radius: 6px; background: #fff; cursor: pointer; text-align: center; font-size: 13px; font-weight: 600; color: #1d2327; transition: border-color .15s; }
+      .provider-btn:hover { border-color: #2271b1; }
+      .provider-btn.active { border-color: #2271b1; background: #f0f6fc; }
+      .hint { font-size: 12px; color: #646970; margin-top: 6px; line-height: 1.7; }
+      code { font-family: Consolas, Monaco, monospace; font-size: 12px; background: #f0f0f1; padding: 2px 4px; border-radius: 3px; }
+      .viewer { border: 1px solid #8c8f94; border-radius: 6px; overflow: hidden; background: #fff; }
+      .viewer-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 8px 10px; background: #f6f7f7; border-bottom: 1px solid #dcdcde; }
+      .viewer-bar .urlbox { flex: 1; min-width: 200px; font-size: 12px; color: #50575e; background: #fff; border: 1px solid #dcdcde; border-radius: 3px; padding: 4px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .quick-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 8px 10px; background: #fffdf5; border-bottom: 1px solid #f0dfa0; }
+      .quick-row .cap { font-size: 12px; font-weight: 600; color: #8a6d1d; }
+      .quick-row input { flex: 1; min-width: 130px; }
+      .quick-row .msg { margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .screen-wrap { position: relative; background: #2c3338; line-height: 0; }
+      #viewImg { display: block; width: 100%; height: auto; cursor: pointer; user-select: none; touch-action: none; }
+      #viewImg.off { opacity: .35; }
+      #dragSvg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; display: none; }
+      .screen-tip { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #dcdcde; font-size: 14px; pointer-events: none; }
+      .kbd-row { display: flex; gap: 6px; align-items: center; padding: 8px 10px; border-top: 1px solid #dcdcde; background: #fcfcfc; flex-wrap: wrap; }
+      .kbd-row input { flex: 1; min-width: 180px; }
+      @keyframes apFlash { 0%,100% { box-shadow: none; } 30% { box-shadow: 0 0 0 2px #2271b1; border-color: #2271b1; } }
+      #typeInput.flash { animation: apFlash 1s ease 1; }
+      .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#c3c4c7; margin-right:5px; }
+      .dot.live { background: #46b450; }
+      .small { font-size: 12px; color: #646970; }
+    </style>
+
+    <div class="wrap">
+      <section class="card">
+        <h2>1. 选择 AI 提供商</h2>
+        <div class="provider-grid" id="providerGrid">
+          {PROVIDERS.map((p) => (
+            <div class="provider-btn" data-provider={p.id}>{p.name}</div>
+          ))}
+        </div>
+        <p class="hint" style="margin-top:0">无需 API Key。登录态保存在服务器（<code>.ap-data/ai-profiles/</code>），重启不丢失；空闲 30 分钟自动释放浏览器内存。</p>
+      </section>
+
+      <section class="card" id="viewerCard" style="display:none">
+        <h2>2. 登录助手 <span class="badge" id="loginBadge" style="margin-left:6px">未启动</span></h2>
+        <div class="viewer">
+          <div class="viewer-bar">
+            <button id="btnOpen">打开登录页</button>
+            <button class="ghost" id="btnHome">回主页</button>
+            <button class="ghost" id="btnCheck">检查登录</button>
+            <button class="ghost" id="btnPause">暂停画面</button>
+            <div class="urlbox" id="urlBox">未打开</div>
+            <span class="small"><span class="dot" id="liveDot"></span><span id="liveText">画面停止</span></span>
+          </div>
+          <div class="quick-row">
+            <span class="cap">🔑 快捷登录</span>
+            <input type="text" id="loginAccount" placeholder="手机号 / 邮箱 / 账号" autocomplete="off" />
+            <input type="password" id="loginPassword" placeholder="密码" autocomplete="new-password" />
+            <button id="btnFill">自动填写</button>
+            <button id="btnFillSubmit">填写并登录</button>
+            <span class="msg small" id="fillMsg">服务器自动定位页面上的账号框和密码框</span>
+          </div>
+          <div class="screen-wrap">
+            <img id="viewImg" alt="AI 网站实时画面" draggable="false" />
+            <svg id="dragSvg" viewBox="0 0 1280 800" preserveAspectRatio="none" aria-hidden="true">
+              <line id="dragLinePath" x1="0" y1="0" x2="0" y2="0" stroke="#ff8c00" stroke-width="3" stroke-dasharray="8 6" stroke-linecap="round" />
+              <circle id="dragStartDot" cx="0" cy="0" r="9" fill="none" stroke="#ff8c00" stroke-width="3" />
+              <circle id="dragEndDot" cx="0" cy="0" r="7" fill="#ff8c00" />
+            </svg>
+            <div class="screen-tip" id="screenTip">点击「打开登录页」，在此直接操作登录（扫码 / 手机号 / 账号密码）</div>
+          </div>
+          <div class="kbd-row">
+            <input type="text" id="typeInput" placeholder="先在画面中点中输入框，再在此输入文字（账号/密码/短信验证码/中文），点「输入」或回车" />
+            <button id="btnType">输入</button>
+            <span class="small">|</span>
+            <button class="ghost" data-key="Enter">回车</button>
+            <button class="ghost" data-key="Tab">Tab</button>
+            <button class="ghost" data-key="Escape">ESC</button>
+            <button class="ghost" data-key="Backspace">⌫</button>
+            <span class="small">|</span>
+            <button class="ghost" id="scrollDown">向下滚</button>
+            <button class="ghost" id="scrollUp">向上滚</button>
+            <span class="small">|</span>
+            <button class="ghost danger" id="btnLogout">退出并清除登录</button>
+          </div>
+        </div>
+        <p class="hint">
+          操作方式：① 账号密码登录推荐直接用上方「🔑 快捷登录」，服务器自动定位并填写，无需在画面里点输入框；
+          ② 画面中的任意位置可<b>直接点击/双击</b>，点输入框后到下方输入框打字再点「输入」（输入法在你本机完成，中文也能进页面）；
+          ③ 遇到<b>滑块/拼图验证码</b>：在画面中按住滑块，直接拖到缺口位置再松手（拟人轨迹自动回放）；
+          ④ 扫码登录：用手机扫描画面中的二维码。登录成功后徽章会自动变为「已登录」。
+        </p>
+      </section>
+
+      <section class="card" id="chatCard" style="display:none">
+        <h2>3. 发送消息</h2>
+        <textarea id="prompt" placeholder="登录成功后，在此输入问题或内容生成请求…"></textarea>
+        <div class="row" style="margin-top:8px">
+          <button id="sendBtn">发送</button>
+          <span class="msg" id="chatMsg"></span>
+        </div>
+        <div class="reply" id="replyBox" style="display:none"></div>
+      </section>
+    </div>
+
+    <script>
+      var current = null;
+      var NAT_W = 1280, NAT_H = 800;
+      var polling = false, pollTimer = null;
+      var $ = function (id) { return document.getElementById(id); };
+
+      function api(url, opts) {
+        return fetch(url, Object.assign({ credentials: "same-origin", headers: { "Content-Type": "application/json" } }, opts)).then(function (r) { return r.json(); });
+      }
+      function view(action, extra) {
+        return api("/admin-ext/api/ai-chat/view", { method: "POST", body: JSON.stringify(Object.assign({ provider: current, action: action }, extra || {})) });
+      }
+      function loginAction(action) {
+        return api("/admin-ext/api/ai-chat/login", { method: "POST", body: JSON.stringify({ provider: current, action: action }) });
+      }
+      function setBadge(text, cls) {
+        var b = $("loginBadge"); b.textContent = text; b.className = "badge " + (cls || "");
+      }
+      function setLive(on) {
+        $("liveDot").className = "dot" + (on ? " live" : "");
+        $("liveText").textContent = on ? "实时画面" : "画面停止";
+        $("btnPause").textContent = on ? "暂停画面" : "继续画面";
+        $("viewImg").classList.toggle("off", !on);
+      }
+
+      // ── 登录自动探测：打开登录页后循环检查，扫码/登录成功立刻翻牌（无需手点）──
+      var detectTimer = null, detectLeft = 0, detectProvider = null;
+      function stopDetect() {
+        if (detectTimer) { clearTimeout(detectTimer); detectTimer = null; }
+        detectLeft = 0;
+      }
+      function startDetect(times) {
+        stopDetect();
+        detectLeft = times || 30; // 30 × 5s = 150s，覆盖扫码耗时
+        detectProvider = current;
+        (function loop() {
+          if (!current || current !== detectProvider) { stopDetect(); return; }
+          loginAction("check").then(function (d) {
+            if (current !== detectProvider) { stopDetect(); return; }
+            if (d.loggedIn) {
+              setBadge("已登录 ✓", "ok");
+              if (d.url) $("urlBox").textContent = d.url;
+              stopDetect();
+            } else {
+              detectLeft -= 1;
+              if (detectLeft > 0) detectTimer = setTimeout(loop, 5000);
+              else setBadge("未登录", "err");
+            }
+          }).catch(function () {
+            detectLeft -= 1;
+            if (detectLeft > 0 && current === detectProvider) detectTimer = setTimeout(loop, 5000);
+          });
+        })();
+      }
+
+      function restoreSession(providerId) {
+        // 首帧截图会等待持久化浏览器启动并打开主页，之后再做一次登录判定
+        setTimeout(function () {
+          if (current !== providerId) return;
+          loginAction("check").then(function (d) {
+            if (current !== providerId) return;
+            if (d.loggedIn) {
+              setBadge("已登录 ✓（自动恢复）", "ok");
+              if (d.url) $("urlBox").textContent = d.url;
+            } else {
+              setBadge("未登录", "err");
+              if (d.url && d.url !== "about:blank") $("urlBox").textContent = d.url;
+              else if (d.lastError) $("urlBox").textContent = "页面打开失败：" + d.lastError;
+            }
+          }).catch(function () { if (current === providerId) setBadge("状态未知", "warn"); });
+        }, 1200);
+      }
+
+      document.querySelectorAll(".provider-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          document.querySelectorAll(".provider-btn").forEach(function (b) { b.classList.remove("active"); });
+          btn.classList.add("active");
+          stopDetect();
+          current = btn.dataset.provider;
+          $("viewerCard").style.display = "block";
+          $("chatCard").style.display = "block";
+          $("screenTip").style.display = "flex";
+          setBadge("正在恢复登录态…", "warn");
+          stopPoll();
+          $("viewImg").removeAttribute("src");
+          $("urlBox").textContent = "正在打开站点主页…";
+          startPoll();              // 首帧会触发持久化会话启动 + 自动打开主页
+          restoreSession(current);  // 基于持久化 Cookie/LocalStorage 自动判定
+        });
+      });
+
+      // ── 画面轮询（顺序加载，标签页隐藏自动暂停）──────────────────────
+      function tick() {
+        if (!polling || !current) return;
+        var img = $("viewImg");
+        var url = "/admin-ext/api/ai-chat/screenshot?provider=" + encodeURIComponent(current) + "&t=" + Date.now();
+        fetch(url, { credentials: "same-origin" }).then(function (r) {
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          return r.blob();
+        }).then(function (blob) {
+          var obj = URL.createObjectURL(blob);
+          var old = img.src;
+          img.onload = function () { if (old) URL.revokeObjectURL(old); $("screenTip").style.display = "none"; };
+          img.src = obj;
+          pollTimer = setTimeout(tick, 650);
+        }).catch(function () {
+          pollTimer = setTimeout(tick, 1500);
+        });
+      }
+      function startPoll() { if (polling) return; polling = true; setLive(true); tick(); }
+      function stopPoll() { polling = false; if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; } setLive(false); }
+      document.addEventListener("visibilitychange", function () {
+        if (document.hidden && polling) { window.__wasLive = true; stopPoll(); }
+        else if (!document.hidden && window.__wasLive && current) { window.__wasLive = false; startPoll(); }
+      });
+
+      $("btnPause").addEventListener("click", function () { polling ? stopPoll() : startPoll(); });
+
+      // ── 打开/主页/检查 ────────────────────────────────────────────
+      $("btnOpen").addEventListener("click", function () {
+        if (!current) return;
+        setBadge("打开登录页…", "warn");
+        view("open", { target: "login" }).then(function (d) {
+          if (d.ok) {
+            $("urlBox").textContent = d.url || "已打开";
+            startPoll();
+            setBadge("请在画面中登录，成功后自动识别…", "warn");
+            startDetect(30); // 扫码/账号登录成功后徽章自动翻为「已登录」
+          } else setBadge("打开失败：" + (d.error || ""), "err");
+        });
+      });
+      $("btnHome").addEventListener("click", function () {
+        if (!current) return;
+        setBadge("打开主页…", "warn");
+        view("open", { target: "home" }).then(function (d) {
+          if (d.ok) { $("urlBox").textContent = d.url || ""; startPoll(); startDetect(3); }
+        });
+      });
+      $("btnCheck").addEventListener("click", function () {
+        if (!current) return;
+        setBadge("检查中…", "warn");
+        loginAction("check").then(function (d) {
+          if (d.loggedIn) { setBadge("已登录 ✓", "ok"); view("info").then(function (i) { if (i.ok) $("urlBox").textContent = i.url; }); }
+          else { setBadge("未登录", "err"); if (d.url) $("urlBox").textContent = d.url; }
+        });
+      });
+      $("btnLogout").addEventListener("click", function () {
+        if (!current) return;
+        if (!confirm("确定退出该平台登录并清除本地保存的登录态吗？")) return;
+        stopDetect();
+        stopPoll();
+        loginAction("logout").then(function () { setBadge("已退出", ""); $("viewImg").removeAttribute("src"); $("screenTip").style.display = "flex"; });
+      });
+
+      // ── 🔑 快捷登录：服务器自动定位账号框/密码框 ───────────────────
+      function doFill(submit) {
+        if (!current) return;
+        var account = $("loginAccount").value || "";
+        var password = $("loginPassword").value || "";
+        if (!account.trim() || !password) {
+          $("fillMsg").textContent = "请先填写账号和密码";
+          $("fillMsg").style.color = "#b32d2e";
+          return;
+        }
+        $("fillMsg").style.color = "#646970";
+        $("fillMsg").textContent = submit ? "正在填写并登录…" : "正在填写…";
+        view("fill-login", { account: account, password: password, submit: submit }).then(function (d) {
+          if (d.ok) {
+            $("fillMsg").textContent = d.message || "已填写";
+            if (submit && d.submitted) startDetect(30);
+            startPoll();
+          } else {
+            $("fillMsg").style.color = "#b32d2e";
+            $("fillMsg").textContent = "填写失败：" + (d.error || "unknown");
+          }
+        });
+      }
+      $("btnFill").addEventListener("click", function () { doFill(false); });
+      $("btnFillSubmit").addEventListener("click", function () { doFill(true); });
+      $("loginPassword").addEventListener("keydown", function (e) {
+        if (e.key === "Enter") { e.preventDefault(); doFill(true); }
+      });
+
+      // ── 画面鼠标操作（按显示比例换算到自然坐标）────────────────────
+      function toNatural(clientX, clientY) {
+        var img = $("viewImg"), rect = img.getBoundingClientRect();
+        var x = (clientX - rect.left) * (img.naturalWidth || NAT_W) / rect.width;
+        var y = (clientY - rect.top) * (img.naturalHeight || NAT_H) / rect.height;
+        return { x: Math.round(x), y: Math.round(y) };
+      }
+
+      // 点击后给下方输入框一个闪烁提示，避免用户直接在截图上打字
+      function flashTypeInput() {
+        var ti = $("typeInput");
+        ti.classList.remove("flash");
+        void ti.offsetWidth; // 重置动画
+        ti.classList.add("flash");
+      }
+
+      // ── 拖拽（滑块/拼图验证码）：pointer 轨迹采集，松手后整段回放 ──
+      var drag = null;            // {x0,y0,active,pointerId,t0,points[]}
+      var suppressClick = false;  // 拖拽结束后浏览器仍会派发 click，需吞掉
+      var DRAG_THRESHOLD = 6;     // 显示像素，超过即判定为拖拽
+
+      function showDragOverlay() { $("dragSvg").style.display = "block"; }
+      function hideDragOverlay() { $("dragSvg").style.display = "none"; }
+      function paintDrag(curNat) {
+        var start = drag.points[0];
+        var line = $("dragLinePath");
+        line.setAttribute("x1", start.x); line.setAttribute("y1", start.y);
+        line.setAttribute("x2", curNat.x); line.setAttribute("y2", curNat.y);
+        $("dragStartDot").setAttribute("cx", start.x);
+        $("dragStartDot").setAttribute("cy", start.y);
+        $("dragEndDot").setAttribute("cx", curNat.x);
+        $("dragEndDot").setAttribute("cy", curNat.y);
+      }
+
+      $("viewImg").addEventListener("pointerdown", function (e) {
+        if (!current || !polling) return;
+        if (e.pointerType === "mouse" && e.button !== 0) return;
+        drag = {
+          x0: e.clientX, y0: e.clientY,
+          active: false, pointerId: e.pointerId,
+          t0: performance.now(),
+          points: [toNatural(e.clientX, e.clientY)],
+        };
+        try { $("viewImg").setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
+      });
+      $("viewImg").addEventListener("pointermove", function (e) {
+        if (!drag) return;
+        var moved = Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0);
+        if (!drag.active && moved >= DRAG_THRESHOLD) {
+          drag.active = true;
+          showDragOverlay();
+        }
+        if (drag.active) {
+          var nat = toNatural(e.clientX, e.clientY);
+          drag.points.push(nat);
+          paintDrag(nat);
+        }
+      });
+      function endDrag(cancelled) {
+        if (!drag) return;
+        var d = drag;
+        drag = null;
+        hideDragOverlay();
+        try { $("viewImg").releasePointerCapture(d.pointerId); } catch (_) { /* ignore */ }
+        if (!cancelled && d.active && d.points.length >= 2) {
+          suppressClick = true;
+          setTimeout(function () { suppressClick = false; }, 400);
+          var duration = Math.max(250, Math.round(performance.now() - d.t0));
+          setBadge("正在回放拖拽轨迹…", "warn");
+          view("drag", { points: d.points, duration: duration }).then(function (r) {
+            if (r && r.ok) setBadge("拖拽完成", "warn");
+            else setBadge("拖拽失败：" + (r && r.error ? r.error : "unknown"), "err");
+          });
+        }
+      }
+      $("viewImg").addEventListener("pointerup", function () { endDrag(false); });
+      $("viewImg").addEventListener("pointercancel", function () { endDrag(true); });
+
+      $("viewImg").addEventListener("click", function (e) {
+        if (suppressClick) { e.preventDefault(); e.stopPropagation(); return; }
+        if (!current || !polling) return;
+        var p = toNatural(e.clientX, e.clientY);
+        view("click", { x: p.x, y: p.y, dbl: false });
+        $("viewImg").focus({ preventScroll: true });
+        flashTypeInput();
+      });
+      $("viewImg").addEventListener("dblclick", function (e) {
+        if (suppressClick) { e.preventDefault(); return; }
+        if (!current || !polling) return;
+        e.preventDefault();
+        var p = toNatural(e.clientX, e.clientY);
+        view("click", { x: p.x, y: p.y, dbl: true });
+        $("viewImg").focus({ preventScroll: true });
+        flashTypeInput();
+      });
+      // 画面获得焦点后转发单键（输入框聚焦时不拦截）
+      $("viewImg").tabIndex = 0;
+      $("viewImg").addEventListener("keydown", function (e) {
+        if (!current || !polling) return;
+        if (document.activeElement === $("typeInput")) return;
+        if (document.activeElement === $("loginAccount") || document.activeElement === $("loginPassword")) return;
+        var k = e.key;
+        if (k.length === 1 || ["Enter", "Tab", "Escape", "Backspace", "Delete", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End", "PageUp", "PageDown"].indexOf(k) >= 0) {
+          e.preventDefault();
+          view("press", { key: k });
+        }
+      });
+
+      // ── 文本输入（本机输入法完成中文）────────────────────────────
+      $("btnType").addEventListener("click", function () {
+        var t = $("typeInput").value;
+        if (!current || !t) return;
+        view("type", { text: t }).then(function () { $("typeInput").value = ""; $("viewImg").focus(); });
+      });
+      $("typeInput").addEventListener("keydown", function (e) {
+        if (e.key === "Enter") { e.preventDefault(); $("btnType").click(); }
+      });
+      document.querySelectorAll("[data-key]").forEach(function (b) {
+        b.addEventListener("click", function () { if (current) view("press", { key: b.dataset.key }); $("viewImg").focus(); });
+      });
+      $("scrollDown").addEventListener("click", function () { if (current) view("scroll", { deltaY: 600 }); $("viewImg").focus(); });
+      $("scrollUp").addEventListener("click", function () { if (current) view("scroll", { deltaY: -600 }); $("viewImg").focus(); });
+
+      // ── 聊天 ─────────────────────────────────────────────────────
+      $("sendBtn").addEventListener("click", function () {
+        if (!current) return;
+        var prompt = $("prompt").value.trim();
+        if (!prompt) { $("chatMsg").textContent = "请输入内容"; return; }
+        $("sendBtn").disabled = true;
+        $("chatMsg").textContent = "发送中，请稍候（10-60 秒）…";
+        $("replyBox").style.display = "none";
+        api("/admin-ext/api/ai-chat/send", { method: "POST", body: JSON.stringify({ provider: current, prompt: prompt }) }).then(function (d) {
+          $("sendBtn").disabled = false;
+          if (d.ok) { $("replyBox").textContent = d.reply; $("replyBox").style.display = "block"; $("chatMsg").textContent = "完成"; setBadge("已登录 ✓", "ok"); }
+          else { $("chatMsg").textContent = "失败：" + (d.error || "unknown"); }
+        }).catch(function (e) { $("sendBtn").disabled = false; $("chatMsg").textContent = "请求失败：" + e; });
+      });
+    </script>
+</AdminLayout>

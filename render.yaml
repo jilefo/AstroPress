@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: astropress
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter
+    healthCheckPath: /api/setup
+    envVars:
+      - key: PORT
+        value: 4321
+      - key: HOST
+        value: 0.0.0.0
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false  # Set in Render dashboard
+      - key: AUTH_SECRET
+        generateValue: true
+    disk:
+      name: data
+      mountPath: /app/data
+      sizeGB: 1

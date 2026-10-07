@@ -1,0 +1,566 @@
+---
+import type { Block, ThemeTokens } from "@astropress/core/types/theme";
+import { buildFormHtml } from "../lib/formRenderer";
+import { queryPosts } from "@astropress/core/query";
+import { eq, inArray, and } from "drizzle-orm";
+import { wpOptions, wpPostmeta, wpUsers } from "@astropress/core/schema";
+import { loadPermalinkSettings, postPath } from "@astropress/core/permalink";
+
+interface Props {
+  blocks: Block[];
+  tokens: ThemeTokens;
+  formsById?: Record<string, any>;
+  navItems?: { url: string; title: string }[];
+  siteTitle?: string;
+  siteTagline?: string;
+  wrapMain?: boolean;
+}
+
+const { blocks, tokens, formsById = {}, navItems = [], siteTitle = "", siteTagline = "", wrapMain = true } = Astro.props;
+
+const db = Astro.locals.db;
+const permalinkSettings = db ? await loadPermalinkSettings(db) : undefined;
+const queryLoopData: Record<string, any[]> = {};
+const queryLoopTotal: Record<string, number> = {};
+const _pagedParam = Astro.url.searchParams.get("paged");
+const currentPaged = _pagedParam ? Math.max(1, Number(_pagedParam)) : 1;
+
+for (const block of blocks) {
+  if (block.type === "query-loop" && db) {
+    try {
+      const perPage = Number(block.props.perPage) || 6;
+      const rawOrderBy = String(block.props.orderBy || "date");
+      const orderBy = (rawOrderBy === "rand" ? "date" : rawOrderBy) as "date" | "title" | "menuOrder" | "id" | "modified";
+      const { posts, total } = await queryPosts(db, {
+        type: String(block.props.postType || "post"),
+        perPage,
+        page: currentPaged,
+        orderBy,
+        order: (String(block.props.order || "desc").toLowerCase() as "asc" | "desc"),
+      });
+      queryLoopData[block.id] = posts;
+      queryLoopTotal[block.id] = total;
+    } catch { queryLoopData[block.id] = []; queryLoopTotal[block.id] = 0; }
+  }
+}
+
+// 批量解析作者显示名（loop-author 块用）
+const authorNamesById: Record<number, string> = {};
+{
+  const authorIds = new Set<number>();
+  for (const posts of Object.values(queryLoopData)) {
+    for (const p of posts) if (p.author) authorIds.add(Number(p.author));
+  }
+  if (authorIds.size > 0 && db) {
+    try {
+      const rows = await db.select({ id: wpUsers.id, name: wpUsers.displayName }).from(wpUsers).where(inArray(wpUsers.id, [...authorIds]));
+      for (const r of rows) if (r.name) authorNamesById[r.id] = r.name;
+    } catch {}
+  }
+}
+
+const loopTemplateCache: Record<string, any[]> = {};
+if (db) {
+  for (const block of blocks) {
+    if (block.type === "query-loop") {
+      const templateId = String(block.props.loopTemplateId || "default-with-image");
+      if (!loopTemplateCache[templateId] && !templateId.startsWith("default-")) {
+        const schemaKey = `astropress_page_schema___loop-item_${templateId}__`;
+        try {
+          const [srow] = await db.select({ value: wpOptions.optionValue }).from(wpOptions)
+            .where(eq(wpOptions.optionName, schemaKey)).limit(1);
+          if (srow?.value) {
+            const s = JSON.parse(srow.value);
+            loopTemplateCache[templateId] = s.blocks ?? [];
+          }
+        } catch {}
+      }
+    }
+  }
+}
+
+const postMetaCache: Record<number, Record<string, string>> = {};
+if (db) {
+  for (const block of blocks) {
+    if (block.type !== "query-loop") continue;
+    const templateId = String(block.props.loopTemplateId || "default-with-image");
+    const templateBlocks: any[] = templateId.startsWith("default-")
+      ? []
+      : (loopTemplateCache[templateId] ?? []);
+    const fieldKeys = templateBlocks
+      .filter((b: any) => b.type === "loop-custom-field" && b.props?.fieldKey)
+      .map((b: any) => String(b.props.fieldKey));
+    if (fieldKeys.length === 0) continue;
+
+    const posts = queryLoopData[block.id] ?? [];
+    const postIds = posts.map((p: any) => p.id).filter(Boolean);
+    if (postIds.length === 0) continue;
+
+    try {
+      const metaRows = await db.select({
+        postId: wpPostmeta.postId,
+        metaKey: wpPostmeta.metaKey,
+        metaValue: wpPostmeta.metaValue,
+      }).from(wpPostmeta).where(
+        and(inArray(wpPostmeta.postId, postIds), inArray(wpPostmeta.metaKey, fieldKeys))
+      );
+      for (const row of metaRows) {
+        if (!postMetaCache[row.postId]) postMetaCache[row.postId] = {};
+        postMetaCache[row.postId][row.metaKey] = row.metaValue ?? "";
+      }
+    } catch {}
+  }
+}
+
+function esc(s: unknown) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+const DEFAULT_LOOP_TEMPLATE_BLOCKS: Record<string, any[]> = {
+  "default-with-image": [
+    { type: "loop-image", props: { height: 220 } },
+    { type: "loop-category", props: { size: "10px" } },
+    { type: "loop-title", props: { tag: "h3", size: "1.05rem", weight: "700" } },
+    { type: "loop-date", props: { size: "11px" } },
+    { type: "loop-author", props: { prefix: "作者：", size: "11px" } },
+    { type: "loop-excerpt", props: { length: 120, size: "0.9rem" } },
+    { type: "loop-read-more", props: { text: "阅读全文 →", buttonStyle: "link" } },
+  ],
+  "default-no-image": [
+    { type: "loop-category", props: { size: "10px", badge: true } },
+    { type: "loop-title", props: { tag: "h3", size: "1.1rem", weight: "700" } },
+    { type: "loop-date", props: { size: "11px" } },
+    { type: "loop-author", props: { prefix: "作者：", size: "12px" } },
+    { type: "loop-excerpt", props: { length: 160, size: "0.9rem" } },
+    { type: "loop-read-more", props: { text: "阅读全文 →", buttonStyle: "link" } },
+  ],
+  "default-horizontal": [
+    { type: "loop-image", props: { height: 140, layout: "horizontal", width: "180px" } },
+    { type: "loop-category", props: { size: "10px" } },
+    { type: "loop-title", props: { tag: "h3", size: "1rem", weight: "700" } },
+    { type: "loop-date", props: { size: "11px" } },
+    { type: "loop-excerpt", props: { length: 80, size: "0.88rem" } },
+    { type: "loop-read-more", props: { text: "阅读全文 →", buttonStyle: "link" } },
+  ],
+  "default-magazine": [
+    { type: "loop-image", props: { height: 280 } },
+    { type: "loop-category", props: { size: "10px", badge: true } },
+    { type: "loop-title", props: { tag: "h3", size: "1.15rem", weight: "700" } },
+    { type: "loop-date", props: { size: "11px" } },
+    { type: "loop-read-more", props: { text: "阅读全文 →", buttonStyle: "link" } },
+  ],
+};
+
+function renderLoopTemplate(loopBlocks: any[], post: any, toks: ThemeTokens, meta: Record<string, string> = {}): string {
+  const postUrl = post.type === "page" ? `/${post.slug}` : postPath(post.slug, permalinkSettings);
+  const date = post.date ? new Date(post.date) : new Date();
+  const typeLabel = post.type === "post" ? "文章" : post.type === "page" ? "页面" : String(post.type || "文章");
+
+  return loopBlocks.map((block: any) => {
+    const p = block.props ?? {};
+    switch (block.type) {
+      case "loop-image": {
+        const imgH = Number(p.height) || 220;
+        const br = String(p.borderRadius || "0");
+        return `<a href="${esc(postUrl)}" style="display:block;height:${imgH}px;overflow:hidden;border-radius:${br} ${br} 0 0;background:linear-gradient(135deg,${toks.colors.surface},${toks.colors.border});flex-shrink:0;">
+          <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="${toks.colors.border}" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          </div>
+        </a>`;
+      }
+      case "loop-category": {
+        const catColor = String(p.color || toks.colors.primary);
+        const badge = p.badge;
+        return `<div style="padding:0 16px 6px;">
+          <span style="font-size:${String(p.size || "10px")};font-weight:700;color:${catColor};text-transform:uppercase;letter-spacing:0.5px;${badge ? `background:${toks.colors.surface};border:1px solid ${toks.colors.border};border-radius:99px;padding:2px 8px;` : ""}">${esc(typeLabel)}</span>
+        </div>`;
+      }
+      case "loop-title": {
+        const tag = String(p.tag || "h3");
+        const titleColor = String(p.color || toks.colors.text);
+        return `<${tag} style="margin:0;padding:6px 16px;font-family:${toks.fonts.heading};font-weight:${String(p.weight || "700")};font-size:${String(p.size || "1.05rem")};line-height:1.35;color:${titleColor};">
+          <a href="${esc(postUrl)}" style="color:inherit;text-decoration:none;">${esc(post.title)}</a>
+        </${tag}>`;
+      }
+      case "loop-date": {
+        const fmt = String(p.format || "long");
+        let dateStr = "";
+        try {
+          if (fmt === "long") dateStr = date.toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric" });
+          else if (fmt === "short") dateStr = date.toLocaleDateString("zh-CN");
+          else if (fmt === "iso") dateStr = date.toISOString().slice(0, 10);
+          else if (fmt === "relative") {
+            const diff = Date.now() - date.getTime();
+            const days = Math.floor(diff / 86400000);
+            dateStr = days === 0 ? "今天" : days === 1 ? "昨天" : `${days} 天前`;
+          }
+        } catch { dateStr = String(post.date || ""); }
+        return `<div style="padding:4px 16px;"><span style="font-size:${String(p.size || "11px")};color:${String(p.color || toks.colors.textMuted)};">${esc(dateStr)}</span></div>`;
+      }
+      case "loop-author": {
+        const authorName = authorNamesById[Number(post.author)] || "";
+        if (!authorName) return "";
+        return `<div style="padding:4px 16px;"><span style="font-size:${String(p.size || "11px")};color:${String(p.color || toks.colors.textMuted)};">${esc(String(p.prefix || "作者："))}${esc(authorName)}</span></div>`;
+      }
+      case "loop-excerpt": {
+        const rawExcerpt = post.excerpt || (post.content ? String(post.content).replace(/<[^>]+>/g, "") : "");
+        const length = Number(p.length) || 120;
+        const excerpt = rawExcerpt.length > length ? rawExcerpt.slice(0, length) + "\u2026" : rawExcerpt;
+        return excerpt ? `<div style="padding:4px 16px;"><p style="margin:0;font-size:${String(p.size || "0.9rem")};color:${String(p.color || toks.colors.textMuted)};line-height:1.65;">${esc(excerpt)}</p></div>` : "";
+      }
+      case "loop-read-more": {
+        const btnStyle = String(p.buttonStyle || "link");
+        const btnColor = String(p.color || toks.colors.primary);
+        const btnText = String(p.text || "阅读全文 →");
+        if (btnStyle === "button") {
+          return `<div style="padding:10px 16px 16px;"><a href="${esc(postUrl)}" style="display:inline-block;background:${btnColor};color:#fff;padding:8px 20px;border-radius:${toks.spacing.borderRadius};font-size:${String(p.size || "13px")};font-weight:600;text-decoration:none;">${esc(btnText)}</a></div>`;
+        } else if (btnStyle === "outline") {
+          return `<div style="padding:10px 16px 16px;"><a href="${esc(postUrl)}" style="display:inline-block;border:2px solid ${btnColor};color:${btnColor};padding:7px 18px;border-radius:${toks.spacing.borderRadius};font-size:${String(p.size || "13px")};font-weight:600;text-decoration:none;">${esc(btnText)}</a></div>`;
+        }
+        return `<div style="padding:10px 16px 16px;"><a href="${esc(postUrl)}" style="font-size:${String(p.size || "13px")};font-weight:600;color:${btnColor};text-decoration:none;">${esc(btnText)}</a></div>`;
+      }
+      case "loop-custom-field": {
+        const fieldKey = String(p.fieldKey || "");
+        if (!fieldKey) return "";
+        const val = meta[fieldKey] ?? String(p.fallback || "");
+        if (!val) return "";
+        const labelHtml = p.showLabel !== false && p.label
+          ? `<span style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:${String(p.labelColor || toks.colors.textMuted)};margin-bottom:2px;">${esc(String(p.label))}</span>`
+          : "";
+        return `<div style="padding:4px 16px;">${labelHtml}<span style="font-size:${String(p.size || "13px")};color:${String(p.color || toks.colors.text)};">${esc(val)}</span></div>`;
+      }
+      case "spacer":
+        return `<div style="height:${Number(p.height) || 16}px;"></div>`;
+      case "divider":
+        return `<hr style="border:none;border-top:1px solid ${toks.colors.border};margin:8px 16px;">`;
+      case "html":
+        return `<div style="padding:0 16px;">${String(p.content || "")}</div>`;
+      default:
+        return "";
+    }
+  }).join("");
+}
+
+function renderBlock(block: Block, queryData?: any[], queryTotal?: number, queryCurrentPage?: number): string {
+  const p = block.props;
+
+  switch (block.type) {
+    case "hero": {
+      const align = String(p.align || "center");
+      const height = Number(p.height) || 480;
+      const itemsAlign = align === "left" ? "flex-start" : align === "right" ? "flex-end" : "center";
+      return `
+<section class="ap-block ap-block-hero" style="background:${esc(p.bgColor || "#1a1a2e")};color:${esc(p.textColor || "#fff")};padding:${tokens.spacing.sectionY} 48px;text-align:${align};min-height:${height}px;display:flex;flex-direction:column;align-items:${itemsAlign};justify-content:center;">
+  <h1 style="font-family:${tokens.fonts.heading};font-size:clamp(2rem,5vw,3rem);font-weight:700;margin:0 0 16px;line-height:1.15;max-width:800px;">${esc(p.heading)}</h1>
+  ${p.subtext ? `<p style="font-size:1.15rem;margin:0 0 32px;opacity:0.85;max-width:560px;">${esc(p.subtext)}</p>` : ""}
+  ${p.buttonText ? `<a href="${esc(p.buttonUrl || "#")}" style="display:inline-block;background:${tokens.colors.primary};color:#fff;padding:14px 32px;border-radius:${tokens.spacing.borderRadius};font-weight:600;font-size:1rem;text-decoration:none;">${esc(p.buttonText)}</a>` : ""}
+</section>`;
+    }
+
+    case "text": {
+      const textBg = String(p.bgColor || "transparent");
+      const textColor = String(p.textColor || tokens.colors.text);
+      return `
+<section class="ap-block ap-block-text" style="background:${textBg};padding:${tokens.spacing.sectionY} 48px;text-align:${esc(p.align || "left")};">
+  <div style="max-width:${tokens.spacing.containerMax};margin:0 auto;font-family:${tokens.fonts.body};font-size:1.05rem;line-height:1.75;color:${textColor};">
+    ${String(p.content || "")}
+  </div>
+</section>`;
+    }
+
+    case "image": {
+      const maxW = p.width === "full" ? "100%" : p.width === "wide" ? "900px" : "640px";
+      return `
+<section class="ap-block ap-block-image" style="padding:32px 48px;text-align:${esc(p.align || "center")};">
+  ${p.src ? `<img src="${esc(p.src)}" alt="${esc(p.alt)}" loading="lazy" style="max-width:${maxW};border-radius:${tokens.spacing.borderRadius};display:inline-block;" />` : ""}
+  ${p.caption ? `<p style="font-size:0.85rem;color:${tokens.colors.textMuted};margin-top:8px;text-align:center;">${esc(p.caption)}</p>` : ""}
+</section>`;
+    }
+
+    case "cta":
+      return `
+<section class="ap-block ap-block-cta" style="background:${esc(p.bgColor || tokens.colors.primary)};color:${esc(p.textColor || "#fff")};padding:${tokens.spacing.sectionY} 48px;text-align:center;">
+  <div style="max-width:${tokens.spacing.containerMax};margin:0 auto;">
+    <h2 style="font-family:${tokens.fonts.heading};font-size:2rem;font-weight:700;margin:0 0 12px;">${esc(p.heading)}</h2>
+    ${p.text ? `<p style="margin:0 0 32px;opacity:0.9;font-size:1.1rem;max-width:560px;margin-left:auto;margin-right:auto;">${esc(p.text)}</p>` : ""}
+    ${p.buttonText ? `<a href="${esc(p.buttonUrl || "#")}" style="display:inline-block;background:rgba(255,255,255,0.15);color:inherit;padding:12px 28px;border-radius:${tokens.spacing.borderRadius};border:2px solid rgba(255,255,255,0.4);font-weight:600;text-decoration:none;">${esc(p.buttonText)}</a>` : ""}
+  </div>
+</section>`;
+
+    case "features": {
+      const items = (p.items as any[]) || [];
+      const cols = Number(p.cols) || 3;
+      const featBg = String(p.bgColor || "transparent");
+      const featTextColor = String(p.textColor || tokens.colors.text);
+      const featCardBg = String(p.cardBg || tokens.colors.surface);
+      const itemsHtml = items.map(item => `
+<div style="padding:28px;background:${featCardBg};border-radius:${tokens.spacing.borderRadius};border:1px solid ${tokens.colors.border};">
+  <div style="font-size:2rem;margin-bottom:12px;">${esc(item.icon || "★")}</div>
+  <h3 style="font-family:${tokens.fonts.heading};margin:0 0 8px;font-size:1.05rem;color:${featTextColor};">${esc(item.title)}</h3>
+  <p style="margin:0;color:${String(p.mutedColor || tokens.colors.textMuted)};font-size:0.95rem;line-height:1.6;">${esc(item.text)}</p>
+</div>`).join("");
+      return `
+<section class="ap-block ap-block-features" style="background:${featBg};padding:${tokens.spacing.sectionY} 48px;text-align:center;">
+  <div style="max-width:${tokens.spacing.containerMax};margin:0 auto;">
+    ${p.heading ? `<h2 style="font-family:${tokens.fonts.heading};font-size:2rem;font-weight:700;margin:0 0 12px;color:${featTextColor};">${esc(p.heading)}</h2>` : ""}
+    ${p.subtext ? `<p style="color:${String(p.mutedColor || tokens.colors.textMuted)};margin:0 0 48px;font-size:1.05rem;">${esc(p.subtext)}</p>` : ""}
+    <div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:28px;text-align:left;">${itemsHtml}</div>
+  </div>
+</section>`;
+    }
+
+    case "columns": {
+      const colsBg = String(p.bgColor || "transparent");
+      const colsTextColor = String(p.textColor || tokens.colors.text);
+      const colRatio = String(p.ratio || "1fr 1fr");
+      return `
+<section class="ap-block ap-block-columns" style="background:${colsBg};padding:${tokens.spacing.sectionY} 48px;">
+  <div style="max-width:${tokens.spacing.containerMax};margin:0 auto;display:grid;grid-template-columns:${colRatio};gap:${esc(p.gap || "2rem")};align-items:${esc(p.align || "start")};">
+    <div style="font-family:${tokens.fonts.body};line-height:1.75;color:${colsTextColor};">${String(p.leftContent || "")}</div>
+    <div style="font-family:${tokens.fonts.body};line-height:1.75;color:${colsTextColor};">${String(p.rightContent || "")}</div>
+  </div>
+</section>`;
+    }
+
+    case "form": {
+      const formId = String(p.formId || "");
+      const form = formsById[formId];
+      if (!form) return `<section class="ap-block ap-block-form" style="padding:32px 48px;"><div style="max-width:560px;margin:0 auto;padding:24px;background:${tokens.colors.surface};border:1px solid ${tokens.colors.border};border-radius:${tokens.spacing.borderRadius};text-align:center;color:${tokens.colors.textMuted};font-size:14px;">表单不存在。</div></section>`;
+      return `<section class="ap-block ap-block-form" style="padding:${tokens.spacing.sectionY} 48px;"><div style="max-width:560px;margin:0 auto;">${buildFormHtml(form)}</div></section>`;
+    }
+
+    case "nav": {
+      const align = String(p.align || "right");
+      const navLinksHtml = navItems.map(item =>
+        `<li><a href="${esc(item.url)}" style="color:${tokens.colors.textMuted};text-decoration:none;font-size:0.9rem;padding:8px 12px;display:block;">${esc(item.title)}</a></li>`
+      ).join("");
+      return `
+<header class="ap-block ap-block-nav" style="background:${tokens.colors.background};border-bottom:1px solid ${tokens.colors.border};padding:0 48px;height:64px;display:flex;align-items:center;justify-content:space-between;">
+  <a href="/" style="font-family:${tokens.fonts.heading};font-weight:700;font-size:1.2rem;color:${tokens.colors.text};text-decoration:none;">${p.logoText ? esc(p.logoText) : esc(siteTitle)}</a>
+  ${navItems.length > 0 ? `<nav><ul style="display:flex;gap:0;list-style:none;margin:0;padding:0;">${navLinksHtml}</ul></nav>` : ""}
+</header>`;
+    }
+
+    case "site-title":
+      return `
+<div class="ap-block ap-block-site-title" style="padding:24px 48px;text-align:${esc(p.align || "left")};">
+  <a href="/" style="font-family:${tokens.fonts.heading};font-weight:700;font-size:${p.size === "large" ? "2rem" : p.size === "small" ? "1rem" : "1.4rem"};color:${tokens.colors.text};text-decoration:none;">${esc(siteTitle)}</a>
+  ${p.showTagline && siteTagline ? `<div style="color:${tokens.colors.textMuted};font-size:0.9rem;margin-top:4px;">${esc(siteTagline)}</div>` : ""}
+</div>`;
+
+    case "spacer":
+      return `<div class="ap-block ap-block-spacer" style="height:${Number(p.height) || 64}px;"></div>`;
+
+    case "divider":
+      return `<div class="ap-block ap-block-divider" style="padding:0 48px;"><hr style="border:none;border-top:${Number(p.thickness) || 1}px ${esc(p.style || "solid")} ${esc(p.color || tokens.colors.border)};margin:0;" /></div>`;
+
+    case "html":
+      return `<div class="ap-block ap-block-html">${String(p.content || "")}</div>`;
+
+    case "ai":
+      return "";
+
+    case "query-loop": {
+      const posts = queryData ?? [];
+      const cols = Number(p.columns) || 3;
+      const gap = String(p.gap || "24px");
+      const cardBg = String(p.cardBg || tokens.colors.surface);
+      const cardBorder = String(p.cardBorder || tokens.colors.border);
+      const cardRadius = String(p.cardRadius || "8px");
+      const padding = String(p.padding || tokens.spacing.sectionY + " 48px");
+      const cssClass = p._cssClass ? ` ${esc(p._cssClass)}` : "";
+      const el = String(p._element || "section");
+      const templateId = String(p.loopTemplateId || "default-with-image");
+      const paginationType = String(p.pagination || "none");
+      const currentPage = queryCurrentPage ?? 1;
+      const perPage = Number(p.perPage) || 6;
+      const pageLimit = Number(p.pageLimit) || 0;
+      const totalPosts = typeof queryTotal === "number" ? queryTotal : posts.length;
+
+      let templateBlocks: any[] = loopTemplateCache[templateId] ?? DEFAULT_LOOP_TEMPLATE_BLOCKS[templateId] ?? DEFAULT_LOOP_TEMPLATE_BLOCKS["default-with-image"];
+
+      if (posts.length === 0) {
+        return `<${el} class="ap-block ap-block-query-loop${cssClass}" style="padding:${padding};text-align:center;color:${tokens.colors.textMuted};font-size:14px;">暂无文章。</${el}>`;
+      }
+
+      const isHorizontal = templateBlocks.some((b: any) => b.type === "loop-image" && b.props?.layout === "horizontal");
+      const cardStyle = isHorizontal
+        ? `background:${cardBg};border:1px solid ${cardBorder};border-radius:${cardRadius};overflow:hidden;display:flex;flex-direction:row;`
+        : `background:${cardBg};border:1px solid ${cardBorder};border-radius:${cardRadius};overflow:hidden;display:flex;flex-direction:column;`;
+
+      const cardsHtml = posts.map((post: any) => {
+        const postId = post.id ?? post.ID ?? 0;
+        const mapped = {
+          id: postId,
+          title: post.title ?? post.postTitle ?? "",
+          slug: post.slug ?? post.postName ?? "",
+          type: post.type ?? post.postType ?? "post",
+          excerpt: post.excerpt ?? post.postExcerpt ?? "",
+          content: post.content ?? post.postContent ?? "",
+          date: post.date ?? post.postDate ?? "",
+          author: post.author ?? post.postAuthor ?? 0,
+        };
+        const meta = postMetaCache[postId] ?? {};
+        if (isHorizontal) {
+          const imgBlocks = templateBlocks.filter((b: any) => b.type === "loop-image");
+          const restBlocks = templateBlocks.filter((b: any) => b.type !== "loop-image");
+          const imgWidth = String(imgBlocks[0]?.props?.width || "180px");
+          return `<article style="${cardStyle}">
+            <div style="width:${imgWidth};flex-shrink:0;">${renderLoopTemplate(imgBlocks, mapped, tokens, meta)}</div>
+            <div style="flex:1;display:flex;flex-direction:column;padding:4px 0;">${renderLoopTemplate(restBlocks, mapped, tokens, meta)}</div>
+          </article>`;
+        }
+        return `<article style="${cardStyle}">${renderLoopTemplate(templateBlocks, mapped, tokens, meta)}</article>`;
+      }).join("");
+
+      let paginationHtml = "";
+      if (paginationType !== "none") {
+        const totalPages = Math.ceil(totalPosts / perPage);
+        const effectiveTotalPages = pageLimit > 0 ? Math.min(totalPages, pageLimit) : totalPages;
+
+        if (paginationType === "numbers" && effectiveTotalPages > 1) {
+          const pageLinks = Array.from({ length: effectiveTotalPages }, (_, i) => i + 1).map(n => {
+            return `<a href="?paged=${n}" style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:4px;font-size:14px;font-weight:${n === currentPage ? "700" : "400"};background:${n === currentPage ? tokens.colors.primary : "transparent"};color:${n === currentPage ? "#fff" : tokens.colors.text};border:1px solid ${n === currentPage ? tokens.colors.primary : tokens.colors.border};text-decoration:none;">${n}</a>`;
+          }).join("");
+          paginationHtml = `<div style="display:flex;justify-content:center;gap:6px;margin-top:40px;flex-wrap:wrap;">${pageLinks}</div>`;
+        } else if (paginationType === "prev-next" && effectiveTotalPages > 1) {
+          const prevHref = currentPage > 1 ? `?paged=${currentPage - 1}` : null;
+          const nextHref = currentPage < effectiveTotalPages ? `?paged=${currentPage + 1}` : null;
+          paginationHtml = `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:40px;">
+            ${prevHref ? `<a href="${esc(prevHref)}" style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border:1px solid ${tokens.colors.border};border-radius:${tokens.spacing.borderRadius};color:${tokens.colors.text};text-decoration:none;font-size:14px;">\u2190 上一页</a>` : `<span></span>`}
+            <span style="font-size:13px;color:${tokens.colors.textMuted};">第 ${currentPage} / ${effectiveTotalPages} 页</span>
+            ${nextHref ? `<a href="${esc(nextHref)}" style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border:1px solid ${tokens.colors.border};border-radius:${tokens.spacing.borderRadius};color:${tokens.colors.text};text-decoration:none;font-size:14px;">下一页 \u2192</a>` : `<span></span>`}
+          </div>`;
+        } else if (paginationType === "load-more") {
+          const blockId = block.id;
+          const loadMoreText = String(p.loadMoreText || "加载更多");
+          const colorParams = `'${tokens.colors.primary}','${tokens.colors.text}','${tokens.colors.textMuted}','${tokens.colors.surface}','${tokens.colors.border}'`;
+          paginationHtml = `
+<div style="text-align:center;margin-top:40px;" id="load-more-${blockId}">
+  <button onclick="apLoadMore('${blockId}',${currentPage},${perPage},'${String(p.postType || "post")}','${String(p.orderBy || "date")}','${String(p.order || "DESC")}','${templateId}','${cardBg}','${cardBorder}','${cardRadius}',${cols},'${gap}',${colorParams})" style="padding:12px 32px;background:${tokens.colors.primary};color:#fff;border:none;border-radius:${tokens.spacing.borderRadius};font-size:14px;font-weight:600;cursor:pointer;">${esc(loadMoreText)}</button>
+  <div id="load-more-spinner-${blockId}" style="display:none;margin-top:12px;color:${tokens.colors.textMuted};font-size:13px;">加载中…</div>
+</div>`;
+        } else if (paginationType === "infinite-scroll") {
+          const blockId = block.id;
+          paginationHtml = `
+<div id="infinite-sentinel-${blockId}" data-page="${currentPage}" data-per-page="${perPage}" data-post-type="${String(p.postType || "post")}" data-orderby="${String(p.orderBy || "date")}" data-order="${String(p.order || "DESC")}" data-template-id="${templateId}" data-cardbg="${cardBg}" data-cardborder="${cardBorder}" data-cardradius="${cardRadius}" data-primary="${tokens.colors.primary}" data-text="${tokens.colors.text}" data-muted="${tokens.colors.textMuted}" data-surface="${tokens.colors.surface}" data-border="${tokens.colors.border}" data-cols="${cols}" data-gap="${gap}" style="height:20px;margin-top:20px;"></div>
+<div id="infinite-loading-${blockId}" style="text-align:center;padding:20px;display:none;color:${tokens.colors.textMuted};font-size:13px;">正在加载更多文章…</div>`;
+        }
+      }
+
+      return `<${el} class="ap-block ap-block-query-loop${cssClass}" style="padding:${padding};">
+  <div style="max-width:${tokens.spacing.containerMax};margin:0 auto;">
+    <div id="query-loop-grid-${block.id}" style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:${gap};">
+      ${cardsHtml}
+    </div>
+    ${paginationHtml}
+  </div>
+</${el}>`;
+    }
+
+    default:
+      return "";
+  }
+}
+
+function wrapBlock(block: Block, inner: string): string {
+  const p = block.props;
+  const cssClass = p._cssClass ? ` ${esc(p._cssClass)}` : "";
+  const animation = p._animation && p._animation !== "none" ? ` data-ap-animation="${esc(p._animation)}"` : "";
+  const customCss = p._customCss ? `<style>.ap-block-${block.id}{}</style>\n` : "";
+  if (!cssClass && !animation && !customCss) return inner;
+  return customCss + inner.replace(/^(\s*<[a-zA-Z]+)([ >])/, `$1${cssClass}${animation}$2`);
+}
+
+const html = blocks.map(block => wrapBlock(block, renderBlock(block, queryLoopData[block.id], queryLoopTotal[block.id], currentPaged))).join("\n");
+---
+<style>
+  @keyframes ap-fade-in { from { opacity:0 } to { opacity:1 } }
+  @keyframes ap-slide-up { from { opacity:0; transform:translateY(32px) } to { opacity:1; transform:translateY(0) } }
+  @keyframes ap-slide-left { from { opacity:0; transform:translateX(-32px) } to { opacity:1; transform:translateX(0) } }
+  @keyframes ap-slide-right { from { opacity:0; transform:translateX(32px) } to { opacity:1; transform:translateX(0) } }
+  @keyframes ap-zoom-in { from { opacity:0; transform:scale(0.92) } to { opacity:1; transform:scale(1) } }
+  [data-ap-animation="ap-fade-in"]  { animation: ap-fade-in  0.6s ease both }
+  [data-ap-animation="ap-slide-up"] { animation: ap-slide-up 0.6s ease both }
+  [data-ap-animation="ap-slide-left"]  { animation: ap-slide-left  0.6s ease both }
+  [data-ap-animation="ap-slide-right"] { animation: ap-slide-right 0.6s ease both }
+  [data-ap-animation="ap-zoom-in"]  { animation: ap-zoom-in  0.6s ease both }
+</style>
+<script is:inline>
+function apLoopUrl(o) {
+  var q = new URLSearchParams({
+    postType: o.postType, page: String(o.page), perPage: String(o.perPage),
+    orderBy: o.orderBy, order: o.order, templateId: o.templateId,
+    cardBg: o.cardBg, cardBorder: o.cardBorder, cardRadius: o.cardRadius,
+    primary: o.primary, textColor: o.text, mutedColor: o.muted, surface: o.surface, border: o.border
+  });
+  return '/ap-query-loop?' + q.toString();
+}
+async function apLoadMore(blockId, currentPage, perPage, postType, orderBy, order, templateId, cardBg, cardBorder, cardRadius, cols, gap, primary, textColor, mutedColor, surface, borderColor) {
+  var nextPage = currentPage + 1;
+  var spinner = document.getElementById('load-more-spinner-' + blockId);
+  var btn = document.querySelector('#load-more-' + blockId + ' button');
+  if (spinner) spinner.style.display = 'block';
+  if (btn) btn.disabled = true;
+  try {
+    var res = await fetch(apLoopUrl({postType: postType, page: nextPage, perPage: perPage, orderBy: orderBy, order: order, templateId: templateId, cardBg: cardBg, cardBorder: cardBorder, cardRadius: cardRadius, primary: primary, text: textColor, muted: mutedColor, surface: surface, border: borderColor}));
+    if (!res.ok) throw new Error('Failed');
+    var data = await res.json();
+    if (data.html) {
+      var grid = document.getElementById('query-loop-grid-' + blockId);
+      if (grid) grid.insertAdjacentHTML('beforeend', data.html);
+    }
+    if (data.hasMore) {
+      if (btn) {
+        btn.disabled = false;
+        btn.onclick = function() { apLoadMore(blockId, nextPage, perPage, postType, orderBy, order, templateId, cardBg, cardBorder, cardRadius, cols, gap, primary, textColor, mutedColor, surface, borderColor); };
+      }
+    } else {
+      var container = document.getElementById('load-more-' + blockId);
+      if (container) container.style.display = 'none';
+    }
+  } catch(e) {
+    if (btn) btn.disabled = false;
+  }
+  if (spinner) spinner.style.display = 'none';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('[id^="infinite-sentinel-"]').forEach(function(sentinel) {
+    var blockId = sentinel.id.replace('infinite-sentinel-', '');
+    var loading = false;
+    var done = false;
+    var currentPage = parseInt(sentinel.dataset.page) || 1;
+    var perPage = parseInt(sentinel.dataset.perPage) || 6;
+    var observer = new IntersectionObserver(async function(entries) {
+      if (!entries[0].isIntersecting || loading || done) return;
+      loading = true;
+      var loadingEl = document.getElementById('infinite-loading-' + blockId);
+      if (loadingEl) loadingEl.style.display = 'block';
+      var nextPage = currentPage + 1;
+      try {
+        var res = await fetch(apLoopUrl({
+          postType: sentinel.dataset.postType || 'post', page: nextPage, perPage: perPage,
+          orderBy: sentinel.dataset.orderby || 'date', order: sentinel.dataset.order || 'DESC',
+          templateId: sentinel.dataset.templateId || 'default-with-image',
+          cardBg: sentinel.dataset.cardbg || '', cardBorder: sentinel.dataset.cardborder || '', cardRadius: sentinel.dataset.cardradius || '',
+          primary: sentinel.dataset.primary || '', text: sentinel.dataset.text || '', muted: sentinel.dataset.muted || '',
+          surface: sentinel.dataset.surface || '', border: sentinel.dataset.border || ''
+        }));
+        var data = await res.json();
+        if (data.html) {
+          var grid = document.getElementById('query-loop-grid-' + blockId);
+          if (grid) grid.insertAdjacentHTML('beforeend', data.html);
+          currentPage = nextPage;
+          sentinel.dataset.page = String(currentPage);
+        }
+        if (!data.hasMore) { done = true; observer.disconnect(); }
+      } catch(e) {}
+      if (loadingEl) loadingEl.style.display = 'none';
+      loading = false;
+    }, { rootMargin: '200px' });
+    observer.observe(sentinel);
+  });
+});
+</script>
+<div class="ap-blocks" set:html={html} />

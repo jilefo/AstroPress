@@ -1,0 +1,231 @@
+---
+/**
+ * /admin-ext/activity-log — 操作审计日志页
+ */
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+if (!Astro.locals.user || !Astro.locals.db) return Astro.redirect("/login");
+---
+<AdminLayout title="操作审计">
+    <style is:global>
+      * { box-sizing: border-box; }
+      .wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+      .card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 20px; margin-bottom: 20px; }
+      h1 { font-size: 20px; margin: 0 0 16px; }
+      button { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 8px 16px; cursor: pointer; font-size: 13px; }
+      button:hover { background: #135e96; }
+      button:disabled { background: #a7aaad; cursor: default; }
+      .btn-secondary { background: #f6f7f7; color: #2c3338; border: 1px solid #c3c4c7; }
+      .btn-secondary:hover { background: #eceeef; }
+      .btn-danger { background: #d63638; }
+      .btn-danger:hover { background: #b32d2e; }
+      .msg { font-size: 13px; margin-top: 10px; min-height: 18px; }
+      .ok { color: #00a32a; }
+      .err { color: #b32d2e; }
+      .filters { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 14px; }
+      .filters label { display: block; font-size: 12px; color: #646970; margin-bottom: 3px; }
+      .filters input, .filters select { font-size: 13px; padding: 5px 8px; border: 1px solid #8c8f94; border-radius: 3px; }
+      .filters input[type="text"] { width: 170px; }
+      .filters input[type="number"] { width: 100px; }
+      table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+      th { background: #f6f7f7; font-weight: 600; white-space: nowrap; }
+      td.col-time { white-space: nowrap; color: #646970; }
+      td.col-user, td.col-method { white-space: nowrap; }
+      td.col-path { word-break: break-all; font-family: Consolas, Monaco, monospace; max-width: 340px; }
+      td.col-ip { white-space: nowrap; color: #646970; }
+      td.col-ua { color: #646970; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .st-badge { display: inline-block; min-width: 34px; text-align: center; border-radius: 3px; padding: 1px 6px; font-size: 12px; font-weight: 600; }
+      .st-ok { background: #edfaef; color: #00a32a; }
+      .st-err { background: #fcf0f1; color: #d63638; }
+      .empty { padding: 24px; text-align: center; color: #646970; font-size: 13px; }
+      .list-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 12px; flex-wrap: wrap; }
+      .list-head h1 { margin: 0; }
+      .pager { display: flex; align-items: center; gap: 10px; margin-top: 14px; font-size: 13px; color: #646970; }
+      .pager button { padding: 5px 12px; }
+    </style>
+
+    <div class="wrap">
+      <div class="card">
+        <div class="list-head">
+          <h1>操作审计</h1>
+          <button type="button" class="btn-danger" id="clearAll">清空日志</button>
+        </div>
+
+        <div class="filters">
+          <div>
+            <label for="fUser">用户</label>
+            <input type="text" id="fUser" placeholder="精确匹配" />
+          </div>
+          <div>
+            <label for="fPath">路径关键字</label>
+            <input type="text" id="fPath" placeholder="包含匹配" />
+          </div>
+          <div>
+            <label for="fStatus">状态码</label>
+            <input type="number" id="fStatus" min="100" max="599" placeholder="如 200" />
+          </div>
+          <button type="button" id="applyFilter">筛选</button>
+          <button type="button" class="btn-secondary" id="resetFilter">重置</button>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>时间</th>
+              <th>用户</th>
+              <th>方法</th>
+              <th>路径</th>
+              <th>状态</th>
+              <th>IP</th>
+              <th>UA</th>
+            </tr>
+          </thead>
+          <tbody id="logBody"></tbody>
+        </table>
+        <div class="empty" id="emptyTip" style="display:none">暂无审计记录</div>
+
+        <div class="pager">
+          <button type="button" class="btn-secondary" id="prevPage">上一页</button>
+          <span id="pageInfo">–</span>
+          <button type="button" class="btn-secondary" id="nextPage">下一页</button>
+        </div>
+        <div class="msg" id="msg"></div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        var bodyEl = document.getElementById("logBody");
+        var emptyEl = document.getElementById("emptyTip");
+        var msgEl = document.getElementById("msg");
+        var pageInfo = document.getElementById("pageInfo");
+        var prevBtn = document.getElementById("prevPage");
+        var nextBtn = document.getElementById("nextPage");
+        var page = 1;
+        var total = 0;
+        var pageSize = 50;
+
+        function flash(text, ok) {
+          msgEl.className = "msg " + (ok ? "ok" : "err");
+          msgEl.textContent = text;
+          setTimeout(function () { msgEl.textContent = ""; }, 3000);
+        }
+
+        function cell(tr, text, cls) {
+          var td = document.createElement("td");
+          td.textContent = text;
+          if (cls) td.setAttribute("class", cls);
+          tr.appendChild(td);
+          return td;
+        }
+
+        function fmtTime(ts) {
+          var s = String(ts ?? "");
+          if (!s) return "—";
+          var d = new Date(s);
+          if (isNaN(d.getTime())) return s;
+          return d.toLocaleString();
+        }
+
+        function renderRows(rows) {
+          while (bodyEl.firstChild) bodyEl.removeChild(bodyEl.firstChild);
+          if (!rows || rows.length === 0) {
+            emptyEl.style.display = "block";
+            return;
+          }
+          emptyEl.style.display = "none";
+          rows.forEach(function (r) {
+            var tr = document.createElement("tr");
+            cell(tr, fmtTime(r.ts), "col-time");
+            cell(tr, String(r.user || "匿名"), "col-user");
+            cell(tr, String(r.method ?? ""), "col-method");
+            cell(tr, String(r.path ?? ""), "col-path");
+            var st = Number(r.status) || 0;
+            var tdSt = document.createElement("td");
+            var badge = document.createElement("span");
+            badge.setAttribute("class", "st-badge " + (st > 0 && st < 400 ? "st-ok" : "st-err"));
+            badge.textContent = String(st || "—");
+            tdSt.appendChild(badge);
+            tr.appendChild(tdSt);
+            cell(tr, String(r.ip || "—"), "col-ip");
+            var ua = cell(tr, String(r.ua || "—"), "col-ua");
+            ua.title = String(r.ua || "");
+            bodyEl.appendChild(tr);
+          });
+        }
+
+        function updatePager() {
+          var maxPage = Math.max(1, Math.ceil(total / pageSize));
+          pageInfo.textContent = "第 " + page + " / " + maxPage + " 页 · 共 " + total + " 条";
+          prevBtn.disabled = page <= 1;
+          nextBtn.disabled = page >= maxPage;
+        }
+
+        async function fetchList() {
+          var fUser = (document.getElementById("fUser") as HTMLInputElement).value.trim();
+          var fPath = (document.getElementById("fPath") as HTMLInputElement).value.trim();
+          var fStatus = (document.getElementById("fStatus") as HTMLInputElement).value.trim();
+          var params = new URLSearchParams();
+          params.set("page", String(page));
+          if (fUser) params.set("user", fUser);
+          if (fPath) params.set("path", fPath);
+          if (fStatus) params.set("status", fStatus);
+          var qs = params.toString();
+          // dev 服务器会把以 .md 结尾的 URL 当 Markdown 模块拦截：命中时追加哑参数规避
+          if (fUser.slice(-3) === ".md" || fPath.slice(-3) === ".md") qs += "&_=";
+          var r = await fetch("/admin-ext/api/activity-log/list?" + qs);
+          var d = await r.json().catch(function () { return {}; });
+          if (!r.ok) {
+            flash(d.error || "加载失败", false);
+            return;
+          }
+          total = Number(d.total) || 0;
+          page = Number(d.page) || 1;
+          pageSize = Number(d.pageSize) || 50;
+          renderRows(d.rows);
+          updatePager();
+        }
+
+        document.getElementById("applyFilter")!.addEventListener("click", function () {
+          page = 1;
+          fetchList();
+        });
+
+        document.getElementById("resetFilter")!.addEventListener("click", function () {
+          (document.getElementById("fUser") as HTMLInputElement).value = "";
+          (document.getElementById("fPath") as HTMLInputElement).value = "";
+          (document.getElementById("fStatus") as HTMLInputElement).value = "";
+          page = 1;
+          fetchList();
+        });
+
+        prevBtn.addEventListener("click", function () {
+          if (page > 1) { page -= 1; fetchList(); }
+        });
+
+        nextBtn.addEventListener("click", function () {
+          var maxPage = Math.max(1, Math.ceil(total / pageSize));
+          if (page < maxPage) { page += 1; fetchList(); }
+        });
+
+        document.getElementById("clearAll")!.addEventListener("click", async function () {
+          if (!window.confirm("确定清空全部审计日志吗？此操作不可恢复。")) return;
+          var r = await fetch("/admin-ext/api/activity-log/clear", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ confirm: true }),
+          });
+          var d = await r.json().catch(function () { return {}; });
+          if (r.ok) {
+            flash("已清空全部日志。", true);
+            page = 1;
+            fetchList();
+          } else {
+            flash(d.error || "清空失败", false);
+          }
+        });
+
+        fetchList();
+      })();
+    </script>
+</AdminLayout>

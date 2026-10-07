@@ -1,0 +1,247 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { listPosts } from "../../../lib/posts";
+import { wpOptions } from "@astropress/core/schema";
+import { eq } from "drizzle-orm";
+
+const db = Astro.locals.db;
+if (!Astro.locals.user || !db) return Astro.redirect("/login");
+
+const status = Astro.url.searchParams.get("status") ?? undefined;
+const page = Number(Astro.url.searchParams.get("page") ?? "1");
+
+const { posts, total } = await listPosts(db, { type: "page", status, page });
+
+const perPage = 20;
+const totalPages = Math.ceil(total / perPage);
+const isTrash = status === "trash";
+
+// Load front page setting
+const [showRow] = await db.select({ value: wpOptions.optionValue }).from(wpOptions).where(eq(wpOptions.optionName, "show_on_front")).limit(1);
+const [frontRow] = await db.select({ value: wpOptions.optionValue }).from(wpOptions).where(eq(wpOptions.optionName, "page_on_front")).limit(1);
+const frontPageId = (showRow?.value === "page" && frontRow?.value && frontRow.value !== "0") ? Number(frontRow.value) : null;
+
+const [siteUrlRow] = await db.select({ value: wpOptions.optionValue }).from(wpOptions).where(eq(wpOptions.optionName, "siteurl")).limit(1);
+const siteUrl = (siteUrlRow?.value ?? "http://localhost:4322").replace(/\/$/, "");
+
+const statusOptions = [
+  { value: "", label: "全部" },
+  { value: "publish", label: "已发布" },
+  { value: "draft", label: "草稿" },
+  { value: "trash", label: "回收站" },
+];
+---
+<AdminLayout title="页面">
+
+  <h1 class="wp-heading-inline">页面</h1>
+  <a href="/admin/pages/new" class="page-title-action">新建</a>
+  <hr class="wp-header-end" />
+
+  <ul class="subsubsub">
+    {statusOptions.map((s) => (
+      <li>
+        <a
+          href={s.value ? `/admin/pages?status=${s.value}` : "/admin/pages"}
+          class={(status ?? "") === s.value ? "current" : ""}
+        >
+          {s.label}
+        </a>
+      </li>
+    ))}
+  </ul>
+
+  {posts.length === 0 ? (
+    <div class="ap-empty-state">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" style="color:#8c8f94;margin-bottom:12px">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+      </svg>
+      <h2 style="font-size:15px;font-weight:600;color:#1d2327;margin:0 0 8px">还没有页面</h2>
+      <p style="font-size:13px;color:#646970;margin:0 0 20px;line-height:1.5">
+        {status ? `没有状态为“${status}”的页面。` : "为你的站点创建页面，例如关于、联系或首页。"}
+      </p>
+      <a href="/admin/pages/new" class="button button-primary">新建第一个页面</a>
+    </div>
+  ) : (
+    <form id="bulk-action-form">
+      <!-- Top tablenav -->
+      <div class="tablenav top">
+        <div class="alignleft actions bulkactions">
+          <select class="bulk-action-selector" id="bulk-action-selector-top">
+            <option value="-1">批量操作</option>
+            {isTrash ? (
+              <>
+                <option value="restore">恢复</option>
+                <option value="delete">永久删除</option>
+              </>
+            ) : (
+              <>
+                <option value="trash">移入回收站</option>
+                <option value="publish">发布</option>
+                <option value="draft">转为草稿</option>
+              </>
+            )}
+          </select>
+          <button type="button" onclick="applyBulkAction()" class="button action">应用</button>
+        </div>
+        <div class="tablenav-pages" style="line-height:28px">
+          <span class="displaying-num">{total} 项</span>
+        </div>
+      </div>
+
+      <table class="wp-list-table widefat fixed striped">
+        <thead>
+          <tr>
+            <th scope="col" class="manage-column column-cb check-column" style="width:2.2em">
+              <input type="checkbox" id="cb-select-all-1" title="全选" />
+            </th>
+            <th scope="col" class="manage-column column-primary">标题</th>
+            <th scope="col" class="manage-column" style="width:100px">状态</th>
+            <th scope="col" class="manage-column" style="width:120px">日期</th>
+          </tr>
+        </thead>
+        <tbody>
+          {posts.map((p) => (
+            <tr>
+              <th scope="row" class="check-column">
+                <input type="checkbox" class="cb-select-posts" value={String(p.id)} />
+              </th>
+              <td class="title column-title has-row-actions column-primary">
+                <strong>
+                  <a href={`/admin/pages/${p.id}`} class="row-title">
+                    {p.title || <em style="font-weight:400;color:#8c8f94">无标题</em>}
+                  </a>
+                </strong>
+                {p.id === frontPageId && (
+                  <span style="display:inline-block;margin-left:8px;font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px;background:#e8f0fb;color:#2271b1;border:1px solid #b3c9e8;vertical-align:middle">首页</span>
+                )}
+                <div style="font-size:11px;color:#8c8f94;font-family:monospace;margin-top:2px">/{p.slug}</div>
+                <div class="row-actions">
+                  {!isTrash && <span class="edit"><a href={`/admin/pages/${p.id}`}>编辑</a> | </span>}
+                  {!isTrash && <span class="view"><a href={`${siteUrl}/${p.slug}`} target="_blank" rel="noopener">查看</a> | </span>}
+                  {!isTrash && p.id !== frontPageId && (
+                    <span class="make-home"><button onclick={`setFrontPage(${p.id})`} class="ap-row-delete-btn" style="color:#2271b1">设为首页</button> | </span>
+                  )}
+                  {!isTrash && p.id === frontPageId && (
+                    <span class="remove-home"><button onclick="removeFrontPage()" class="ap-row-delete-btn" style="color:#646970">取消首页设置</button> | </span>
+                  )}
+                  {!isTrash && (
+                    <span class="trash">
+                      <button onclick={`apBulkSingle('trash',${p.id})`} class="ap-row-delete-btn">移入回收站</button>
+                    </span>
+                  )}
+                  {isTrash && (
+                    <>
+                      <span class="untrash"><button onclick={`apBulkSingle('restore',${p.id})`} class="ap-row-delete-btn" style="color:#2271b1">恢复</button> | </span>
+                      <span class="delete"><button onclick={`apBulkSingle('delete',${p.id})`} class="ap-row-delete-btn">永久删除</button></span>
+                    </>
+                  )}
+                </div>
+              </td>
+              <td>
+                <span style={`display:inline-block;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;background:${p.status === "publish" ? "#d1e7dd" : p.status === "trash" ? "#f8d7da" : "#fff3cd"};color:${p.status === "publish" ? "#146c43" : p.status === "trash" ? "#842029" : "#997404"}`}>
+                  {p.status === "publish" ? "已发布" : p.status === "draft" ? "草稿" : p.status === "trash" ? "回收站" : p.status === "private" ? "私密" : p.status}
+                </span>
+              </td>
+              <td style="color:var(--wp-gray-600);font-size:12px">{p.date.slice(0, 10)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <!-- Bottom tablenav -->
+      <div class="tablenav bottom">
+        <div class="alignleft actions bulkactions">
+          <select class="bulk-action-selector" id="bulk-action-selector-bottom">
+            <option value="-1">批量操作</option>
+            {isTrash ? (
+              <>
+                <option value="restore">恢复</option>
+                <option value="delete">永久删除</option>
+              </>
+            ) : (
+              <>
+                <option value="trash">移入回收站</option>
+                <option value="publish">发布</option>
+                <option value="draft">转为草稿</option>
+              </>
+            )}
+          </select>
+          <button type="button" onclick="applyBulkAction()" class="button action">应用</button>
+        </div>
+        {totalPages > 1 && (
+          <div class="tablenav-pages">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+              <a
+                href={`/admin/pages?page=${p}${status ? `&status=${status}` : ""}`}
+                class={p === page ? "button button-disabled" : "button"}
+                style={p === page ? "font-weight:700" : ""}
+              >
+                {p}
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+    </form>
+  )}
+
+</AdminLayout>
+
+<script is:inline>
+window.apBulkActions = window.apBulkActions || [];
+
+(function () {
+  document.querySelectorAll('.bulk-action-selector').forEach(function (sel) {
+    sel.addEventListener('change', function () {
+      document.querySelectorAll('.bulk-action-selector').forEach(function (s) { s.value = sel.value; });
+    });
+  });
+  var selectAll = document.getElementById('cb-select-all-1');
+  if (selectAll) {
+    selectAll.addEventListener('change', function () {
+      document.querySelectorAll('.cb-select-posts').forEach(function (cb) { cb.checked = selectAll.checked; });
+    });
+  }
+  document.querySelectorAll('.cb-select-posts').forEach(function (cb) {
+    cb.addEventListener('change', function () {
+      if (selectAll) selectAll.checked = document.querySelectorAll('.cb-select-posts:not(:checked)').length === 0;
+    });
+  });
+})();
+
+window.applyBulkAction = async function () {
+  var sel = document.querySelector('.bulk-action-selector');
+  var action = sel ? sel.value : '-1';
+  if (!action || action === '-1') { alert('请选择一个操作。'); return; }
+  var ids = Array.from(document.querySelectorAll('.cb-select-posts:checked')).map(function (cb) { return parseInt(cb.value); });
+  if (ids.length === 0) { alert('请至少选择一项。'); return; }
+  var custom = (window.apBulkActions || []).find(function (a) { return a.value === action && a.handler; });
+  if (custom) { return custom.handler(ids); }
+  var confirmMsg = action === 'delete' ? '确定永久删除选中的 ' + ids.length + ' 项吗？此操作无法撤销。' : '将此操作应用于选中的 ' + ids.length + ' 项吗？';
+  if (!confirm(confirmMsg)) return;
+  var res = await fetch('/api/posts/bulk', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: action, ids: ids }) });
+  if (res.ok) { location.reload(); }
+  else { var d = await res.json().catch(function () { return {}; }); alert(d.error || '操作失败。'); }
+};
+
+window.setFrontPage = async function (pageId) {
+  var res = await fetch('/api/pages/set-front', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pageId: pageId }) });
+  if (res.ok) { location.reload(); }
+  else { var d = await res.json().catch(function () { return {}; }); alert(d.error || '设置首页失败。'); }
+};
+
+window.removeFrontPage = async function () {
+  var res = await fetch('/api/pages/set-front', { method: 'DELETE' });
+  if (res.ok) { location.reload(); }
+  else { alert('取消首页设置失败。'); }
+};
+
+window.apBulkSingle = async function (action, id) {
+  var confirmMsg = action === 'delete' ? '确定永久删除此项吗？此操作无法撤销。' : action === 'trash' ? '确定移入回收站吗？' : null;
+  if (confirmMsg && !confirm(confirmMsg)) return;
+  var res = await fetch('/api/posts/bulk', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: action, ids: [id] }) });
+  if (res.ok) { location.reload(); }
+  else { var d = await res.json().catch(function () { return {}; }); alert(d.error || '操作失败。'); }
+};
+</script>

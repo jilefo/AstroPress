@@ -1,0 +1,38 @@
+{
+  "name": "@astropress/core",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema/index.ts",
+    "./registry": "./src/registry/index.ts",
+    "./db": "./src/db/index.ts",
+    "./query": "./src/query.ts",
+    "./schema/sqlite": "./src/schema/sqlite/index.ts",
+    "./schema/postgres": "./src/schema/postgres/index.ts",
+    "./integration": "./src/integration.ts",
+    "./plugin-state": "./src/plugins/state-cache.ts",
+    "./permalink": "./src/permalink.ts",
+    "./secret": "./src/secret.ts",
+    "./virtual": "./src/virtual.d.ts",
+    "./types/theme": "./src/types/theme.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.36.0",
+    "@libsql/client": "^0.14.0",
+    "postgres": "^3.4.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.0.0",
+    "astro": "^4.0.0",
+    "drizzle-kit": "^0.28.0",
+    "typescript": "^5.4.0",
+    "@types/node": "^20.0.0"
+  }
+}

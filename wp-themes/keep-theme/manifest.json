@@ -1,0 +1,26 @@
+{
+  "name": "Keep",
+  "version": "4.3.0",
+  "description": "Hexo theme Keep ported to AstroPress — ultra-clean minimalism, thin borders, generous whitespace",
+  "author": "XPoet (ported)",
+  "tokens": {
+    "fonts": {
+      "body": "Optima-Regular, Optima, 'PingFang SC', 'Microsoft YaHei', sans-serif",
+      "heading": "Optima-Regular, Optima, 'PingFang SC', 'Microsoft YaHei', sans-serif"
+    },
+    "spacing": {
+      "sectionY": "40px",
+      "borderRadius": "8px",
+      "containerMax": "960px"
+    },
+    "colors": {
+      "textMuted": "#6f6f78",
+      "surface": "#ffffff",
+      "background": "#ffffff",
+      "secondary": "#0066cc",
+      "border": "#e6e6e6",
+      "text": "#50505c",
+      "primary": "#0066cc"
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "Blossom Fashion",
+  "version": "1.4.6",
+  "description": "Fashion feminine blog theme with elegant serif headings",
+  "author": "Blossom Themes",
+  "tokens": {
+    "fonts": {
+      "body": "'Montserrat', -apple-system, sans-serif",
+      "heading": "'Cormorant Garamond', Georgia, serif"
+    },
+    "spacing": {
+      "sectionY": "48px",
+      "borderRadius": "6px",
+      "containerMax": "1200px"
+    },
+    "colors": {
+      "textMuted": "#717171",
+      "surface": "#f6f6f6",
+      "background": "#ffffff",
+      "secondary": "#dd2020",
+      "border": "#e5e5e5",
+      "text": "#404040",
+      "primary": "#c44646"
+    }
+  }
+}

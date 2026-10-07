@@ -1,0 +1,1621 @@
+---
+/**
+ * /admin-ext/files — 网站文件管理器（Explorer 风格）
+ */
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+if (!Astro.locals.user || !Astro.locals.db) return Astro.redirect("/login");
+// 页面无 Last-Modified/ETag，浏览器可能启发式缓存旧 HTML/旧脚本；
+// 显式 no-store 保证每次加载都是最新代码（CodeMirror 6 编辑器脚本随页更新）。
+Astro.response.headers.set("Cache-Control", "no-store");
+---
+<AdminLayout title="文件管理">
+    <style is:global>
+      * { box-sizing: border-box; }
+      .fm-wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; display: grid; gap: 16px; }
+      .fm-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px 22px 20px; box-shadow: 0 1px 3px rgba(15,23,42,.06); }
+      .fm-card h1 { font-size: 18px; margin: 0 0 4px; font-weight: 600; color: #111827; }
+      .fm-muted { color: #6b7280; font-size: 12px; }
+      .fm-muted code { background: #f3f4f6; border-radius: 4px; padding: 1px 5px; color: #4b5563; }
+      /* 工具栏：无边框分组 + 幽灵按钮 */
+      .fm-toolbar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 14px; padding: 8px 10px; background: #f9fafb; border: 1px solid #eef0f2; border-radius: 10px; }
+      .fm-btn { background: #fff; color: #374151; border: 1px solid #e5e7eb; border-radius: 7px; padding: 5px 12px; cursor: pointer; font-size: 13px; line-height: 1.5; transition: background .12s, border-color .12s, color .12s; }
+      .fm-btn:hover:not(:disabled) { background: #f3f4f6; border-color: #d1d5db; color: #111827; }
+      .fm-btn:disabled { opacity: .4; cursor: default; }
+      .fm-btn.primary { background: #4f46e5; border-color: #4f46e5; color: #fff; }
+      .fm-btn.primary:hover:not(:disabled) { background: #4338ca; border-color: #4338ca; color: #fff; }
+      .fm-btn.danger { background: #fff; border-color: #fecaca; color: #dc2626; }
+      .fm-btn.danger:hover:not(:disabled) { background: #fef2f2; border-color: #fca5a5; color: #b91c1c; }
+      /* 面包屑：胶囊式 */
+      .fm-crumbs { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; font-size: 13px; margin-top: 12px; padding: 7px 12px; border: 1px solid #eef0f2; border-radius: 10px; background: #f9fafb; }
+      .fm-crumbs a { color: #4f46e5; text-decoration: none; cursor: pointer; padding: 2px 7px; border-radius: 5px; transition: background .12s; }
+      .fm-crumbs a:hover { text-decoration: none; background: #eef2ff; }
+      .fm-crumbs .sep { color: #d1d5db; }
+      /* 文件表格：去竖线、行 hover 圆角 */
+      table.fm-grid { border-collapse: collapse; width: 100%; font-size: 13px; margin-top: 12px; }
+      table.fm-grid th, table.fm-grid td { border: 0; border-bottom: 1px solid #f0f1f4; padding: 8px 10px; text-align: left; vertical-align: middle; }
+      table.fm-grid th { background: transparent; font-weight: 600; color: #6b7280; font-size: 12px; border-bottom: 1px solid #e5e7eb; }
+      table.fm-grid tbody tr { transition: background .1s; }
+      table.fm-grid tbody tr:hover { background: #f6f7fb; }
+      table.fm-grid tbody tr.selected { background: #eef2ff; }
+      table.fm-grid tbody tr.is-protected { color: #9ca3af; background: #fafbfc; }
+      .fm-name { display: flex; align-items: center; gap: 7px; cursor: default; user-select: none; }
+      .fm-name svg { flex-shrink: 0; opacity: .75; }
+      .fm-empty { color: #646970; text-align: center; padding: 24px; }
+      .fm-msg { margin-top: 10px; font-size: 13px; min-height: 18px; }
+      .fm-ok { color: #00a32a; }
+      .fm-err { color: #b32d2e; }
+      .fm-num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+      /* —— 编辑器弹窗：现代化重构 —— */
+      /* z-index 必须高于后台外壳：AdminLayout 顶栏 99999、侧栏 9999，否则弹层左/上部分被外壳遮挡（侧栏被压成窄条） */
+      .fm-modal-mask { position: fixed; inset: 0; background: rgba(15,18,30,.5); backdrop-filter: blur(3px); display: none; align-items: center; justify-content: center; z-index: 100000; }
+      .fm-modal-mask.is-open { display: flex; }
+      .fm-modal { background: #fff; border-radius: 12px; width: min(860px, 92vw); max-height: 88vh; display: flex; flex-direction: column; box-shadow: 0 24px 64px rgba(15,23,42,.3); overflow: hidden; }
+      .fm-modal.wide { width: min(1080px, 95vw); max-height: 92vh; }
+      .fm-modal-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid #f0f1f4; background: #fafbfc; }
+      .fm-modal-head strong { font-size: 14px; font-weight: 600; color: #111827; }
+      .fm-modal-head .fm-path { font-family: 'Cascadia Code', Consolas, monospace; font-size: 12px; color: #9ca3af; margin-left: 10px; word-break: break-all; }
+      .fm-modal-x { border: 0; background: none; font-size: 20px; cursor: pointer; color: #9ca3af; line-height: 1; border-radius: 6px; padding: 2px 8px; }
+      .fm-modal-x:hover { background: #f3f4f6; color: #374151; }
+      .fm-modal-body { padding: 0; overflow: auto; flex: 1; display: flex; flex-direction: column; }
+      .fm-modal-foot { padding: 10px 18px; border-top: 1px solid #f0f1f4; display: flex; justify-content: flex-end; gap: 8px; background: #fafbfc; }
+      .fm-cm-host { flex: 1; min-height: 48vh; height: 48vh; }
+      .fm-cm-host .cm-editor { height: 100%; }
+      .fm-editor-wrap { display: flex; border: 0; border-radius: 0; overflow: hidden; background: #fff; flex: 1; transition: background .2s; }
+      .fm-editor-wrap.readonly { background: #fff; }
+      .fm-editor-wrap.dark { background: #1e1e1e; }
+      /* —— 深色模式：整个编辑器弹窗一起变深（VS Code 风格） —— */
+      .fm-modal.dark { background: #252526; }
+      .fm-modal.dark .fm-modal-head { background: #2d2d2d; border-bottom-color: #3e3e42; }
+      .fm-modal.dark .fm-modal-head strong { color: #e7e7e7; }
+      .fm-modal.dark .fm-modal-head .fm-path { color: #9d9d9d; }
+      .fm-modal.dark .fm-modal-x { color: #9d9d9d; }
+      .fm-modal.dark .fm-modal-x:hover { background: #3e3e42; color: #fff; }
+      .fm-modal.dark .fe-toolbar { background: #252526; border-bottom-color: #3e3e42; }
+      .fm-modal.dark .fe-tbtn { color: #cccccc; }
+      .fm-modal.dark .fe-tbtn:hover:not(:disabled) { background: #37373d; color: #fff; }
+      .fm-modal.dark .fe-tbtn.on { background: #264f78; color: #fff; border-color: transparent; }
+      .fm-modal.dark .fe-sep { background: #3e3e42; }
+      .fm-modal.dark .fe-lang { background: #3c3c3c; color: #9d9d9d; }
+      .fm-modal.dark .fe-findbar { background: #2d2d2d; border-bottom-color: #3e3e42; }
+      .fm-modal.dark .fe-findbar input { background: #1e1e1e; border-color: #3e3e42; color: #d4d4d4; }
+      .fm-modal.dark .fe-findbar .fe-count { color: #9d9d9d; }
+      .fm-modal.dark .fe-statusbar { background: #252526; border-top-color: #3e3e42; color: #9d9d9d; }
+      .fm-modal.dark .fm-modal-foot { background: #2d2d2d; border-top-color: #3e3e42; }
+      .fm-modal.dark .fm-modal-foot .fm-btn { background: #3c3c3c; border-color: #4a4a4a; color: #e0e0e0; }
+      .fm-modal.dark .fm-modal-foot .fm-btn:hover:not(:disabled) { background: #4a4a4a; border-color: #5a5a5a; color: #fff; }
+      .fm-modal.dark .fm-modal-foot .fm-btn.primary { background: #0e639c; border-color: #0e639c; color: #fff; }
+      .fm-modal.dark .fm-modal-foot .fm-btn.primary:hover:not(:disabled) { background: #1177bb; border-color: #1177bb; }
+      .fm-cm-loading { padding: 16px 18px; color: #9ca3af; font-size: 13px; font-family: 'Cascadia Code', Consolas, monospace; }
+      /* 宝塔风格：右键菜单 */
+      .fm-ctx { position: fixed; z-index: 100001; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 8px 28px rgba(15,18,30,.14); display: none; min-width: 168px; font-size: 13px; padding: 4px; }
+      .fm-ctx.show { display: block; }
+      .fm-ctx .fm-ctx-item { display: flex; align-items: center; gap: 8px; padding: 7px 12px; cursor: pointer; color: #1f2937; border-bottom: 0; border-radius: 5px; }
+      .fm-ctx .fm-ctx-item:hover { background: #f3f6fb; }
+      .fm-ctx .fm-ctx-item.danger { color: #dc2626; }
+      .fm-ctx .fm-ctx-item.danger:hover { background: #fef2f2; }
+      .fm-ctx .fm-ctx-hr { height: 1px; background: #f0f1f4; margin: 3px 6px; }
+      .fm-ctx .fm-ctx-icon { width: 14px; height: 14px; flex-shrink: 0; opacity: .7; }
+      /* 工具栏：无边框幽灵按钮 */
+      .fe-toolbar { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; padding: 8px 14px; border: 0; border-bottom: 1px solid #f0f1f4; background: #fff; }
+      .fe-tbtn { border: 1px solid transparent; background: transparent; color: #4b5563; border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer; line-height: 1.5; white-space: nowrap; transition: background .12s; }
+      .fe-tbtn:hover:not(:disabled) { background: #f3f4f6; color: #111827; }
+      .fe-tbtn:disabled { opacity: .35; cursor: default; }
+      .fe-tbtn.on { background: #eef2ff; color: #4f46e5; border-color: #c7d2fe; }
+      .fe-sep { width: 1px; height: 16px; background: #e5e7eb; margin: 0 6px; }
+      .fe-lang { margin-left: auto; font-size: 11px; color: #6b7280; font-family: 'Cascadia Code', Consolas, monospace; background: #f3f4f6; border-radius: 4px; padding: 2px 8px; }
+      .fe-findbar { display: none; align-items: center; gap: 6px; flex-wrap: wrap; padding: 8px 14px; border: 0; border-bottom: 1px solid #f0f1f4; background: #fffbeb; }
+      .fe-findbar.is-open { display: flex; }
+      .fe-findbar input { padding: 5px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; font-family: 'Cascadia Code', Consolas, monospace; width: 170px; background: #fff; }
+      .fe-findbar input:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,.15); }
+      .fe-findbar .fe-count { font-size: 12px; color: #6b7280; min-width: 70px; }
+      .fe-statusbar { display: flex; align-items: center; gap: 16px; padding: 6px 14px; border: 0; border-top: 1px solid #f0f1f4; background: #fafbfc; font-size: 12px; color: #6b7280; }
+      .fe-statusbar .fe-right { margin-left: auto; }
+      .fe-statusbar .fe-loc { font-family: 'Cascadia Code', Consolas, monospace; font-size: 11px; color: #9ca3af; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .fe-dirty { color: #d97706; font-weight: 600; visibility: hidden; }
+      .fe-dirty.on { visibility: visible; }
+      /* —— 宝塔式编辑器布局 —— */
+      .fe-mask { padding: 24px; }
+      .fe-mask.is-max { padding: 0; }
+      .fe-mask.is-max .fm-modal.fe-window { border-radius: 0; }
+      .fe-mask .fm-modal.fe-window { width: 100%; max-width: none; max-height: 100%; height: 100%; display: flex; flex-direction: column; position: relative; }
+      /* 标题栏窗口按钮（最小化/最大化/关闭） */
+      .fe-winbtns { display: flex; align-items: center; gap: 4px; }
+      .fe-head-save { padding: 5px 14px; font-size: 12px; margin-right: 10px; }
+      .fe-head-save:disabled { opacity: .5; cursor: default; }
+      .fe-winbtn { width: 28px; height: 26px; border: 0; background: none; color: #6b7280; font-size: 14px; line-height: 1; cursor: pointer; border-radius: 6px; padding: 0; }
+      .fe-winbtn:hover { background: #eef2f7; color: #111827; }
+      .fm-modal.dark .fe-winbtn { color: #9d9d9d; }
+      .fm-modal.dark .fe-winbtn:hover { background: #3e3e42; color: #fff; }
+      /* 最小化恢复条 */
+      .fe-mini { position: fixed; right: 20px; bottom: 20px; z-index: 100002; display: none; align-items: center; gap: 8px; background: #1f2937; color: #e5e7eb; border-radius: 999px; padding: 8px 8px 8px 14px; font-size: 12px; box-shadow: 0 8px 28px rgba(15,23,42,.35); cursor: pointer; user-select: none; }
+      .fe-mini.show { display: flex; }
+      .fe-mini:hover { background: #374151; }
+      .fe-mini .fe-mini-ico { font-size: 14px; }
+      .fe-mini .fe-mini-txt { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .fe-mini .fe-mini-x { width: 22px; height: 22px; border: 0; border-radius: 50%; background: rgba(255,255,255,.12); color: #e5e7eb; font-size: 13px; line-height: 1; cursor: pointer; padding: 0; }
+      .fe-mini .fe-mini-x:hover { background: #dc2626; color: #fff; }
+      /* 注意：.fe-body 同时带 .fm-modal-body（声明了 flex-direction:column），
+         display:flex 不会重置方向，必须显式 row，否则侧栏按内容撑高、编辑区被压成 0 高 */
+      .fe-body { display: flex; flex-direction: row; flex: 1 1 0; min-height: 0; padding: 0; gap: 0; align-items: stretch; overflow: hidden; }
+      .fe-side { flex: 0 0 220px; width: 220px; height: 100%; min-height: 0; overflow: hidden; border-right: 2px solid #d5dbe4; display: flex; flex-direction: column; background: #eef1f6; }
+      /* 窄屏：侧栏收窄但始终保留（绝不折叠成 0） */
+      @media (max-width: 720px) { .fe-side { flex-basis: 170px; width: 170px; } }
+      .fe-side-head { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid #d5dbe4; font-size: 12px; color: #374151; background: #e3e8f0; font-weight: 600; }
+      .fe-side-dir { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: 'Cascadia Code', Consolas, monospace; font-size: 11px; }
+      .fe-side-up, .fe-side-refresh { cursor: pointer; user-select: none; opacity: .7; }
+      .fe-side-up:hover, .fe-side-refresh:hover { opacity: 1; }
+      .fe-side-list { flex: 1 1 0; min-height: 0; overflow: auto; padding: 4px 0; }
+      .fe-side-item { display: flex; align-items: center; gap: 6px; padding: 5px 10px; font-size: 12px; color: #374151; cursor: pointer; user-select: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .fe-side-item:hover { background: #eef2f7; }
+      .fe-side-item.is-dir { color: #4f46e5; }
+      .fe-side-item.is-active { background: #e0e7ff; color: #3730a3; font-weight: 600; }
+      .fe-side-item.is-protected { color: #9ca3af; cursor: default; }
+      .fe-side-empty { padding: 16px 10px; color: #9ca3af; font-size: 12px; text-align: center; }
+      .fe-main { flex: 1 1 0; height: 100%; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+      .fe-main .fm-editor-wrap { flex: 1 1 0; min-height: 0; }
+      .fe-main .fm-cm-host { height: 100%; min-height: 0; }
+      /* 标签页 */
+      .fe-tabs { display: flex; align-items: center; gap: 2px; padding: 0 10px; border-bottom: 1px solid #f0f1f4; background: #fafbfc; overflow-x: auto; min-height: 34px; }
+      .fe-tab { display: flex; align-items: center; gap: 6px; padding: 5px 10px; font-size: 12px; color: #6b7280; cursor: pointer; border: 1px solid transparent; border-bottom: 0; border-radius: 6px 6px 0 0; white-space: nowrap; user-select: none; }
+      .fe-tab:hover { background: #f3f4f6; }
+      .fe-tab.is-active { background: #fff; color: #111827; border-color: #f0f1f4; font-weight: 600; position: relative; top: 1px; }
+      .fe-tab .fe-tab-dot { color: #d97706; font-size: 10px; visibility: hidden; }
+      .fe-tab.is-dirty .fe-tab-dot { visibility: visible; }
+      .fe-tab .fe-tab-x { border: 0; background: none; cursor: pointer; color: #9ca3af; font-size: 12px; line-height: 1; padding: 0 2px; border-radius: 3px; }
+      .fe-tab .fe-tab-x:hover { background: #e5e7eb; color: #374151; }
+      /* 快捷键浮层 */
+      .fe-keys-pop { position: absolute; top: 44px; right: 14px; z-index: 5; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 8px 24px rgba(15,23,42,.12); padding: 12px 14px; display: none; min-width: 240px; }
+      .fe-keys-pop.is-open { display: block; }
+      .fe-keys-title { font-size: 12px; font-weight: 600; color: #111827; margin-bottom: 8px; }
+      .fe-keys-grid { display: grid; grid-template-columns: auto 1fr; gap: 5px 14px; font-size: 12px; color: #4b5563; }
+      .fe-keys-grid span:nth-child(odd) { font-family: 'Cascadia Code', Consolas, monospace; background: #f3f4f6; border-radius: 4px; padding: 1px 6px; }
+      /* 深色：编辑器窗口整体 */
+      .fm-modal.dark .fe-side { background: #252526; border-right-color: #3e3e42; }
+      .fm-modal.dark .fe-side-head { border-bottom-color: #3e3e42; color: #d4d4d4; background: #2d2d2d; }
+      .fm-modal.dark .fe-side-item { color: #cccccc; }
+      .fm-modal.dark .fe-side-item:hover { background: #2d2d2d; }
+      .fm-modal.dark .fe-side-item.is-dir { color: #569cd6; }
+      .fm-modal.dark .fe-side-item.is-active { background: #264f78; color: #fff; }
+      .fm-modal.dark .fe-side-item.is-protected { color: #6b6b6b; }
+      .fm-modal.dark .fe-tabs { background: #2d2d2d; border-bottom-color: #3e3e42; }
+      .fm-modal.dark .fe-tab { color: #9d9d9d; }
+      .fm-modal.dark .fe-tab:hover { background: #37373d; }
+      .fm-modal.dark .fe-tab.is-active { background: #1e1e1e; color: #e7e7e7; border-color: #3e3e42; }
+      .fm-modal.dark .fe-tab .fe-tab-x { color: #6b6b6b; }
+      .fm-modal.dark .fe-tab .fe-tab-x:hover { background: #4a4a4a; color: #fff; }
+      .fm-modal.dark .fe-keys-pop { background: #252526; border-color: #3e3e42; }
+      .fm-modal.dark .fe-keys-title { color: #e7e7e7; }
+      .fm-modal.dark .fe-keys-grid { color: #cccccc; }
+      .fm-modal.dark .fe-keys-grid span:nth-child(odd) { background: #3c3c3c; }
+      .fm-modal.dark .fe-statusbar .fe-loc { color: #6b6b6b; }
+      .fm-dirs { list-style: none; margin: 0; padding: 0; max-height: 46vh; overflow: auto; border: 1px solid #dcdcdd; border-radius: 3px; }
+      .fm-dirs li { padding: 6px 12px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+      .fm-dirs li:hover { background: #f0f6fb; }
+      .fm-dirs li.sel { background: #e5f1f8; font-weight: 600; }
+      .fm-dirs .fm-dirs-empty { color: #646970; cursor: default; }
+      .fm-dest-input { width: 100%; margin-top: 8px; padding: 6px 9px; border: 1px solid #8c8f94; border-radius: 3px; font-size: 13px; font-family: ui-monospace, Consolas, monospace; }
+      .fm-modal-hint { font-size: 12px; color: #646970; margin: 8px 0 0; }
+    </style>
+
+    <div class="fm-wrap">
+      <div class="fm-card">
+        <h1>文件管理</h1>
+        <div class="fm-muted">管理站点根目录下的文件。<code>.git</code> / <code>node_modules</code> / <code>.astro</code> 为受保护目录，仅可浏览，禁止修改。</div>
+
+        <div class="fm-toolbar">
+          <button class="fm-btn" id="btnMkdir">新建文件夹</button>
+          <button class="fm-btn" id="btnNewFile">新建文件</button>
+          <button class="fm-btn" id="btnUpload">上传</button>
+          <button class="fm-btn" id="btnView" disabled>查看</button>
+          <button class="fm-btn" id="btnEdit" disabled>编辑</button>
+          <button class="fm-btn" id="btnDownload" disabled>下载</button>
+          <button class="fm-btn" id="btnCopy" disabled>复制到…</button>
+          <button class="fm-btn" id="btnMove" disabled>移动到…</button>
+          <button class="fm-btn" id="btnZip" disabled>打包 ZIP</button>
+          <button class="fm-btn" id="btnUnzip" disabled>解压</button>
+          <button class="fm-btn" id="btnRename" disabled>重命名</button>
+          <button class="fm-btn danger" id="btnDelete" disabled>删除</button>
+          <button class="fm-btn" id="btnRefresh">刷新</button>
+          <input type="file" id="uploadInput" style="display:none" />
+        </div>
+
+        <div class="fm-crumbs" id="crumbs"></div>
+
+        <table class="fm-grid">
+          <thead>
+            <tr>
+              <th style="width:32px;"><input type="checkbox" id="checkAll" /></th>
+              <th>名称</th>
+              <th style="width:110px;">大小</th>
+              <th style="width:170px;">修改时间</th>
+            </tr>
+          </thead>
+          <tbody id="fmTbody">
+            <tr><td colspan="4" class="fm-empty">加载中…</td></tr>
+          </tbody>
+        </table>
+        <div class="fm-msg fm-muted" id="fmMsg"></div>
+      </div>
+    </div>
+
+    <!-- 右键菜单（宝塔风格） -->
+    <div class="fm-ctx" id="fmCtx" role="menu">
+      <div class="fm-ctx-item" data-act="open">打开</div>
+      <div class="fm-ctx-item" data-act="edit">编辑</div>
+      <div class="fm-ctx-item" data-act="download">下载</div>
+      <div class="fm-ctx-hr"></div>
+      <div class="fm-ctx-item" data-act="copy">复制到…</div>
+      <div class="fm-ctx-item" data-act="move">移动到…</div>
+      <div class="fm-ctx-item" data-act="rename">重命名</div>
+      <div class="fm-ctx-hr"></div>
+      <div class="fm-ctx-item" data-act="zip">打包 ZIP</div>
+      <div class="fm-ctx-item" data-act="unzip">解压</div>
+      <div class="fm-ctx-hr"></div>
+      <div class="fm-ctx-item danger" data-act="delete">删除</div>
+    </div>
+
+    <!-- 宝塔式编辑器：左侧文件列表 + 标签页 + 工具栏 + 状态栏（内容一律 textContent/value，无动态 HTML） -->
+    <div class="fm-modal-mask fe-mask" id="editorMask">
+      <div class="fm-modal fe-window" role="dialog" aria-modal="true" aria-label="文件编辑器">
+        <div class="fm-modal-head">
+          <div><strong id="editorTitle">文件编辑器</strong><span class="fm-path" id="editorPath"></span></div>
+          <div class="fe-winbtns">
+            <button type="button" class="fm-btn primary fe-head-save" id="feHeadSave" title="保存当前文件 (Ctrl+S)">💾 保存</button>
+            <button type="button" class="fe-winbtn" id="feMin" title="最小化" aria-label="最小化">—</button>
+            <button type="button" class="fe-winbtn" id="feMax" title="最大化" aria-label="最大化">⛶</button>
+            <button type="button" class="fm-modal-x" id="editorClose" aria-label="关闭">×</button>
+          </div>
+        </div>
+        <!-- 工具栏（对标宝塔：保存/全部保存/刷新/搜索/替换/跳转行/字号/主题/快捷键） -->
+        <div class="fe-toolbar" id="feToolbar">
+          <button type="button" class="fe-tbtn" id="feSave" title="保存当前文件 (Ctrl+S)">💾 保存</button>
+          <button type="button" class="fe-tbtn" id="feSaveAll" title="保存所有已修改的标签页">全部保存</button>
+          <button type="button" class="fe-tbtn" id="feReload" title="放弃修改并重新从磁盘读取">⟳ 刷新</button>
+          <span class="fe-sep"></span>
+          <button type="button" class="fe-tbtn" id="feUndo" title="撤销 (Ctrl+Z)">↶ 撤销</button>
+          <button type="button" class="fe-tbtn" id="feRedo" title="重做 (Ctrl+Y)">↷ 重做</button>
+          <span class="fe-sep"></span>
+          <button type="button" class="fe-tbtn" id="feFind" title="查找 / 替换 (Ctrl+F)">🔍 搜索替换</button>
+          <button type="button" class="fe-tbtn" id="feGoto" title="转到指定行 (Ctrl+G)">⤓ 跳转行</button>
+          <span class="fe-sep"></span>
+          <button type="button" class="fe-tbtn" id="feFontDec" title="减小字号">A−</button>
+          <button type="button" class="fe-tbtn" id="feFontInc" title="增大字号">A+</button>
+          <button type="button" class="fe-tbtn on" id="feWrap" title="切换自动换行">自动换行</button>
+          <span class="fe-sep"></span>
+          <button type="button" class="fe-tbtn" id="feTheme" title="切换深色主题">🌙 深色</button>
+          <button type="button" class="fe-tbtn" id="feKeys" title="快捷键一览">⌨ 快捷键</button>
+          <span class="fe-lang" id="feLang">plain text</span>
+        </div>
+        <!-- 快捷键说明浮层 -->
+        <div class="fe-keys-pop" id="feKeysPop">
+          <div class="fe-keys-title">快捷键</div>
+          <div class="fe-keys-grid">
+            <span>Ctrl+S</span><span>保存当前文件</span>
+            <span>Ctrl+F</span><span>搜索 / 替换</span>
+            <span>Ctrl+G</span><span>跳转到行</span>
+            <span>Ctrl+Z / Ctrl+Y</span><span>撤销 / 重做</span>
+            <span>Tab / Shift+Tab</span><span>缩进 / 反缩进</span>
+            <span>Esc</span><span>关闭搜索栏</span>
+          </div>
+        </div>
+        <!-- 标签页栏 -->
+        <div class="fe-tabs" id="feTabs"></div>
+        <div class="fm-modal-body fe-body">
+          <!-- 左侧：当前目录文件列表 -->
+          <div class="fe-side" id="feSide">
+            <div class="fe-side-head">
+              <span title="文件树">📁</span>
+              <span class="fe-side-up" id="feSideUp" title="上一级">⬆</span>
+              <span class="fe-side-dir" id="feSideDir" title="当前目录">/</span>
+              <span class="fe-side-refresh" id="feSideRefresh" title="刷新列表">⟳</span>
+            </div>
+            <div class="fe-side-list" id="feSideList"><div class="fe-side-empty">加载中…</div></div>
+          </div>
+          <!-- 右侧：编辑区 -->
+          <div class="fe-main">
+            <div class="fe-findbar" id="feFindBar">
+              <input type="text" id="feFindInput" placeholder="查找内容" />
+              <button type="button" class="fe-tbtn" id="feFindPrev">上一个</button>
+              <button type="button" class="fe-tbtn" id="feFindNext">下一个</button>
+              <span class="fe-count" id="feFindCount"></span>
+              <input type="text" id="feReplaceInput" placeholder="替换为" />
+              <button type="button" class="fe-tbtn" id="feReplaceOne">替换</button>
+              <button type="button" class="fe-tbtn" id="feReplaceAll">全部替换</button>
+              <button type="button" class="fe-tbtn" id="feFindClose">✕</button>
+            </div>
+            <div class="fm-editor-wrap readonly" id="feWrapBox">
+              <div class="fm-cm-host" id="cmHost"></div>
+            </div>
+          </div>
+        </div>
+        <!-- 状态栏（对标宝塔：文件位置/LF/行列/制表符/编码/语言） -->
+        <div class="fe-statusbar">
+          <span class="fe-dirty" id="feDirty">● 未保存</span>
+          <span class="fe-loc" id="feLoc" title="文件位置">文件位置：-</span>
+          <span>LF</span>
+          <span id="fePos">行 1，列 1</span>
+          <span id="feSel"></span>
+          <span class="fe-right">制表符：4 · <span id="feChars">0 字符</span> · <span id="feBytes">0 字节</span> · UTF-8 · <span id="feLangSb">plain text</span></span>
+        </div>
+        <div class="fm-modal-foot">
+          <button type="button" class="fm-btn" id="editorCancel">关闭</button>
+          <button type="button" class="fm-btn" id="editorToEdit" style="display:none">✏️ 切换到编辑</button>
+          <button type="button" class="fm-btn primary" id="editorSave">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 编辑器最小化后的恢复条（保留全部标签状态） -->
+    <div class="fe-mini" id="feMiniBar" title="点击恢复编辑器">
+      <span class="fe-mini-ico">📝</span>
+      <span class="fe-mini-txt" id="feMiniText">文件编辑器</span>
+      <button type="button" class="fe-mini-x" id="feMiniClose" title="关闭编辑器" aria-label="关闭">×</button>
+    </div>
+
+    <!-- 复制/移动目录选择弹窗 -->
+    <div class="fm-modal-mask" id="transferMask">
+      <div class="fm-modal" role="dialog" aria-modal="true" aria-label="选择目标目录">
+        <div class="fm-modal-head">
+          <div><strong id="transferTitle">复制到…</strong></div>
+          <button type="button" class="fm-modal-x" id="transferClose" aria-label="关闭">×</button>
+        </div>
+        <div class="fm-modal-body">
+          <ul class="fm-dirs" id="dirsList"></ul>
+          <input type="text" class="fm-dest-input" id="destInput" placeholder="目标目录相对路径（留空 = 站点根）" />
+          <p class="fm-modal-hint" id="transferHint"></p>
+        </div>
+        <div class="fm-modal-foot">
+          <button type="button" class="fm-btn" id="transferCancel">取消</button>
+          <button type="button" class="fm-btn primary" id="transferOk">确定</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 图片预览弹窗 -->
+    <div class="fm-modal-mask" id="imageMask">
+      <div class="fm-modal" role="dialog" aria-modal="true" aria-label="图片预览" style="width:min(900px,95vw);max-height:90vh;">
+        <div class="fm-modal-head">
+          <div><strong id="imageTitle">图片预览</strong><span class="fm-path" id="imagePath"></span></div>
+          <button type="button" class="fm-modal-x" id="imageClose" aria-label="关闭">×</button>
+        </div>
+        <div class="fm-modal-body" style="display:flex;align-items:center;justify-content:center;background:#1d2327;padding:20px;">
+          <img id="imagePreview" src="" alt="预览" style="max-width:100%;max-height:70vh;object-fit:contain;" />
+        </div>
+        <div class="fm-modal-foot">
+          <button type="button" class="fm-btn" id="imageDownload">下载</button>
+          <button type="button" class="fm-btn" id="imageCancel">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // 该脚本被 Astro 作为模块打包（index=0）：CodeMirror 6 及其语言包由 Vite 打包
+      import { createFileEditor } from "../scripts/editor-cm.ts";
+      window.__fmCreateCM = createFileEditor;
+      (function () {
+        var ESC_MAP = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+        function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return ESC_MAP[c]; }); }
+        function fmtSize(n, isDir) {
+          if (isDir) return "—";
+          if (n < 1024) return n + " B";
+          if (n < 1024 * 1024) return (n / 1024).toFixed(1) + " KB";
+          if (n < 1024 * 1024 * 1024) return (n / 1024 / 1024).toFixed(1) + " MB";
+          return (n / 1024 / 1024 / 1024).toFixed(2) + " GB";
+        }
+        function fmtTime(iso) {
+          if (!iso) return "-";
+          try { return new Date(iso).toLocaleString("zh-CN", { hour12: false }); } catch (e) { return iso; }
+        }
+        function api(url, opts) {
+          return fetch(url, Object.assign({ credentials: "same-origin" }, opts)).then(function (r) {
+            if (r.status === 401) { location.href = "/login"; throw new Error("未登录"); }
+            return r.json().then(function (d) { return { ok: r.ok, status: r.status, data: d }; });
+          });
+        }
+        function post(url, payload) {
+          return api(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+        }
+
+        var ICON_DIR = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>';
+        var ICON_FILE = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>';
+        var ICON_IMG = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
+        var ICON_ZIP = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>';
+        var ICON_TEXT = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>';
+        var ICON_CODE = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>';
+        // 宝塔风格：按扩展名区分文件图标
+        function iconForFile(name) {
+          var low = name.toLowerCase();
+          var ext = low.slice(low.lastIndexOf(".") + 1);
+          if (ext === "png" || ext === "jpg" || ext === "jpeg" || ext === "gif" || ext === "svg" || ext === "webp" || ext === "ico" || ext === "bmp") return ICON_IMG;
+          if (ext === "zip" || ext === "tar" || ext === "gz" || ext === "tgz" || ext === "bz2" || ext === "7z") return ICON_ZIP;
+          if (ext === "js" || ext === "ts" || ext === "tsx" || ext === "jsx" || ext === "vue" || ext === "py" || ext === "php" || ext === "java" || ext === "go" || ext === "rs" || ext === "sh" || ext === "bat" || ext === "cmd" || ext === "ps1") return ICON_CODE;
+          if (ext === "md" || ext === "txt" || ext === "log" || ext === "ini" || ext === "conf" || ext === "env" || ext === "yaml" || ext === "yml" || ext === "json" || ext === "xml" || ext === "html" || ext === "css" || ext === "astro") return ICON_TEXT;
+          return ICON_FILE;
+        }
+
+        var tbody = document.getElementById("fmTbody");
+        var crumbs = document.getElementById("crumbs");
+        var msg = document.getElementById("fmMsg");
+        var checkAll = document.getElementById("checkAll");
+        var uploadInput = document.getElementById("uploadInput");
+        var cur = "";
+        var items = [];
+
+        function setMsg(text, cls) {
+          msg.className = "fm-msg " + (cls || "fm-muted");
+          msg.textContent = text;
+        }
+
+        function joinRel(base, name) { return base ? base + "/" + name : name; }
+        // 查询串路径参数尾部追加哑参数 "_="：dev 模式下 Vite/Astro 会把
+        // 解码后以 .md 结尾的 URL 当作 Markdown 模块请求拦截（ENOENT 500），
+        // 追加后 URL 不再以 .md 结尾即可绕过；服务端会忽略多余参数。
+        function qPath(p) { return encodeURIComponent(p) + "&_="; }
+        function isZipName(name) { return name.slice(-4).toLowerCase() === ".zip"; }
+        var EDIT_EXT = { ".md":1, ".markdown":1, ".txt":1, ".json":1, ".js":1, ".mjs":1, ".cjs":1, ".ts":1, ".tsx":1, ".astro":1, ".css":1, ".scss":1, ".less":1, ".html":1, ".htm":1, ".xml":1, ".svg":1, ".yml":1, ".yaml":1, ".ini":1, ".conf":1, ".env":1, ".sh":1, ".bash":1, ".zsh":1, ".bat":1, ".cmd":1, ".ps1":1, ".sql":1, ".log":1, ".vue":1, ".svelte":1, ".toml":1, ".php":1, ".py":1, ".rb":1, ".go":1, ".rs":1, ".java":1, ".c":1, ".h":1, ".cpp":1 };
+        function isTextName(name) {
+          var dot = name.lastIndexOf(".");
+          var ext = dot >= 0 ? name.slice(dot).toLowerCase() : "";
+          if (EDIT_EXT[ext]) return true;
+          if (name.charAt(0) === ".") return true;
+          var base = name.toLowerCase();
+          if (base === "dockerfile" || base === "license" || base === "makefile" || base === "readme" || base === "changelog") return true;
+          return false;
+        }
+
+        function selectedItems() {
+          var boxes = tbody.querySelectorAll("input[data-name]:checked");
+          var out = [];
+          for (var i = 0; i < boxes.length; i++) {
+            var name = boxes[i].getAttribute("data-name");
+            for (var j = 0; j < items.length; j++) {
+              if (items[j].name === name) { out.push(items[j]); break; }
+            }
+          }
+          return out;
+        }
+
+        function refreshButtons() {
+          var sel = selectedItems();
+          var singleFile = sel.length === 1 && sel[0].type === "file";
+          var textFile = singleFile && isTextName(sel[0].name);
+          document.getElementById("btnView").disabled = !textFile;
+          document.getElementById("btnEdit").disabled = !(textFile && !sel[0].protected);
+          document.getElementById("btnDownload").disabled = !singleFile;
+          document.getElementById("btnCopy").disabled = sel.length < 1;
+          document.getElementById("btnMove").disabled = !sel.some(function (i) { return !i.protected; });
+          document.getElementById("btnZip").disabled = sel.length < 1;
+          document.getElementById("btnUnzip").disabled = !(sel.length === 1 && sel[0].type === "file" && isZipName(sel[0].name));
+          document.getElementById("btnRename").disabled = sel.length !== 1;
+          document.getElementById("btnDelete").disabled = !sel.some(function (i) { return !i.protected; });
+          checkAll.checked = items.length > 0 && sel.length === items.filter(function (i) { return !i.protected; }).length && sel.length > 0;
+        }
+
+        function renderCrumbs() {
+          var html = '<a data-crumb="">站点根</a>';
+          var acc = "";
+          if (cur) {
+            var segs = cur.split("/");
+            for (var i = 0; i < segs.length; i++) {
+              acc = acc ? acc + "/" + segs[i] : segs[i];
+              html += '<span class="sep">/</span><a data-crumb="' + esc(acc) + '">' + esc(segs[i]) + "</a>";
+            }
+          }
+          crumbs.innerHTML = html; // ap-audit-ok: 面包屑片段均经 esc() 转义
+        }
+
+        function render() {
+          renderCrumbs();
+          if (!items.length) {
+            tbody.innerHTML = '<tr><td colspan="4" class="fm-empty">空目录</td></tr>'; // ap-audit-ok: 静态空状态，无动态数据
+            refreshButtons();
+            return;
+          }
+          tbody.innerHTML = items.map(function (it) { // ap-audit-ok: 名称经 esc()、属性值经 esc()，图标为静态 SVG
+            var icon = it.type === "dir" ? ICON_DIR : iconForFile(it.name);
+            var cls = it.protected ? ' class="is-protected"' : "";
+            var box = it.protected
+              ? '<input type="checkbox" disabled title="受保护目录" />'
+              : '<input type="checkbox" data-name="' + esc(it.name) + '" />';
+            return "<tr" + cls + ">" +
+              "<td>" + box + "</td>" +
+              '<td><span class="fm-name" data-name="' + esc(it.name) + '" data-type="' + it.type + '">' + icon + "<span>" + esc(it.name) + (it.protected ? "（受保护）" : "") + "</span></span></td>" +
+              '<td class="fm-num">' + fmtSize(it.size, it.type === "dir") + "</td>" +
+              '<td class="fm-num">' + esc(fmtTime(it.mtime)) + "</td>" +
+              "</tr>";
+          }).join("");
+          refreshButtons();
+        }
+
+        function load(path) {
+          cur = path;
+          setMsg("加载中…");
+          api("/admin-ext/api/files/list?path=" + qPath(cur)).then(function (res) {
+            if (!res.ok) {
+              setMsg((res.data && res.data.error) || "加载失败", "fm-err");
+              items = [];
+              render();
+              return;
+            }
+            items = res.data.items || [];
+            setMsg("共 " + items.length + " 项");
+            render();
+          }).catch(function (e) { setMsg(e.message || "网络错误", "fm-err"); });
+        }
+
+        crumbs.addEventListener("click", function (e) {
+          var a = e.target.closest("a[data-crumb]");
+          if (!a) return;
+          load(a.getAttribute("data-crumb") || "");
+        });
+
+        // ── 宝塔风格：右键菜单 ──
+        var ctxMenu = document.getElementById("fmCtx");
+        function hideCtx() { ctxMenu.classList.remove("show"); }
+        function showCtx(x, y) {
+          ctxMenu.style.left = x + "px";
+          ctxMenu.style.top = y + "px";
+          ctxMenu.classList.add("show");
+        }
+        document.addEventListener("click", hideCtx);
+        document.addEventListener("keydown", function (e) { if (e.key === "Escape") hideCtx(); });
+        tbody.addEventListener("contextmenu", function (e) {
+          var tr = e.target.closest("tr");
+          if (!tr) return;
+          e.preventDefault();
+          var span = tr.querySelector(".fm-name");
+          if (!span) return;
+          var name = span.getAttribute("data-name");
+          var type = span.getAttribute("data-type");
+          // 若未选中该行，先选中它
+          var box = tr.querySelector("input[data-name]");
+          if (box && !box.checked) { box.checked = true; refreshButtons(); }
+          // 按类型显隐菜单项
+          var isDir = type === "dir";
+          var isZip = type === "file" && isZipName(name);
+          var isText = type === "file" && isTextName(name);
+          var isProtected = tr.classList.contains("is-protected");
+          var acts = ctxMenu.querySelectorAll(".fm-ctx-item");
+          for (var i = 0; i < acts.length; i++) {
+            var act = acts[i].getAttribute("data-act");
+            var show = true;
+            if (act === "edit" && (!isText || isProtected)) show = false;
+            if (act === "unzip" && !isZip) show = false;
+            if (act === "download" && isDir) show = false;
+            acts[i].style.display = show ? "" : "none";
+          }
+          showCtx(e.clientX, e.clientY);
+        });
+        ctxMenu.addEventListener("click", function (e) {
+          var item = e.target.closest(".fm-ctx-item");
+          if (!item) return;
+          hideCtx();
+          var act = item.getAttribute("data-act");
+          var btnMap = { edit: "btnEdit", download: "btnDownload", copy: "btnCopy", move: "btnMove", rename: "btnRename", zip: "btnZip", unzip: "btnUnzip", delete: "btnDelete" };
+          if (act === "open") {
+            var sel = selectedItems();
+            if (sel.length === 1) {
+              if (sel[0].type === "dir") load(joinRel(cur, sel[0].name));
+              else if (isTextName(sel[0].name)) openEditor(joinRel(cur, sel[0].name), true);
+              else if (isImageName(sel[0].name)) openImagePreview(joinRel(cur, sel[0].name));
+              else location.href = "/admin-ext/api/files/download?path=" + qPath(joinRel(cur, sel[0].name));
+            }
+          } else if (btnMap[act]) {
+            var btn = document.getElementById(btnMap[act]);
+            if (btn && !btn.disabled) btn.click();
+          }
+        });
+
+        tbody.addEventListener("change", function (e) {
+          if (e.target.matches("input[data-name]")) refreshButtons();
+        });
+
+        checkAll.addEventListener("change", function () {
+          var boxes = tbody.querySelectorAll("input[data-name]");
+          for (var i = 0; i < boxes.length; i++) boxes[i].checked = checkAll.checked;
+          refreshButtons();
+        });
+
+        function isImageName(name) {
+          var low = name.toLowerCase();
+          var ext = low.slice(low.lastIndexOf(".") + 1);
+          return ext === "png" || ext === "jpg" || ext === "jpeg" || ext === "gif" || ext === "svg" || ext === "webp" || ext === "ico" || ext === "bmp";
+        }
+
+        tbody.addEventListener("dblclick", function (e) {
+          if (e.target.closest("input")) return;
+          var tr = e.target.closest("tr");
+          if (!tr) return;
+          var span = tr.querySelector(".fm-name");
+          if (!span) return;
+          var name = span.getAttribute("data-name");
+          if (span.getAttribute("data-type") === "dir") {
+            load(joinRel(cur, name));
+          } else if (isTextName(name)) {
+            // 双击 = 最强编辑意图，直接进可编辑模式（保护文件由 write API 服务端兜底拦截）；
+            // 只读查看入口保留给工具栏「查看」按钮与右键菜单「打开」
+            openEditor(joinRel(cur, name), false);
+          } else if (isImageName(name)) {
+            openImagePreview(joinRel(cur, name));
+          } else {
+            location.href = "/admin-ext/api/files/download?path=" + qPath(joinRel(cur, name));
+          }
+        });
+
+        document.getElementById("btnRefresh").addEventListener("click", function () { load(cur); });
+
+        document.getElementById("btnMkdir").addEventListener("click", function () {
+          var name = prompt("新建文件夹名称：", "新建文件夹");
+          if (!name) return;
+          if (name.indexOf("/") !== -1 || name.indexOf("\\") !== -1) { alert("名称不允许包含路径分隔符"); return; }
+          post("/admin-ext/api/files/mkdir", { path: joinRel(cur, name) }).then(function (res) {
+            if (!res.ok) { alert((res.data && res.data.error) || "创建失败"); return; }
+            setMsg("已创建文件夹：" + name, "fm-ok");
+            load(cur);
+          });
+        });
+
+        // 新建文本文件：先创建空文件（父目录为当前目录），成功后直接打开编辑器
+        document.getElementById("btnNewFile").addEventListener("click", function () {
+          var name = prompt("新建文件名称（仅限文本类型，如 note.txt / page.md）：", "新建文件.txt");
+          if (!name) return;
+          if (name.indexOf("/") !== -1 || name.indexOf("\\") !== -1) { alert("名称不允许包含路径分隔符"); return; }
+          if (!isTextName(name)) { alert("不支持在线创建的文件类型（仅文本扩展名）"); return; }
+          var rel = joinRel(cur, name);
+          post("/admin-ext/api/files/write", { path: rel, content: "", confirm: true }).then(function (res) {
+            if (!res.ok) { alert((res.data && res.data.error) || "创建失败"); return; }
+            setMsg("已创建文件：" + name, "fm-ok");
+            load(cur);
+            openEditor(rel, false);
+          });
+        });
+
+        document.getElementById("btnUpload").addEventListener("click", function () {
+          uploadInput.value = "";
+          uploadInput.click();
+        });
+
+        uploadInput.addEventListener("change", function () {
+          if (!uploadInput.files || !uploadInput.files[0]) return;
+          var f = uploadInput.files[0];
+          if (f.size > 64 * 1024 * 1024) { alert("单文件不能超过 64MB"); return; }
+          var fd = new FormData();
+          fd.append("file", f);
+          fd.append("dir", cur);
+          setMsg("正在上传 " + f.name + " …");
+          fetch("/admin-ext/api/files/upload", { method: "POST", credentials: "same-origin", body: fd })
+            .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+            .then(function (res) {
+              if (!res.ok) { setMsg((res.data && res.data.error) || "上传失败", "fm-err"); return; }
+              setMsg("已上传：" + res.data.file + (res.data.renamed ? "（重名自动改名）" : ""), "fm-ok");
+              load(cur);
+            })
+            .catch(function (e) { setMsg(e.message || "网络错误", "fm-err"); });
+        });
+
+        document.getElementById("btnDownload").addEventListener("click", function () {
+          var sel = selectedItems();
+          if (sel.length !== 1 || sel[0].type !== "file") return;
+          location.href = "/admin-ext/api/files/download?path=" + qPath(joinRel(cur, sel[0].name));
+        });
+
+        document.getElementById("btnZip").addEventListener("click", function () {
+          var sel = selectedItems();
+          if (!sel.length) return;
+          var names = sel.map(function (i) { return i.name; }).join("、");
+          if (!confirm("将打包以下内容到当前目录 ZIP：\n" + names + "\n\n确定继续吗？")) return;
+          var paths = sel.map(function (i) { return joinRel(cur, i.name); });
+          setMsg("正在打包…");
+          post("/admin-ext/api/files/zip", { paths: paths, confirm: true }).then(function (res) {
+            if (!res.ok) { setMsg((res.data && res.data.error) || "打包失败", "fm-err"); return; }
+            setMsg("已生成 " + (res.data.path || res.data.file) + "（" + res.data.count + " 个文件）", "fm-ok");
+            load(cur);
+          });
+        });
+
+        document.getElementById("btnUnzip").addEventListener("click", function () {
+          var sel = selectedItems();
+          if (sel.length !== 1 || !isZipName(sel[0].name)) return;
+          if (!confirm("将解压 " + sel[0].name + " 到当前目录下的同名文件夹，确定继续吗？")) return;
+          setMsg("正在解压…");
+          post("/admin-ext/api/files/unzip", { path: joinRel(cur, sel[0].name), confirm: true }).then(function (res) {
+            if (!res.ok) { setMsg((res.data && res.data.error) || "解压失败", "fm-err"); return; }
+            setMsg("已解压到 " + res.data.dir + "/（" + res.data.count + " 个文件）", "fm-ok");
+            load(cur);
+          });
+        });
+
+        document.getElementById("btnRename").addEventListener("click", function () {
+          var sel = selectedItems();
+          if (sel.length !== 1) return;
+          var oldName = sel[0].name;
+          var to = prompt("重命名 " + oldName + " 为：", oldName);
+          if (!to || to === oldName) return;
+          if (to.indexOf("/") !== -1 || to.indexOf("\\") !== -1) { alert("名称不允许包含路径分隔符"); return; }
+          if (!confirm("确定将 " + oldName + " 重命名为 " + to + " 吗？")) return;
+          post("/admin-ext/api/files/rename", { path: joinRel(cur, oldName), to: to, confirm: true }).then(function (res) {
+            if (!res.ok) { alert((res.data && res.data.error) || "重命名失败"); return; }
+            setMsg("已重命名为 " + to, "fm-ok");
+            load(cur);
+          });
+        });
+
+        document.getElementById("btnDelete").addEventListener("click", function () {
+          var sel = selectedItems();
+          if (!sel.length) return;
+          var names = sel.map(function (i) { return i.name; }).join("、");
+          if (!confirm("将删除以下内容（不可撤销）：\n" + names + "\n\n确定继续吗？")) return;
+          var paths = sel.map(function (i) { return joinRel(cur, i.name); });
+          post("/admin-ext/api/files/delete", { paths: paths, confirm: true }).then(function (res) {
+            if (!res.ok) { setMsg((res.data && res.data.error) || "删除失败", "fm-err"); load(cur); return; }
+            setMsg("已删除 " + res.data.deleted.length + " 项", "fm-ok");
+            load(cur);
+          });
+        });
+
+        /* ===== 宝塔式编辑器（多标签 + 左侧文件列表 + CodeMirror 6） ===== */
+        var editorMask = document.getElementById("editorMask");
+        var editorPath = document.getElementById("editorPath");
+        var editorTitle = document.getElementById("editorTitle");
+        var editorSave = document.getElementById("editorSave");
+        var editorToEdit = document.getElementById("editorToEdit");
+        var feHeadSave = document.getElementById("feHeadSave");
+        var cm = null; // CodeMirror 实例（模块脚本就绪后创建）
+
+        var feWrapBox = document.getElementById("feWrapBox");
+        var feDirty = document.getElementById("feDirty");
+        var fePos = document.getElementById("fePos");
+        var feSel = document.getElementById("feSel");
+        var feChars = document.getElementById("feChars");
+        var feBytes = document.getElementById("feBytes");
+        var feLang = document.getElementById("feLang");
+        var feLangSb = document.getElementById("feLangSb");
+        var feLoc = document.getElementById("feLoc");
+        var feTabs = document.getElementById("feTabs");
+        var feKeysPop = document.getElementById("feKeysPop");
+        var feSideDir = document.getElementById("feSideDir");
+        var feSideList = document.getElementById("feSideList");
+        var feFindBar = document.getElementById("feFindBar");
+        var feFindInput = document.getElementById("feFindInput");
+        var feReplaceInput = document.getElementById("feReplaceInput");
+        var feFindCount = document.getElementById("feFindCount");
+        var feBtnSave = document.getElementById("feSave");
+        var feBtnSaveAll = document.getElementById("feSaveAll");
+        var feBtnReload = document.getElementById("feReload");
+        var feBtnUndo = document.getElementById("feUndo");
+        var feBtnRedo = document.getElementById("feRedo");
+        var feBtnFind = document.getElementById("feFind");
+        var feBtnGoto = document.getElementById("feGoto");
+        var feBtnWrap = document.getElementById("feWrap");
+        var feBtnFontDec = document.getElementById("feFontDec");
+        var feBtnFontInc = document.getElementById("feFontInc");
+        var feBtnTheme = document.getElementById("feTheme");
+        var feBtnKeys = document.getElementById("feKeys");
+        var feBtnRepOne = document.getElementById("feReplaceOne");
+        var feBtnRepAll = document.getElementById("feReplaceAll");
+        var feBtnMin = document.getElementById("feMin");
+        var feBtnMax = document.getElementById("feMax");
+        var feMiniBar = document.getElementById("feMiniBar");
+        var feMiniText = document.getElementById("feMiniText");
+        var feMiniClose = document.getElementById("feMiniClose");
+
+        var LANG_MAP = {
+          ".js": "JavaScript", ".mjs": "JavaScript", ".cjs": "JavaScript", ".ts": "TypeScript", ".tsx": "TSX",
+          ".astro": "Astro", ".vue": "Vue", ".svelte": "Svelte", ".css": "CSS", ".scss": "SCSS", ".less": "LESS",
+          ".html": "HTML", ".htm": "HTML", ".xml": "XML", ".svg": "SVG", ".json": "JSON", ".md": "Markdown",
+          ".markdown": "Markdown", ".yml": "YAML", ".yaml": "YAML", ".toml": "TOML", ".ini": "INI",
+          ".conf": "CONF", ".env": "ENV", ".sh": "Shell", ".bash": "Shell", ".zsh": "Shell", ".bat": "Batch", ".cmd": "Batch",
+          ".ps1": "PowerShell", ".sql": "SQL", ".log": "LOG", ".txt": "Text", ".php": "PHP", ".py": "Python",
+          ".rb": "Ruby", ".go": "Go", ".rs": "Rust", ".java": "Java", ".c": "C", ".h": "C", ".cpp": "C++"
+        };
+        function langOf(name) {
+          var dot = name.lastIndexOf(".");
+          if (dot < 0) return name.toLowerCase() === "dockerfile" ? "Dockerfile" : "plain text";
+          return LANG_MAP[name.slice(dot).toLowerCase()] || "plain text";
+        }
+        function baseName(p) { var i = Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\")); return p.slice(i + 1); }
+        function dirName(p) { var i = Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\")); return i < 0 ? "" : p.slice(0, i); }
+
+        var fontPx = 13;
+
+        /* ---- 多标签状态：content 为当前内容，savedContent 为磁盘基准 ---- */
+        var openTabs = [];   // [{path, name, readonly, content, savedContent, dirty}]
+        var activeTab = -1;  // openTabs 索引；-1 = 无打开文件
+        var sideDir = null;  // 左侧列表当前目录（null = 尚未加载，保证首次打开必定拉取）
+
+        function activeTabObj() { return activeTab >= 0 ? openTabs[activeTab] : null; }
+
+        function setDirty(v) {
+          var t = activeTabObj();
+          v = !!v;
+          var changed = !t || t.dirty !== v;
+          if (t) t.dirty = v;
+          feDirty.classList.toggle("on", v);
+          if (changed) renderTabs(); // 仅在脏状态翻转时重建标签，避免每次按键全量重建 DOM
+        }
+
+        function anyDirty() { return openTabs.some(function (t) { return t.dirty && !t.readonly; }); }
+
+        function updateMeta() {
+          if (!cm) return;
+          var v = cm.getText();
+          feChars.textContent = v.length + " 字符";
+          try { feBytes.textContent = new Blob([v]).size + " 字节"; } catch (e) { feBytes.textContent = "-"; }
+        }
+
+        function afterContentChanged() {
+          // 以磁盘基准 savedContent 比对：undo 回原文后脏点自动消失
+          var t = activeTabObj();
+          setDirty(!!(t && cm && cm.getText() !== t.savedContent));
+          updateMeta();
+          if (feFindBar.classList.contains("is-open")) recomputeMatches();
+        }
+
+        /** 模块脚本（CodeMirror bundle）就绪后创建实例；未就绪时有限等待，超时显式报错（避免永久空白） */
+        function cmLoadError(msg) {
+          var host = document.getElementById("cmHost");
+          if (!host) return;
+          host.innerHTML = '<div style="padding:16px;font-size:13px;color:#b91c1c;font-family:Consolas,monospace;white-space:pre-wrap;line-height:1.6">⚠️ 编辑器加载失败：' + msg + '\n请强刷页面重试（Ctrl+F5）；若持续失败请查看浏览器控制台与 /admin-ext/files/editor-cm.js 请求。</div>';
+        }
+        function whenCm(cb, tries) {
+          tries = tries || 0;
+          if (cm) { cb && cb(); return; }
+          if (window.__fmCreateCM) {
+            try {
+              cm = window.__fmCreateCM(document.getElementById("cmHost"), {
+                onDirty: afterContentChanged,
+                onPosition: function (line, col, selected) {
+                  fePos.textContent = "行 " + line + "，列 " + col;
+                  feSel.textContent = selected > 0 ? "已选 " + selected + " 字符" : "";
+                },
+                onSave: function () { doSave(); },
+                onFind: function () { openFindBar(); },
+                onGoto: function () { gotoLinePrompt(); }
+              });
+              cm.setWrap(true);
+              cm.setFontSize(fontPx);
+              if (cm.setDark) cm.setDark(darkOn);
+              cb && cb();
+            } catch (e) {
+              cm = null;
+              cmLoadError(String(e && e.message || e));
+            }
+          } else if (tries < 150) {
+            setTimeout(function () { whenCm(cb, tries + 1); }, 40);
+          } else {
+            cmLoadError("模块脚本 6 秒内未就绪（window.__fmCreateCM 缺失）");
+          }
+        }
+
+        function applyReadonlyUI() {
+          var t = activeTabObj();
+          var loading = !!(t && t.loading);
+          var ro = !t || t.readonly || loading;
+          if (cm) cm.setReadonly(ro);
+          feWrapBox.classList.toggle("readonly", ro);
+          feBtnSave.disabled = ro;
+          feBtnUndo.disabled = ro;
+          feBtnRedo.disabled = ro;
+          feBtnRepOne.disabled = ro;
+          feBtnRepAll.disabled = ro;
+          feReplaceInput.disabled = ro;
+          // 任何状态底部都有明确主按钮：加载中两个都藏；只读时显示「✏️ 切换到编辑」；
+          // 可编辑时显示「保存」——绝不让 footer 只剩一个"关闭"
+          editorSave.style.display = (!ro) ? "" : "none";
+          feHeadSave.style.display = (!ro) ? "" : "none";
+          editorToEdit.style.display = (ro && !loading && t && !t.readError && !t.protected) ? "" : "none";
+        }
+
+        /** 只读查看 → 编辑 热切换（底部按钮 / 工具栏「编辑」共用） */
+        function unlockActive() {
+          var t = activeTabObj();
+          if (!t || !t.readonly) return;
+          if (t.loading) return;
+          if (t.readError) { alert("该文件读取失败，无法编辑：\n" + t.content); return; }
+          if (t.protected) { alert("受保护文件/目录禁止编辑"); return; }
+          t.readonly = false;
+          editorTitle.textContent = "编辑文件";
+          if (cm) {
+            cm.setReadonly(false);
+            cm.focus();
+          }
+          applyReadonlyUI();
+          renderTabs();
+          setMsg("已切换到编辑模式：" + t.path, "fm-muted");
+        }
+
+        function resetFindBar() {
+          feFindBar.classList.remove("is-open");
+          feFindInput.value = "";
+          feReplaceInput.value = "";
+          feFindCount.textContent = "";
+        }
+
+        /* ---- 标签页渲染 ---- */
+        function renderTabs() {
+          feTabs.textContent = "";
+          openTabs.forEach(function (t, i) {
+            var el = document.createElement("div");
+            el.className = "fe-tab" + (i === activeTab ? " is-active" : "") + (t.dirty ? " is-dirty" : "");
+            el.title = t.path;
+            var dot = document.createElement("span");
+            dot.className = "fe-tab-dot";
+            dot.textContent = "●";
+            var nm = document.createElement("span");
+            nm.textContent = t.name;
+            var x = document.createElement("button");
+            x.type = "button";
+            x.className = "fe-tab-x";
+            x.textContent = "×";
+            x.title = "关闭";
+            x.addEventListener("click", function (e) { e.stopPropagation(); closeTab(i); });
+            el.appendChild(dot);
+            el.appendChild(nm);
+            el.appendChild(x);
+            el.addEventListener("click", function () { switchTab(i); });
+            feTabs.appendChild(el);
+          });
+          updateMiniBar();
+        }
+
+        /** 把当前编辑器内容写回活动标签（切标签前调用） */
+        function stashActive() {
+          var t = activeTabObj();
+          if (t && cm) t.content = cm.getText();
+        }
+
+        /** 激活某个标签：把内容装进编辑器 */
+        function switchTab(i) {
+          if (i < 0 || i >= openTabs.length) return;
+          stashActive();
+          activeTab = i;
+          var t = openTabs[i];
+          editorTitle.textContent = t.readonly ? "查看文件" : "编辑文件";
+          editorPath.textContent = t.path;
+          feLang.textContent = langOf(t.name);
+          feLangSb.textContent = langOf(t.name);
+          feLoc.textContent = "文件位置：" + t.path;
+          resetFindBar();
+          whenCm(function () {
+            if (t.loading) { cm.setText("加载中…", "", true); applyReadonlyUI(); updateMeta(); return; }
+            cm.setText(t.content, t.name, t.readonly);
+            applyReadonlyUI();
+            feDirty.classList.toggle("on", t.dirty);
+            updateMeta();
+            cm.gotoLine(1);
+          });
+          renderTabs();
+          markSideActive();
+        }
+
+        /** 关闭标签；有未保存修改需确认 */
+        function closeTab(i) {
+          var t = openTabs[i];
+          if (!t) return;
+          if (t.dirty && !t.readonly && !confirm("「" + t.name + "」尚未保存，关闭将丢失修改，确定关闭吗？")) return;
+          openTabs.splice(i, 1);
+          if (!openTabs.length) {
+            activeTab = -1;
+            closeEditor(true);
+            return;
+          }
+          if (i === activeTab) {
+            activeTab = -1; // 让 switchTab 不 stash 已删除项
+            var next = Math.min(i, openTabs.length - 1);
+            switchTab(next);
+          } else {
+            if (i < activeTab) activeTab--;
+            renderTabs();
+          }
+        }
+
+        /* ---- 左侧文件列表 ---- */
+        function markSideActive() {
+          var t = activeTabObj();
+          var items = feSideList.querySelectorAll(".fe-side-item");
+          items.forEach(function (el) {
+            el.classList.toggle("is-active", !!t && el.getAttribute("data-path") === t.path);
+          });
+        }
+
+        function renderSideList(items, dir) {
+          feSideList.textContent = "";
+          if (!items.length) {
+            var empty = document.createElement("div");
+            empty.className = "fe-side-empty";
+            empty.textContent = "（空目录）";
+            feSideList.appendChild(empty);
+            return;
+          }
+          items.forEach(function (it) {
+            var el = document.createElement("div");
+            var path = dir ? dir + "/" + it.name : it.name;
+            el.className = "fe-side-item" + (it.type === "dir" ? " is-dir" : "") + (it.protected ? " is-protected" : "");
+            el.setAttribute("data-path", path);
+            el.title = path;
+            var ico = document.createElement("span");
+            ico.textContent = it.type === "dir" ? "📁" : "📄";
+            var nm = document.createElement("span");
+            nm.textContent = it.name;
+            el.appendChild(ico);
+            el.appendChild(nm);
+            el.addEventListener("click", function () {
+              if (it.type === "dir") {
+                if (it.protected) { setMsg("保护目录禁止进入", "fm-err"); return; }
+                loadSideDir(path);
+              } else {
+                if (!isTextName(it.name)) { setMsg("二进制文件不支持编辑", "fm-err"); return; }
+                openEditor(path, it.protected, it.protected);
+              }
+            });
+            feSideList.appendChild(el);
+          });
+          markSideActive();
+        }
+
+        function loadSideDir(dir) {
+          // 规范化：去掉空段与 . / ..，避免 "a/./b"、"." 导致显示 /. 与路径拼接污染
+          dir = String(dir || "").split("/").filter(function (p) { return p && p !== "." && p !== ".."; }).join("/");
+          sideDir = dir;
+          feSideDir.textContent = "/" + (dir || "");
+          feSideList.textContent = "";
+          var ld = document.createElement("div");
+          ld.className = "fe-side-empty";
+          ld.textContent = "加载中…";
+          feSideList.appendChild(ld);
+          api("/admin-ext/api/files/list?path=" + qPath(dir)).then(function (res) {
+            if (!res.ok) {
+              feSideList.textContent = "";
+              var er = document.createElement("div");
+              er.className = "fe-side-empty";
+              er.textContent = (res.data && res.data.error) || "加载失败";
+              feSideList.appendChild(er);
+              return;
+            }
+            renderSideList(res.data.items || [], dir);
+          }).catch(function (e) {
+            feSideList.textContent = "";
+            var er = document.createElement("div");
+            er.className = "fe-side-empty";
+            er.textContent = e.message || "网络错误";
+            feSideList.appendChild(er);
+          });
+        }
+
+        document.getElementById("feSideUp").addEventListener("click", function () {
+          loadSideDir(dirName(sideDir || ""));
+        });
+        document.getElementById("feSideRefresh").addEventListener("click", function () {
+          loadSideDir(sideDir || "");
+        });
+
+        /** 打开文件：已开则聚焦，否则新建标签。
+         *  readonly=true 表示以只读查看打开；isProtected=true 表示文件本身受保护（永不可解锁） */
+        function openEditor(relPath, readonly, isProtected) {
+          var idx = -1;
+          for (var i = 0; i < openTabs.length; i++) {
+            if (openTabs[i].path === relPath) { idx = i; break; }
+          }
+          editorMask.classList.add("is-open");
+          // 左侧列表定位到文件所在目录（即使标签已存在也要定位，用户可能已在侧栏里导航到别处）
+          var fdir = dirName(relPath);
+          if (fdir !== sideDir) loadSideDir(fdir);
+          if (idx >= 0) {
+            var ex = openTabs[idx];
+            // 只读查看态下点「编辑」：解锁为可编辑。
+            // 受保护文件 / readError / loading 的标签拒绝解锁，避免误覆盖
+            if (!readonly && ex.readonly && !isProtected) {
+              if (ex.loading) { switchTab(idx); return; }
+              if (ex.readError) { alert("该文件读取失败，无法编辑：\n" + ex.content); switchTab(idx); return; }
+              ex.readonly = false;
+            }
+            switchTab(idx);
+            return;
+          }
+
+          stashActive();
+          var tab = { path: relPath, name: baseName(relPath), readonly: !!readonly, protected: !!isProtected, content: "", savedContent: "", dirty: false, loading: true, readError: false };
+          openTabs.push(tab);
+          activeTab = openTabs.length - 1;
+          renderTabs();
+          editorTitle.textContent = readonly ? "查看文件" : "编辑文件";
+          editorPath.textContent = relPath;
+          feLang.textContent = langOf(tab.name);
+          feLangSb.textContent = langOf(tab.name);
+          feLoc.textContent = "文件位置：" + relPath;
+          resetFindBar();
+          whenCm(function () {
+            cm.setText("加载中…", "", true);
+            applyReadonlyUI();
+            api("/admin-ext/api/files/read?path=" + qPath(relPath)).then(function (res) {
+              // 无论用户是否已切到别的标签，响应都要写回该 tab，
+              // 否则快速连续开多文件时，先开的标签内容永远为空
+              if (!res.ok) {
+                tab.content = (res.data && res.data.error) || "读取失败";
+                tab.readonly = true;
+                tab.readError = true;
+              } else {
+                tab.content = res.data.content || "";
+                tab.savedContent = tab.content;
+              }
+              tab.loading = false;
+              if (activeTabObj() === tab) {
+                cm.setText(tab.content, tab.name, tab.readonly);
+                applyReadonlyUI();
+                feDirty.classList.remove("on");
+                cm.gotoLine(1);
+                updateMeta();
+              }
+              renderTabs();
+            }).catch(function (e) {
+              tab.content = e.message || "网络错误";
+              tab.readonly = true;
+              tab.readError = true;
+              tab.loading = false;
+              if (activeTabObj() === tab) {
+                cm.setText(tab.content, tab.name, true);
+                applyReadonlyUI();
+                updateMeta();
+              }
+              renderTabs();
+            });
+          });
+        }
+
+        function closeEditor(force) {
+          if (!force && anyDirty() && !confirm("存在未保存的修改，关闭将丢失，确定关闭吗？")) return;
+          editorMask.classList.remove("is-open");
+          openTabs = [];
+          activeTab = -1;
+          renderTabs();
+          feDirty.classList.remove("on");
+          feFindBar.classList.remove("is-open");
+          feKeysPop.classList.remove("is-open");
+        }
+
+        /* ---- 最小化 / 最大化（对标宝塔窗口控件） ---- */
+        var maximized = false;
+        try { maximized = localStorage.getItem("fm-editor-max") === "1"; } catch (_) {}
+        function applyMax() {
+          editorMask.classList.toggle("is-max", maximized);
+          feBtnMax.textContent = maximized ? "❐" : "⛶";
+          feBtnMax.title = maximized ? "还原" : "最大化";
+        }
+        function toggleMax() {
+          maximized = !maximized;
+          try { localStorage.setItem("fm-editor-max", maximized ? "1" : "0"); } catch (_) {}
+          applyMax();
+        }
+        /** 最小化恢复条文案与显隐（renderTabs 后自动调用） */
+        function updateMiniBar() {
+          var n = openTabs.length;
+          var d = openTabs.filter(function (t) { return t.dirty && !t.readonly; }).length;
+          feMiniText.textContent = "文件编辑器 · " + n + " 个文件" + (d ? " · " + d + " 个未保存" : "");
+          feMiniBar.classList.toggle("show", n > 0 && !editorMask.classList.contains("is-open"));
+        }
+        function minimizeEditor() {
+          if (!openTabs.length) return;
+          editorMask.classList.remove("is-open");
+          feKeysPop.classList.remove("is-open");
+          feFindBar.classList.remove("is-open");
+          updateMiniBar();
+        }
+        function restoreEditor() {
+          if (!openTabs.length) return;
+          editorMask.classList.add("is-open");
+          feMiniBar.classList.remove("show");
+          if (cm) cm.focus();
+        }
+
+        function reloadFile() {
+          var t = activeTabObj();
+          if (!t) return;
+          if (!t.readonly && t.dirty && !confirm("重新载入将放弃未保存的修改，确定继续吗？")) return;
+          api("/admin-ext/api/files/read?path=" + qPath(t.path)).then(function (res) {
+            if (!res.ok) { alert((res.data && res.data.error) || "读取失败"); return; }
+            if (activeTabObj() !== t) return;
+            t.content = res.data.content || "";
+            t.savedContent = t.content;
+            t.dirty = false;
+            cm.setText(t.content, t.name, t.readonly);
+            applyReadonlyUI();
+            feDirty.classList.remove("on");
+            renderTabs();
+            updateMeta();
+            if (feFindBar.classList.contains("is-open")) recomputeMatches();
+            setMsg("已重新载入：" + t.path, "fm-ok");
+          }).catch(function (e) { alert(e.message || "网络错误"); });
+        }
+
+        /** 保存单个标签（不关闭编辑器，对标宝塔） */
+        function saveTab(t) {
+          return post("/admin-ext/api/files/write", { path: t.path, content: t.content, confirm: true })
+            .then(function (res) {
+              if (!res.ok) throw new Error((res.data && res.data.error) || "保存失败");
+              t.savedContent = t.content;
+              t.dirty = false;
+              return true;
+            });
+        }
+
+        function doSave() {
+          var t = activeTabObj();
+          if (!t || t.readonly || t.loading || !cm) return;
+          if (!t.dirty) { setMsg("文件未修改，无需保存", "fm-muted"); return; }
+          stashActive();
+          editorSave.disabled = true;
+          feHeadSave.disabled = true;
+          feBtnSave.disabled = true;
+          editorSave.textContent = "保存中…";
+          feHeadSave.textContent = "保存中…";
+          saveTab(t)
+            .then(function () {
+              editorSave.disabled = false;
+              feHeadSave.disabled = false;
+              feBtnSave.disabled = false;
+              editorSave.textContent = "保存";
+              feHeadSave.textContent = "💾 保存";
+              cm.setClean();
+              feDirty.classList.remove("on");
+              renderTabs();
+              setMsg("已保存：" + t.path, "fm-ok");
+              load(cur);
+            })
+            .catch(function (e) {
+              editorSave.disabled = false;
+              feHeadSave.disabled = false;
+              feBtnSave.disabled = false;
+              editorSave.textContent = "保存";
+              feHeadSave.textContent = "💾 保存";
+              alert(e.message || "网络错误");
+            });
+        }
+
+        function doSaveAll() {
+          stashActive();
+          var dirty = openTabs.filter(function (t) { return t.dirty && !t.readonly; });
+          if (!dirty.length) { setMsg("没有需要保存的文件", "fm-err"); return; }
+          if (!confirm("确定保存全部 " + dirty.length + " 个文件吗？")) return;
+          var fails = [];
+          Promise.all(dirty.map(function (t) {
+            return saveTab(t).catch(function (e) { fails.push(t.name + "：" + e.message); });
+          })).then(function () {
+            renderTabs();
+            if (activeTabObj() && !activeTabObj().dirty) { feDirty.classList.remove("on"); if (cm) cm.setClean(); }
+            if (fails.length) alert("部分保存失败：\n" + fails.join("\n"));
+            else setMsg("已全部保存（" + dirty.length + " 个文件）", "fm-ok");
+            load(cur);
+          });
+        }
+
+        /* ---- Ctrl+S / Ctrl+F / Ctrl+G / Tab 缩进均由 CodeMirror keymap 处理 ---- */
+        document.getElementById("editorClose").addEventListener("click", closeEditor);
+        document.getElementById("editorCancel").addEventListener("click", closeEditor);
+        editorMask.addEventListener("click", function (e) { if (e.target === editorMask) closeEditor(); });
+        editorSave.addEventListener("click", doSave);
+        editorToEdit.addEventListener("click", unlockActive);
+        feHeadSave.addEventListener("click", doSave);
+        feBtnSave.addEventListener("click", doSave);
+        feBtnSaveAll.addEventListener("click", doSaveAll);
+        feBtnReload.addEventListener("click", reloadFile);
+        /* ---- 最小化 / 最大化 ---- */
+        feBtnMin.addEventListener("click", minimizeEditor);
+        feBtnMax.addEventListener("click", toggleMax);
+        feMiniBar.addEventListener("click", function (e) { if (e.target === feMiniClose) return; restoreEditor(); });
+        feMiniClose.addEventListener("click", function (e) { e.stopPropagation(); closeEditor(); });
+        // 双击标题栏切换最大化（点在按钮上时不触发）
+        editorMask.querySelector(".fm-modal-head").addEventListener("dblclick", function (e) {
+          if (e.target.closest("button")) return;
+          toggleMax();
+        });
+        applyMax();
+        /* ---- 快捷键速查浮层（点击其他区域自动关闭） ---- */
+        feBtnKeys.addEventListener("click", function (e) {
+          e.stopPropagation();
+          feKeysPop.classList.toggle("is-open");
+        });
+        feKeysPop.addEventListener("click", function (e) { e.stopPropagation(); });
+        document.addEventListener("click", function () { feKeysPop.classList.remove("is-open"); });
+        feBtnUndo.addEventListener("click", function () { if (cm) cm.undo(); });
+        feBtnRedo.addEventListener("click", function () { if (cm) cm.redo(); });
+
+        /* ---- 自动换行 / 字号（CodeMirror 动态重配） ---- */
+        var wrapOn = true;
+        feBtnWrap.classList.add("on");
+        feBtnWrap.addEventListener("click", function () {
+          wrapOn = !wrapOn;
+          feBtnWrap.classList.toggle("on", wrapOn);
+          if (cm) cm.setWrap(wrapOn);
+        });
+        function applyFont() {
+          feBtnFontDec.disabled = fontPx <= 11;
+          feBtnFontInc.disabled = fontPx >= 22;
+          if (cm) cm.setFontSize(fontPx);
+        }
+        feBtnFontDec.addEventListener("click", function () { fontPx = Math.max(11, fontPx - 1); applyFont(); });
+        feBtnFontInc.addEventListener("click", function () { fontPx = Math.min(22, fontPx + 1); applyFont(); });
+        applyFont();
+
+        /* ---- 明暗主题切换（localStorage 持久化） ---- */
+        var darkOn = false;
+        try { darkOn = localStorage.getItem("fm-editor-dark") === "1"; } catch (_) {}
+        function applyTheme() {
+          feBtnTheme.classList.toggle("on", darkOn);
+          feBtnTheme.textContent = darkOn ? "☀️ 浅色" : "🌙 深色";
+          feWrapBox.classList.toggle("dark", darkOn);
+          // 深色模式需要整个弹窗 chrome 一起变深（浅色工具栏夹黑色编辑器看起来是坏的）
+          var modal = feWrapBox.closest(".fm-modal");
+          if (modal) modal.classList.toggle("dark", darkOn);
+          if (cm && cm.setDark) cm.setDark(darkOn);
+        }
+        feBtnTheme.addEventListener("click", function () {
+          darkOn = !darkOn;
+          try { localStorage.setItem("fm-editor-dark", darkOn ? "1" : "0"); } catch (_) {}
+          applyTheme();
+        });
+        applyTheme();
+
+        /* ---- 查找 / 替换（CodeMirror SearchQuery 匹配） ---- */
+        var findState = { count: 0, query: "" };
+        function updateFindLabel() {
+          if (!findState.query) { feFindCount.textContent = ""; return; }
+          var idx = cm ? cm.getActiveMatchIndex() : -1;
+          feFindCount.textContent = findState.count
+            ? (idx >= 0 ? (idx + 1) + " / " + findState.count : "共 " + findState.count + " 处")
+            : "未找到";
+        }
+        function recomputeMatches() {
+          var q = feFindInput.value;
+          findState.query = q;
+          findState.count = cm ? cm.setQuery(q) : 0;
+          updateFindLabel();
+        }
+        function findNext() {
+          if (!findState.count) return;
+          cm.findNext();
+          updateFindLabel();
+        }
+        function findPrev() {
+          if (!findState.count) return;
+          cm.findPrev();
+          updateFindLabel();
+        }
+        function openFindBar() {
+          feFindBar.classList.add("is-open");
+          if (cm) {
+            var sel = cm.getSelectionText();
+            if (sel && sel.length < 80 && sel.indexOf("\n") === -1) feFindInput.value = sel;
+          }
+          recomputeMatches();
+          feFindInput.focus();
+          feFindInput.select();
+        }
+        feBtnFind.addEventListener("click", openFindBar);
+        document.getElementById("feFindClose").addEventListener("click", function () {
+          feFindBar.classList.remove("is-open");
+          if (cm) cm.focus();
+        });
+        feFindInput.addEventListener("input", recomputeMatches);
+        feFindInput.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") { e.preventDefault(); e.shiftKey ? findPrev() : findNext(); }
+          if (e.key === "Escape") { e.stopPropagation(); feFindBar.classList.remove("is-open"); if (cm) cm.focus(); }
+        });
+        document.getElementById("feFindNext").addEventListener("click", findNext);
+        document.getElementById("feFindPrev").addEventListener("click", findPrev);
+        feBtnRepOne.addEventListener("click", function () {
+          if (!findState.query) return;
+          if (!cm) return;
+          var status = cm.replaceOne(feReplaceInput.value);
+          if (status === "none") { updateFindLabel(); return; }
+          if (status === "replaced") {
+            recomputeMatches();
+            if (findState.count) findNext();
+          } else {
+            updateFindLabel();
+          }
+        });
+        feBtnRepAll.addEventListener("click", function () {
+          var q = findState.query, repl = feReplaceInput.value;
+          if (!q || !cm) return;
+          if (!findState.count) recomputeMatches();
+          if (!findState.count) return;
+          if (!confirm("确定全部替换 " + findState.count + " 处吗？")) return;
+          var n = cm.replaceAll(q, repl);
+          cm.focus();
+          recomputeMatches();
+          feFindCount.textContent = "已替换 " + n + " 处";
+        });
+
+        /* ---- 图片预览 ---- */
+        var imageMask = document.getElementById("imageMask");
+        var imagePreview = document.getElementById("imagePreview");
+        var imagePath = document.getElementById("imagePath");
+        var currentImagePath = "";
+
+        function openImagePreview(relPath) {
+          currentImagePath = relPath;
+          imagePath.textContent = relPath;
+          imagePreview.src = "/admin-ext/api/files/download?path=" + qPath(relPath);
+          imageMask.classList.add("is-open");
+        }
+
+        function closeImagePreview() {
+          imageMask.classList.remove("is-open");
+          imagePreview.src = "";
+          currentImagePath = "";
+        }
+
+        document.getElementById("imageClose").addEventListener("click", closeImagePreview);
+        document.getElementById("imageCancel").addEventListener("click", closeImagePreview);
+        document.getElementById("imageDownload").addEventListener("click", function () {
+          if (currentImagePath) {
+            location.href = "/admin-ext/api/files/download?path=" + qPath(currentImagePath);
+          }
+        });
+        imageMask.addEventListener("click", function (e) { if (e.target === imageMask) closeImagePreview(); });
+
+        /* ---- 转到行 ---- */
+        function gotoLinePrompt() {
+          if (!cm) return;
+          var total = cm.getLineCount();
+          var ans = prompt("输入要转到的行号（共 " + total + " 行）：", "1");
+          if (ans === null) return;
+          var n = parseInt(ans, 10);
+          if (!isFinite(n) || n < 1) return;
+          cm.gotoLine(n);
+        }
+        feBtnGoto.addEventListener("click", gotoLinePrompt);
+
+        document.getElementById("btnView").addEventListener("click", function () {
+          var sel = selectedItems();
+          if (sel.length === 1 && sel[0].type === "file") openEditor(joinRel(cur, sel[0].name), true);
+        });
+        document.getElementById("btnEdit").addEventListener("click", function () {
+          var sel = selectedItems();
+          if (sel.length === 1 && sel[0].type === "file" && !sel[0].protected) {
+            openEditor(joinRel(cur, sel[0].name), false);
+          }
+        });
+
+        /* ===== 复制 / 移动弹窗 ===== */
+        var transferMask = document.getElementById("transferMask");
+        var transferTitle = document.getElementById("transferTitle");
+        var dirsList = document.getElementById("dirsList");
+        var destInput = document.getElementById("destInput");
+        var transferHint = document.getElementById("transferHint");
+        var transferOk = document.getElementById("transferOk");
+        var transferState = { mode: "copy", chosen: "" };
+
+        function normDest(s) {
+          var out = String(s || "").split("\\").join("/").trim();
+          while (out.charAt(0) === "/") out = out.slice(1);
+          while (out.length && out.charAt(out.length - 1) === "/") out = out.slice(0, -1);
+          return out;
+        }
+
+        function closeTransfer() { transferMask.classList.remove("is-open"); }
+
+        function pickDir(rel) {
+          transferState.chosen = rel;
+          destInput.value = rel;
+          var lis = dirsList.querySelectorAll("li[data-rel]");
+          for (var i = 0; i < lis.length; i++) {
+            lis[i].className = lis[i].getAttribute("data-rel") === rel ? "sel" : "";
+          }
+        }
+
+        function openTransfer(mode) {
+          var sel = selectedItems();
+          if (!sel.length) return;
+          transferState.mode = mode;
+          transferState.chosen = cur;
+          transferTitle.textContent = mode === "copy" ? "复制到…" : "移动到…";
+          destInput.value = cur;
+          transferHint.textContent =
+            "将" + sel.length + " 项" + (mode === "copy" ? "复制" : "移动") + "到所选目录，重名自动改名";
+          transferOk.disabled = false;
+          transferOk.textContent = "确定";
+          dirsList.textContent = "";
+          var loading = document.createElement("li");
+          loading.className = "fm-dirs-empty";
+          loading.textContent = "加载目录…";
+          dirsList.appendChild(loading);
+          transferMask.classList.add("is-open");
+
+          api("/admin-ext/api/files/dirs?path=").then(function (res) {
+            dirsList.textContent = "";
+            if (!res.ok) {
+              var fail = document.createElement("li");
+              fail.className = "fm-dirs-empty";
+              fail.textContent = (res.data && res.data.error) || "目录加载失败";
+              dirsList.appendChild(fail);
+              return;
+            }
+            var root = document.createElement("li");
+            root.setAttribute("data-rel", "");
+            root.textContent = "📁 站点根";
+            if (cur === "") root.className = "sel";
+            dirsList.appendChild(root);
+            (res.data.dirs || []).forEach(function (d) {
+              var li = document.createElement("li");
+              li.setAttribute("data-rel", d);
+              li.textContent = "📁 " + d;
+              if (d === cur) li.className = "sel";
+              dirsList.appendChild(li);
+            }); // ap-audit-ok: 目录名仅作为文本节点与属性值写入，无 HTML 注入
+          }).catch(function (e) {
+            dirsList.textContent = "";
+            var fail2 = document.createElement("li");
+            fail2.className = "fm-dirs-empty";
+            fail2.textContent = e.message || "网络错误";
+            dirsList.appendChild(fail2);
+          });
+        }
+
+        dirsList.addEventListener("click", function (e) {
+          var li = e.target.closest("li[data-rel]");
+          if (li) pickDir(li.getAttribute("data-rel") || "");
+        });
+        document.getElementById("transferClose").addEventListener("click", closeTransfer);
+        document.getElementById("transferCancel").addEventListener("click", closeTransfer);
+        transferMask.addEventListener("click", function (e) { if (e.target === transferMask) closeTransfer(); });
+
+        transferOk.addEventListener("click", function () {
+          var sel = selectedItems();
+          if (!sel.length) return;
+          var destDir = normDest(destInput.value);
+          var mode = transferState.mode;
+          var verb = mode === "copy" ? "复制" : "移动";
+          var names = sel.map(function (i) { return i.name; }).join("、");
+          if (!confirm("确定将以下 " + sel.length + " 项" + verb + "到「" + (destDir || "站点根") + "」吗？\n" + names)) return;
+          var paths = sel.map(function (i) { return joinRel(cur, i.name); });
+          transferOk.disabled = true;
+          transferOk.textContent = verb === "复制" ? "复制中…" : "移动中…";
+          post("/admin-ext/api/files/" + mode, { sources: paths, destDir: destDir, confirm: true })
+            .then(function (res) {
+              transferOk.disabled = false;
+              transferOk.textContent = "确定";
+              if (!res.ok) { alert((res.data && res.data.error) || (verb + "失败")); return; }
+              var d = res.data;
+              var errs = (d.results || []).filter(function (r) { return !r.ok; });
+              if (errs.length) {
+                alert(verb + "完成 " + d.done + " 项，失败 " + d.failed + " 项：\n" +
+                  errs.slice(0, 5).map(function (r) { return "· " + r.src + "：" + r.error; }).join("\n"));
+              } else {
+                setMsg(verb + "完成：" + d.done + " 项 → " + (destDir || "站点根"), "fm-ok");
+              }
+              transferMask.classList.remove("is-open");
+              load(cur);
+            })
+            .catch(function (e) {
+              transferOk.disabled = false;
+              transferOk.textContent = "确定";
+              alert(e.message || "网络错误");
+            });
+        });
+
+        document.getElementById("btnCopy").addEventListener("click", function () { openTransfer("copy"); });
+        document.getElementById("btnMove").addEventListener("click", function () { openTransfer("move"); });
+
+        /* 弹窗 Escape：编辑器内仅关浮层/搜索栏（防误触丢失编辑状态），复制移动弹窗直接关闭 */
+        document.addEventListener("keydown", function (e) {
+          if (e.key !== "Escape") return;
+          if (editorMask.classList.contains("is-open")) {
+            if (feKeysPop.classList.contains("is-open")) { feKeysPop.classList.remove("is-open"); return; }
+            if (feFindBar.classList.contains("is-open")) {
+              feFindBar.classList.remove("is-open");
+              if (cm) cm.focus();
+            }
+            return;
+          }
+          if (transferMask.classList.contains("is-open")) closeTransfer();
+        });
+
+        load("");
+      })();
+    </script>
+</AdminLayout>

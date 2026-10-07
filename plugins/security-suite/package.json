@@ -1,0 +1,27 @@
+{
+    "name":  "@astropress/plugin-security-suite",
+    "version":  "1.0.0",
+    "private":  true,
+    "type":  "module",
+    "description":  "合并套件：全局限流 · 维护模式 · 操作审计 · 两步验证 · 用户角色",
+    "exports":  {
+                    ".":  "./src/index.ts",
+                    "./integration":  "./src/integration.ts"
+                },
+    "scripts":  {
+                    "typecheck":  "tsc --noEmit"
+                },
+    "dependencies":  {
+                         "@astropress/core":  "workspace:*",
+                         "@astropress/plugin-rate-limit":  "workspace:*",
+                         "@astropress/plugin-maintenance-mode":  "workspace:*",
+                         "@astropress/plugin-two-factor-auth":  "workspace:*",
+                         "@astropress/plugin-user-roles":  "workspace:*",
+                         "@astropress/plugin-activity-log":  "workspace:*"
+                     },
+    "devDependencies":  {
+                            "astro":  "^4.0.0",
+                            "typescript":  "^5.4.0",
+                            "@cloudflare/workers-types":  "^4.0.0"
+                        }
+}

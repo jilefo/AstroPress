@@ -1,0 +1,294 @@
+---
+/**
+ * /admin-ext/links — 网站目录管理页
+ *
+ * 分类 CRUD + 链接 CRUD（表格内联编辑）+ 页面设置（astropress_links_settings）。
+ */
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+if (!Astro.locals.user || !Astro.locals.db) return Astro.redirect("/login");
+---
+<AdminLayout title="网站目录">
+    <style is:global>
+      * { box-sizing: border-box; }
+      .wrap { max-width: 1100px; margin: 0 auto; padding: 0 16px; display: grid; gap: 20px; }
+      .card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 20px; }
+      h1 { font-size: 20px; margin: 0 0 14px; }
+      h2 { font-size: 15px; margin: 0 0 12px; }
+      label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 4px; }
+      input[type="text"], input[type="number"], select, textarea { font-size: 13px; padding: 6px 8px; border: 1px solid #8c8f94; border-radius: 3px; font-family: inherit; }
+      input[type="text"], input[type="number"], textarea { width: 100%; }
+      button { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 6px 14px; cursor: pointer; font-size: 13px; }
+      button:hover { background: #135e96; }
+      button.danger { background: #b32d2e; }
+      button.mini { padding: 3px 10px; font-size: 12px; }
+      .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+      .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .msg { font-size: 13px; margin-top: 8px; min-height: 18px; color: #646970; }
+      .ok { color: #00a32a; }
+      .err { color: #b32d2e; }
+      .hint { font-size: 12px; color: #646970; margin-top: 4px; }
+      .check { display: flex; align-items: center; gap: 6px; font-size: 13px; margin-top: 12px; }
+      .check label { margin: 0; font-weight: normal; }
+      .linkbox { font-size: 13px; }
+      .linkbox a { color: #2271b1; text-decoration: none; }
+      table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      th, td { padding: 6px 8px; border-bottom: 1px solid #e5e7eb; vertical-align: middle; }
+      th { font-weight: 600; color: #646970; text-align: left; white-space: nowrap; }
+      td .mini { white-space: nowrap; }
+      .badge { display:inline-block; padding:1px 8px; border-radius:3px; font-size:12px; background:#f0f0f1; }
+      .badge.approved { background:#d7f0d7; color:#227a2c; }
+      .badge.pending { background:#fcf0c8; color:#9a7b12; }
+    </style>
+
+    <div class="wrap">
+      <!-- 设置 -->
+      <section class="card">
+        <h1>网站目录</h1>
+        <div class="linkbox">公开目录页：<a href="/directory" target="_blank">/directory</a></div>
+
+        <div class="check">
+          <input type="checkbox" id="s-enabled" />
+          <label for="s-enabled">启用网站目录（关闭后 /directory 返回 404）</label>
+        </div>
+        <div class="grid2">
+          <div>
+            <label for="s-pageTitle">页面标题</label>
+            <input type="text" id="s-pageTitle" maxlength="80" />
+          </div>
+          <div>
+            <label for="s-subtitle">副标题</label>
+            <input type="text" id="s-subtitle" maxlength="200" />
+          </div>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="s-newTab" />
+          <label for="s-newTab">链接在新标签页打开</label>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="s-showClicks" />
+          <label for="s-showClicks">在卡片上显示点击次数</label>
+        </div>
+        <button id="s-save" style="margin-top:16px">保存设置</button>
+        <div class="msg" id="s-msg"></div>
+      </section>
+
+      <!-- 分类 -->
+      <section class="card">
+        <h2>分类</h2>
+        <div class="row">
+          <input type="text" id="cat-name" placeholder="分类名称" style="flex:2;min-width:160px" />
+          <input type="text" id="cat-slug" placeholder="slug（留空自动生成）" style="flex:2;min-width:140px" />
+          <input type="number" id="cat-sort" placeholder="排序" value="0" min="0" max="9999" style="width:90px" />
+          <button id="cat-add">新增分类</button>
+        </div>
+        <div class="msg" id="cat-msg"></div>
+        <table style="margin-top:10px">
+          <thead><tr><th style="width:25%">名称</th><th style="width:25%">slug</th><th style="width:90px">排序</th><th style="width:70px">链接数</th><th style="width:150px"></th></tr></thead>
+          <tbody id="cat-body"></tbody>
+        </table>
+      </section>
+
+      <!-- 链接 -->
+      <section class="card">
+        <h2>链接</h2>
+        <table>
+          <thead>
+            <tr><th style="width:130px">分类</th><th style="width:160px">名称</th><th style="width:200px">URL</th><th>描述</th><th style="width:70px">点击</th><th style="width:96px">状态</th><th style="width:140px"></th></tr>
+          </thead>
+          <tbody id="link-body"></tbody>
+        </table>
+        <div class="msg" id="link-msg"></div>
+      </section>
+    </div>
+
+    <script>
+      var $ = function (id) { return document.getElementById(id); };
+      function esc(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+      function flash(el, text, ok) { el.textContent = text; el.className = "msg " + (ok ? "ok" : "err"); }
+
+      var CATS = [];
+      function catOptions(sel) {
+        return CATS.map(function (c) {
+          return '<option value="' + c.id + '"' + (c.id === sel ? " selected" : "") + ">" + esc(c.name) + "</option>";
+        }).join("");
+      }
+
+      // ── 设置 ──────────────────────────────────────────────────────────
+      async function loadSettings() {
+        var r = await fetch("/admin-ext/api/links/settings", { credentials: "same-origin" });
+        if (!r.ok) return;
+        var s = await r.json();
+        $("s-enabled").checked = !!s.enabled;
+        $("s-pageTitle").value = s.pageTitle || "";
+        $("s-subtitle").value = s.subtitle || "";
+        $("s-newTab").checked = !!s.newTab;
+        $("s-showClicks").checked = !!s.showClicks;
+      }
+      $("s-save").addEventListener("click", async function () {
+        var r = await fetch("/admin-ext/api/links/settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({
+            enabled: $("s-enabled").checked,
+            pageTitle: $("s-pageTitle").value.trim(),
+            subtitle: $("s-subtitle").value.trim(),
+            newTab: $("s-newTab").checked,
+            showClicks: $("s-showClicks").checked
+          })
+        });
+        var d = await r.json();
+        flash($("s-msg"), r.ok ? "已保存。" : (d.error || "保存失败"), r.ok);
+      });
+
+      // ── 分类 ──────────────────────────────────────────────────────────
+      async function loadCats() {
+        var r = await fetch("/admin-ext/api/links/cats", { credentials: "same-origin" });
+        var list = r.ok ? await r.json() : [];
+        CATS = Array.isArray(list) ? list : [];
+        var tbody = $("cat-body");
+        tbody.innerHTML = "";
+        CATS.forEach(function (c) {
+          var tr = document.createElement("tr");
+          tr.innerHTML =
+            '<td><input type="text" value="' + esc(c.name) + '" data-k="name" /></td>' +
+            '<td><input type="text" value="' + esc(c.slug) + '" data-k="slug" /></td>' +
+            '<td><input type="number" min="0" max="9999" value="' + esc(c.sort) + '" data-k="sort" style="width:80px" /></td>' +
+            '<td>' + esc(c.linkCount) + '</td>' +
+            '<td><button class="mini" data-act="save">保存</button> <button class="mini danger" data-act="del">删除</button></td>';
+          tr.querySelector('[data-act="save"]').addEventListener("click", function () { saveCat(c.id, tr); });
+          tr.querySelector('[data-act="del"]').addEventListener("click", function () { delCat(c.id); });
+          tbody.appendChild(tr);
+        });
+      }
+
+      async function saveCat(id, tr) {
+        var body = {
+          id: id,
+          name: tr.querySelector('[data-k="name"]').value,
+          slug: tr.querySelector('[data-k="slug"]').value,
+          sort: parseInt(tr.querySelector('[data-k="sort"]').value, 10) || 0
+        };
+        var r = await fetch("/admin-ext/api/links/cats", {
+          method: "PUT", headers: { "Content-Type": "application/json" }, credentials: "same-origin",
+          body: JSON.stringify(body)
+        });
+        var d = await r.json();
+        if (d.ok) { flash($("cat-msg"), "已保存", true); await loadCats(); await loadLinks(); }
+        else flash($("cat-msg"), d.error || "保存失败", false);
+      }
+
+      async function delCat(id) {
+        if (!confirm("确定删除此分类？分类下存在链接时将被拒绝。")) return;
+        var r = await fetch("/admin-ext/api/links/cats?id=" + id, { method: "DELETE", credentials: "same-origin" });
+        var d = await r.json();
+        if (d.ok) { flash($("cat-msg"), "已删除", true); await loadCats(); await loadLinks(); }
+        else flash($("cat-msg"), d.error || "删除失败", false);
+      }
+
+      $("cat-add").addEventListener("click", async function () {
+        var name = $("cat-name").value.trim();
+        if (!name) { flash($("cat-msg"), "请填写分类名称", false); return; }
+        var r = await fetch("/admin-ext/api/links/cats", {
+          method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin",
+          body: JSON.stringify({ name: name, slug: $("cat-slug").value.trim(), sort: parseInt($("cat-sort").value, 10) || 0 })
+        });
+        var d = await r.json();
+        if (d.ok) {
+          flash($("cat-msg"), "已新增", true);
+          $("cat-name").value = ""; $("cat-slug").value = ""; $("cat-sort").value = "0";
+          await loadCats(); await loadLinks();
+        } else flash($("cat-msg"), d.error || "新增失败", false);
+      });
+
+      // ── 链接（内联编辑） ───────────────────────────────────────────────
+      async function loadLinks() {
+        var r = await fetch("/admin-ext/api/links", { credentials: "same-origin" });
+        var list = r.ok ? await r.json() : [];
+        if (!Array.isArray(list)) list = [];
+        var tbody = $("link-body");
+        tbody.innerHTML = "";
+
+        // 新增行
+        var add = document.createElement("tr");
+        add.innerHTML = // ap-audit-ok: 静态表单行；catOptions 中分类名经 esc()（含引号）、id 为整数
+          '<td><select data-k="catId">' + catOptions(CATS[0] ? CATS[0].id : 0) + "</select></td>" +
+          '<td><input type="text" data-k="name" placeholder="名称" /></td>' +
+          '<td><input type="text" data-k="url" placeholder="https://…" /></td>' +
+          '<td><input type="text" data-k="description" placeholder="描述（可选）" /></td>' +
+          '<td></td>' +
+          '<td><select data-k="status"><option value="pending">待审</option><option value="approved">通过</option></select></td>' +
+          '<td><button class="mini" id="link-add-btn">新增链接</button></td>';
+        add.querySelector("#link-add-btn").addEventListener("click", async function () { addLink(add); });
+        tbody.appendChild(add);
+
+        list.forEach(function (l) {
+          var tr = document.createElement("tr");
+          tr.innerHTML =
+            '<td><select data-k="catId">' + catOptions(l.catId) + "</select></td>" +
+            '<td><input type="text" value="' + esc(l.name) + '" data-k="name" /></td>' +
+            '<td><input type="text" value="' + esc(l.url) + '" data-k="url" /></td>' +
+            '<td><input type="text" value="' + esc(l.description) + '" data-k="description" /></td>' +
+            '<td>' + esc(l.clicks) + '</td>' +
+            '<td><select data-k="status"><option value="pending"' + (l.status === "pending" ? " selected" : "") + '>待审</option><option value="approved"' + (l.status === "approved" ? " selected" : "") + ">通过</option></select></td>" +
+            '<td><button class="mini" data-act="save">保存</button> <button class="mini danger" data-act="del">删除</button></td>';
+          tr.querySelector('[data-act="save"]').addEventListener("click", function () { saveLink(l.id, tr); });
+          tr.querySelector('[data-act="del"]').addEventListener("click", function () { delLink(l.id); });
+          tbody.appendChild(tr);
+        });
+
+        if (!list.length) $("link-msg").textContent = "暂无链接，在表格首行添加。";
+        else $("link-msg").textContent = "";
+      }
+
+      function rowPayload(tr, withId) {
+        var p = {
+          catId: parseInt(tr.querySelector('[data-k="catId"]').value, 10),
+          name: tr.querySelector('[data-k="name"]').value.trim(),
+          url: tr.querySelector('[data-k="url"]').value.trim(),
+          description: tr.querySelector('[data-k="description"]').value,
+          status: tr.querySelector('[data-k="status"]').value
+        };
+        if (withId) p.id = withId;
+        return p;
+      }
+
+      async function addLink(tr) {
+        var body = rowPayload(tr, 0);
+        delete body.id;
+        if (!body.name || !/^https?:\/\//i.test(body.url)) { flash($("link-msg"), "名称与 http(s) URL 必填", false); return; }
+        var r = await fetch("/admin-ext/api/links", {
+          method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin",
+          body: JSON.stringify(body)
+        });
+        var d = await r.json();
+        if (d.ok) { flash($("link-msg"), "已新增", true); await loadLinks(); }
+        else flash($("link-msg"), d.error || "新增失败", false);
+      }
+
+      async function saveLink(id, tr) {
+        var body = rowPayload(tr, id);
+        var r = await fetch("/admin-ext/api/links", {
+          method: "PUT", headers: { "Content-Type": "application/json" }, credentials: "same-origin",
+          body: JSON.stringify(body)
+        });
+        var d = await r.json();
+        if (d.ok) { flash($("link-msg"), "已保存", true); await loadLinks(); }
+        else flash($("link-msg"), d.error || "保存失败", false);
+      }
+
+      async function delLink(id) {
+        if (!confirm("确定删除此链接？")) return;
+        var r = await fetch("/admin-ext/api/links?id=" + id, { method: "DELETE", credentials: "same-origin" });
+        var d = await r.json();
+        if (d.ok) { flash($("link-msg"), "已删除", true); await loadLinks(); }
+        else flash($("link-msg"), d.error || "删除失败", false);
+      }
+
+      (async function init() {
+        await loadSettings();
+        await loadCats();
+        await loadLinks();
+      })();
+    </script>
+</AdminLayout>

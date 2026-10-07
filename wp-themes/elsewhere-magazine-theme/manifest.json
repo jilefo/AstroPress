@@ -1,0 +1,26 @@
+{
+  "name": "Elsewhere Magazine",
+  "version": "1.0",
+  "description": "Magazine news style theme",
+  "author": "Superbthemescom",
+  "tokens": {
+    "fonts": {
+      "body": "Poppins, 'Helvetica Neue', sans-serif",
+      "heading": "'Playfair Display', Georgia, serif"
+    },
+    "spacing": {
+      "sectionY": "48px",
+      "borderRadius": "4px",
+      "containerMax": "1200px"
+    },
+    "colors": {
+      "textMuted": "#626c77",
+      "surface": "#fbfcfd",
+      "background": "#e9edf1",
+      "secondary": "#24466b",
+      "border": "#dfe4e9",
+      "text": "#223c58",
+      "primary": "#1d3c4e"
+    }
+  }
+}

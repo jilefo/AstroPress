@@ -1,0 +1,3 @@
+# AstroPress v1.0.2 发布包 SHA256 校验和
+# 生成时间: 2026-10-05 00:49:50
+7d35faaaaafec6fc45f0751aa31841201cf0330afd44c06d6814200990157fa7  astropress-v1.0.2-source.zip

@@ -1,0 +1,26 @@
+{
+  "name": "AIYA-CMS",
+  "version": "1.0.0",
+  "description": "Comprehensive CMS theme with dark header and clean layout",
+  "author": "AIYA",
+  "tokens": {
+    "fonts": {
+      "body": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      "heading": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    },
+    "spacing": {
+      "sectionY": "48px",
+      "borderRadius": "8px",
+      "containerMax": "1200px"
+    },
+    "colors": {
+      "textMuted": "#617187",
+      "surface": "#f1f5f9",
+      "background": "#ffffff",
+      "secondary": "#0e65f4",
+      "border": "#e2e8f0",
+      "text": "#0f172a",
+      "primary": "#0f172a"
+    }
+  }
+}

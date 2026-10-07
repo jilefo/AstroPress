@@ -1,0 +1,26 @@
+{
+  "name": "Dream 2.0 MXIN",
+  "version": "2.0.0",
+  "description": "Anime-inspired blog theme with sky blue gradient header",
+  "author": "MXIN",
+  "tokens": {
+    "fonts": {
+      "body": "'Inter', -apple-system, sans-serif",
+      "heading": "'Inter', -apple-system, sans-serif"
+    },
+    "spacing": {
+      "sectionY": "48px",
+      "borderRadius": "12px",
+      "containerMax": "1200px"
+    },
+    "colors": {
+      "textMuted": "#617382",
+      "surface": "#f0f7ff",
+      "background": "#ffffff",
+      "secondary": "#e30000",
+      "border": "#d6e8f5",
+      "text": "#333333",
+      "primary": "#0076ba"
+    }
+  }
+}

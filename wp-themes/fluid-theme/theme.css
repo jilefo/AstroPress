@@ -1,0 +1,303 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Hexo Theme Fluid — AstroPress 移植版
+   设计语言来源：hexo-theme-fluid v1.9.9
+     · source/css/_variables/base.styl
+     · source/css/_pages/_base/_widget/{board,header,pagination}.styl
+     · source/css/_pages/_post/markdown.styl（rewrite github-markdown.css）
+     · 页面底色 #eee，白色 board 浮于其上：圆角 .5rem(8px) + Material 深阴影
+     · 顶栏 #2f4154（深蓝灰），白字，链接 hover #30a9de
+     · 正文 #2c3e50 / 16px / 行高 1.6，次要文字 #718096，字距 0.02em
+     · 字体走 Bootstrap 4.6 系统栈（_config.yml font.font_family 留空，
+       即 var(--font-family-sans-serif)），默认不加载任何远程字体
+   注：注入块（.ap-block-*）使用适配层 AA 快照色（见文件末尾说明）。
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --fluid-bg: #eeeeee;
+  --fluid-card: #ffffff;
+  --fluid-navbar: #2f4154;
+  --fluid-link-hover: #30a9de;
+  --fluid-text: #3c4858;
+  --fluid-text-secondary: #718096;
+  --fluid-text-post: #2c3e50;
+  --fluid-text-heading: #1a202c;
+  --fluid-border: #eaecef;
+  --fluid-line: #eaecef;
+  --fluid-button-bg: #f6f8fa;
+  --fluid-button-hover: #f2f3f5;
+  --fluid-pagination-hover-bg: #ebedef;
+  --fluid-radius: 8px;
+  /* board.styl：0 12px 15px rgba(0,0,0,.24), 0 17px 50px rgba(0,0,0,.19) */
+  --fluid-board-shadow: 0 12px 15px 0 rgba(0, 0, 0, 0.24), 0 17px 50px 0 rgba(0, 0, 0, 0.19);
+  /* header.styl 导航阴影 */
+  --fluid-navbar-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.16), 0 2px 10px 0 rgba(0, 0, 0, 0.12);
+  /* base.styl：正文图片阴影 */
+  --fluid-img-shadow: 0 5px 11px 0 rgba(0, 0, 0, 0.18), 0 4px 15px 0 rgba(0, 0, 0, 0.15);
+  --fluid-blockquote-border: #dfe2e5;
+  --fluid-code-bg: rgba(175, 184, 193, 0.2);
+  --fluid-pre-bg: #f6f8fa;
+  --fluid-table-border: #eaecef;
+}
+
+/* ── 基础 ─────────────────────────────────────────────────────────── */
+html { scroll-behavior: smooth; }
+body { background: var(--fluid-bg) !important; color: var(--fluid-text); font-size: 16px; letter-spacing: 0.02em; }
+
+::selection { background: var(--fluid-link-hover); color: #fff; }
+
+.site-wrapper { max-width: 1100px; }
+.site-main { padding: 40px 0; }
+
+/* ── 顶部导航：深蓝灰底（header.styl：滚动后实色 #2f4154 + 阴影）────── */
+.site-header {
+  background: var(--fluid-navbar);
+  border-bottom: none;
+  box-shadow: var(--fluid-navbar-shadow);
+  height: auto;
+  min-height: 60px;
+  position: sticky;
+  top: 0;
+  z-index: 90;
+}
+.site-header .site-wrapper { padding: 12px 24px; }
+.site-branding a {
+  color: #fff !important;
+  font-weight: 700;
+  font-size: 1.3rem;
+  letter-spacing: 0.02em;
+}
+.site-branding a:hover { color: var(--fluid-link-hover) !important; }
+.site-description { color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; }
+.site-nav a {
+  color: rgba(255, 255, 255, 0.85);
+  padding: 8px 16px;
+  font-size: 0.875rem;
+  transition: color 0.2s ease-in-out, background-color 0.2s ease-in-out;
+}
+.site-nav a:hover { color: var(--fluid-link-hover); }
+
+/* ── 文章列表：统一一块白色 board，8px 圆角 + 深阴影 ────────────────── */
+.post-list { display: flex; flex-direction: column; gap: 30px; }
+.post-list-item {
+  background: var(--fluid-card);
+  border: none;
+  border-radius: var(--fluid-radius);
+  box-shadow: var(--fluid-board-shadow);
+  padding: 32px;
+  transition: background-color 0.2s ease-in-out;
+}
+.post-list-item:first-child { padding-top: 32px; }
+.post-list-item h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.post-list-item h2 a { color: var(--fluid-text-heading) !important; text-decoration: none; }
+.post-list-item h2 a:hover { color: var(--fluid-link-hover) !important; }
+.post-meta { color: var(--fluid-text-secondary); font-size: 0.85rem; }
+.post-excerpt { color: var(--fluid-text-secondary); font-size: 0.95rem; line-height: 1.4; }
+.read-more {
+  color: var(--fluid-text-post);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease-in-out;
+}
+.read-more:hover { color: var(--fluid-link-hover); }
+
+/* ── 单篇文章：整页 board ─────────────────────────────────────────── */
+main .site-wrapper > article {
+  background: var(--fluid-card);
+  border-radius: var(--fluid-radius);
+  box-shadow: var(--fluid-board-shadow);
+  padding: 48px 48px 40px;
+  overflow: hidden;
+}
+.post-header h1 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--fluid-text-heading);
+  line-height: 1.4;
+}
+.post-header .post-meta { margin: 0; }
+
+.post-content {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--fluid-text-post);
+}
+.post-content h1, .post-content h2, .post-content h3,
+.post-content h4, .post-content h5, .post-content h6 {
+  font-weight: 700;
+  color: var(--fluid-text-heading);
+}
+.post-content a {
+  color: var(--fluid-text-post);
+  text-decoration: none;
+  border-bottom: 1px solid var(--fluid-text-post);
+  padding-bottom: 1px;
+  transition: color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+  word-break: break-word;
+}
+.post-content a:hover { color: var(--fluid-link-hover); border-bottom-color: var(--fluid-link-hover); }
+/* github-markdown blockquote：4px 左竖线、无底色，fluid 覆盖文字为 #718096 */
+.post-content blockquote {
+  margin: 0 0 1rem;
+  padding: 0 1rem;
+  border-left: 4px solid var(--fluid-blockquote-border);
+  background: none;
+  color: var(--fluid-text-secondary);
+  border-radius: 0;
+}
+.post-content pre {
+  background: var(--fluid-pre-bg);
+  border-radius: var(--fluid-radius);
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  font-size: 0.85rem;
+}
+/* markdown.styl：code 仅浅灰底，文字继承（base.styl code { color: inherit }） */
+.post-content code {
+  background: var(--fluid-code-bg);
+  color: inherit;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.85em;
+}
+.post-content pre code { background: none; color: inherit; padding: 0; }
+/* markdown.styl：正文图片 4px 圆角 + img-shadow */
+.post-content img { border-radius: 4px; box-shadow: var(--fluid-img-shadow); }
+.post-content table { border-collapse: collapse; width: 100%; margin: 1.5rem 0; }
+.post-content th, .post-content td { border: 1px solid var(--fluid-table-border); padding: 8px 12px; }
+
+/* ── 分页：透明按钮无描边，hover/当前页 #ebedef 底（pagination.styl）── */
+.pagination { gap: 2px; margin-top: 48px; }
+.pagination a, .pagination span {
+  background: transparent;
+  border: none;
+  border-radius: 2px;
+  color: var(--fluid-text);
+  padding: 8px 12px;
+  font-weight: 400;
+  font-size: 0.9rem;
+  line-height: 1.25;
+  transition: background-color 0.2s ease-in-out;
+}
+.pagination a:hover, .pagination .current { background: var(--fluid-pagination-hover-bg); color: var(--fluid-text); }
+
+/* ── 页脚 ─────────────────────────────────────────────────────────── */
+.site-footer {
+  border-top: none;
+  color: var(--fluid-text-secondary);
+  font-size: 0.85rem;
+}
+.site-footer a { color: var(--fluid-link-hover); }
+
+/* ── 404 ──────────────────────────────────────────────────────────── */
+.not-found h1 { color: var(--fluid-border); }
+
+/* ── 返回链接 ─────────────────────────────────────────────────────── */
+main .site-wrapper > nav {
+  border-top: none !important;
+  background: var(--fluid-card);
+  border-radius: var(--fluid-radius);
+  box-shadow: var(--fluid-board-shadow);
+  padding: 16px 32px !important;
+  margin-top: 36px !important;
+}
+main .site-wrapper > nav a { color: var(--fluid-text-post); text-decoration: none; }
+main .site-wrapper > nav a:hover { color: var(--fluid-link-hover); }
+
+/* ── 响应式 ───────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .post-list { gap: 20px; }
+  .post-list-item { padding: 22px 24px; }
+  main .site-wrapper > article { padding: 28px 24px; }
+  .site-main { padding: 24px 0; }
+}
+
+/* >>> ap-adapter >>> */
+/* ═══════════════════════════════════════════════════════════════════════
+   AstroPress 适配层：把 Fluid 设计语言映射到 BlockRenderer 的真实 DOM。
+   下方 :root 为注入块配色快照。源码强调色 #30a9de / 次要文字 #718096
+   在 #eee 页面底或白字按钮上不满足 WCAG AA（#30a9de 白字仅 2.67:1、
+   #718096 在 #eee 上 3.46:1），故同色相最小幅度加深：
+     链接 hover：#30a9de → #0c6f9c（白字 5.57:1 / #eee 4.80:1）
+     弱化文字：#718096 → #5d6b7d（#eee 4.68:1 / 白 5.43:1）
+     UI 辅色：#30a9de → #1f86bd（白字 4.04:1，UI 阈值 3:1）
+   主色沿用源码导航深蓝灰 #2f4154（白字 10.47:1）。
+   深底导航上的 hover 仍用源码原色 #30a9de（在 #2f4154 上 3.87:1，装饰态）。
+   ═══════════════════════════════════════════════════════════════════════ */
+:root {
+  --ap-primary: #2f4154;
+  --ap-primary-hover: #0c6f9c;
+  --ap-bg: #eeeeee;
+  --ap-surface: #ffffff;
+  --ap-border: #eaecef;
+  --ap-text: #3c4858;
+  --ap-muted: #5d6b7d;
+  --ap-radius: 8px;
+}
+
+body { background: var(--ap-bg) !important; }
+.ap-blocks { color: var(--ap-text); }
+.ap-block h1, .ap-block h2, .ap-block h3, .ap-block h4,
+.post-header h1 { color: #1a202c; }
+
+/* 链接：深蓝灰正文链接，hover 加深版强调蓝 */
+.ap-block-text a, .ap-block-columns a, .ap-block-html a,
+.post-content a, .read-more { color: var(--ap-primary); }
+.ap-block a:hover, .post-content a:hover, .read-more:hover { color: var(--ap-primary-hover); }
+
+/* 弱化信息 */
+.post-meta, .post-list-item-meta { color: var(--ap-muted); }
+
+/* 导航：源码深蓝灰实色底 + 阴影 + 白字（内联默认是 tokens.background #eee，需 !important） */
+.ap-block-nav {
+  position: sticky; top: 0; z-index: 90;
+  background: #2f4154 !important;
+  border-bottom: none !important;
+  box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.16), 0 2px 10px 0 rgba(0, 0, 0, 0.12);
+}
+.ap-block-nav > a { color: #ffffff !important; }
+.ap-block-nav nav ul li a { color: rgba(255, 255, 255, 0.85) !important; border-radius: 4px; }
+.ap-block-nav nav ul li a:hover { color: #30a9de !important; background: rgba(255, 255, 255, 0.08); }
+
+/* query-loop 卡片 = board：白底、无描边、8px 圆角 + 深阴影 */
+.ap-block-query-loop article {
+  background: var(--ap-surface) !important;
+  border-color: transparent !important;
+  border-radius: var(--ap-radius) !important;
+  box-shadow: 0 12px 15px 0 rgba(0, 0, 0, 0.24), 0 17px 50px 0 rgba(0, 0, 0, 0.19);
+}
+.ap-block-query-loop article a { text-decoration: none; }
+.ap-block img { border-radius: 4px; box-shadow: 0 5px 11px 0 rgba(0, 0, 0, 0.18), 0 4px 15px 0 rgba(0, 0, 0, 0.15); }
+
+/* 分隔线 */
+.ap-block-divider hr { border-top-color: var(--ap-border) !important; }
+
+/* github-markdown 引用块：4px 左竖线无底色 */
+.ap-block-text blockquote, .ap-block-columns blockquote, .ap-block-html blockquote {
+  border-left: 4px solid #dfe2e5;
+  background: none;
+  border-radius: 0;
+  color: var(--ap-muted);
+}
+
+/* 代码：源码浅灰底 */
+.ap-block-text code, .ap-block-columns code, .ap-block-html code {
+  background: rgba(175, 184, 193, 0.2);
+  color: inherit;
+  border-radius: 3px;
+  padding: 2px 6px;
+}
+.ap-block-text pre, .ap-block-columns pre, .ap-block-html pre {
+  background: #f6f8fa;
+  border-radius: var(--ap-radius);
+}
+
+@media (max-width: 640px) {
+  .ap-block-nav { height: auto !important; min-height: 56px; flex-wrap: wrap; padding: 8px 20px !important; row-gap: 4px; }
+  .ap-block-nav nav { width: 100%; }
+  .ap-block-nav nav ul { flex-wrap: wrap; }
+}
+/* <<< ap-adapter <<< */

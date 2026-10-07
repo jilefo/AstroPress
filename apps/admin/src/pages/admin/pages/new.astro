@@ -1,0 +1,10 @@
+---
+import { createPost } from "../../../lib/posts";
+
+const db = Astro.locals.db;
+const user = Astro.locals.user;
+if (!db || !user) return Astro.redirect("/login");
+
+const id = await createPost(db, { title: "", content: "", status: "auto-draft", type: "page", authorId: user.id });
+return Astro.redirect(`/admin/pages/${id}`);
+---

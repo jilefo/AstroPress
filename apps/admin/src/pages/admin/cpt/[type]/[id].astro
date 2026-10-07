@@ -1,0 +1,287 @@
+---
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import { getPost } from "../../../../lib/posts";
+import BlockEditor from "../../../../islands/BlockEditor";
+import { getSidebarPanels, getPostType, getTaxonomies } from "@astropress/core/registry";
+import SeoPanel from "../../../../islands/SeoPanel";
+import CustomFieldsPanel from "../../../../islands/CustomFieldsPanel";
+import TaxonomyPanel from "../../../../islands/TaxonomyPanel";
+import { wpOptions } from "@astropress/core/schema";
+import { eq } from "drizzle-orm";
+
+const db = Astro.locals.db;
+const user = Astro.locals.user;
+const type = Astro.params.type!;
+const id = Number(Astro.params.id);
+
+if (!db || !user) return Astro.redirect("/login");
+
+const postTypeConfig = getPostType(type);
+if (!postTypeConfig) return Astro.redirect("/admin/dashboard");
+
+const post = await getPost(db, id);
+if (!post) return Astro.redirect(`/admin/cpt/${type}`);
+
+const [siteUrlRow] = await db.select({ value: wpOptions.optionValue }).from(wpOptions).where(eq(wpOptions.optionName, "siteurl")).limit(1);
+const siteUrl = (siteUrlRow?.value ?? "http://localhost:4322").replace(/\/$/, "");
+
+const panels = getSidebarPanels(type);
+const backUrl = `/admin/cpt/${type}`;
+const postTaxonomies = getTaxonomies().filter((t) => t.config.postTypes?.includes(type));
+const editorMode = Astro.url.searchParams.get("editor") ?? "classic";
+const isVisual = editorMode === "visual";
+// If visual mode, redirect to the visual editor by post slug or ID
+if (isVisual && post.slug) {
+  return Astro.redirect(`/admin/themes/edit/${post.slug}?backUrl=${encodeURIComponent(backUrl)}`);
+}
+---
+<AdminLayout title={post.title || `编辑${postTypeConfig.label}`}>
+
+  <!-- Editor mode switcher -->
+  <div style="display:flex;align-items:center;gap:0;margin-bottom:16px;border:1px solid #dcdcde;border-radius:4px;overflow:hidden;width:fit-content">
+    <a
+      href={`/admin/cpt/${type}/${id}?editor=classic`}
+      style={`padding:6px 16px;font-size:13px;font-weight:600;text-decoration:none;border-right:1px solid #dcdcde;${!isVisual ? "background:#2271b1;color:#fff" : "background:#f6f7f7;color:#1d2327"}`}
+    >经典编辑器</a>
+    <a
+      href={post.slug ? `/admin/themes/edit/${post.slug}?backUrl=${encodeURIComponent(backUrl)}` : `?editor=visual`}
+      title={!post.slug ? "请先填写标题并保存，再使用可视化编辑" : undefined}
+      style={`padding:6px 16px;font-size:13px;font-weight:600;text-decoration:none;${isVisual ? "background:#2271b1;color:#fff" : "background:#f6f7f7;color:#1d2327"}${!post.slug ? ";opacity:0.5;cursor:not-allowed" : ""}`}
+    >可视化编辑器</a>
+  </div>
+
+  <div id="editor-root"
+    data-post-id={String(id)}
+    data-initial-slug={post.slug ?? ""}
+    data-back-url={backUrl}
+    data-site-url={siteUrl}
+    style="display:grid;grid-template-columns:1fr 280px;gap:20px;align-items:start">
+
+    <!-- Left: Title + Block editor -->
+    <div>
+      <input
+        id="post-title"
+        type="text"
+        placeholder={`${postTypeConfig.label}标题`}
+        value={post.title}
+        style="width:100%;font-size:28px;font-weight:700;border:none;border-bottom:2px solid #dcdcde;padding:8px 0;margin-bottom:20px;outline:none;background:transparent;color:#1d2327"
+        oninput="updateSlug(this.value)"
+      />
+      <div id="permalink-row" style="font-size:12px;color:#646970;margin-bottom:16px;display:flex;align-items:center;flex-wrap:wrap;gap:4px">
+        <span>固定链接：</span>
+        <span id="permalink-view" style="display:inline-flex;align-items:center;gap:4px">
+          <a id="permalink-link" href={post.slug ? `${siteUrl}/${post.slug}` : "#"} target="_blank" style="color:#2271b1;text-decoration:none" rel="noopener">{post.slug ? `${siteUrl}/${post.slug}` : "—"}</a>
+          <button onclick="startEditSlug()" style="font-size:11px;color:#2271b1;background:none;border:none;padding:0 2px;cursor:pointer;font-family:inherit;text-decoration:underline">编辑</button>
+        </span>
+        <span id="permalink-edit" style="display:none;align-items:center;gap:4px">
+          <input id="post-slug" type="text" value={post.slug}
+            style="font-size:12px;padding:2px 6px;border:1px solid #8c8f94;border-radius:2px;outline:none;width:200px;font-family:monospace"
+            onkeydown="if(event.key==='Enter')confirmSlug();if(event.key==='Escape')cancelEditSlug()"
+          />
+          <button onclick="confirmSlug()" style="font-size:11px;padding:2px 8px;background:#2271b1;color:#fff;border:none;border-radius:2px;cursor:pointer">确定</button>
+          <button onclick="cancelEditSlug()" style="font-size:11px;padding:2px 8px;background:none;border:1px solid #dcdcde;border-radius:2px;cursor:pointer;color:#646970">取消</button>
+        </span>
+      </div>
+
+      <div style="background:#fff;border:1px solid #dcdcde;border-radius:4px;overflow:hidden;min-height:480px">
+        <BlockEditor
+          client:only="react"
+          initialContent={post.content}
+          postId={id}
+        />
+      </div>
+
+      <!-- Excerpt -->
+      <div style="margin-top:16px;background:#fff;border:1px solid #dcdcde;border-radius:4px;padding:16px">
+        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px">摘要</label>
+        <textarea
+          id="post-excerpt"
+          rows="3"
+          placeholder="摘要（选填）…"
+          style="width:100%;font-size:13px;border:1px solid #dcdcde;border-radius:3px;padding:8px;resize:vertical;outline:none"
+        >{post.excerpt}</textarea>
+      </div>
+
+      <!-- Custom Fields -->
+      <div style="margin-top:16px">
+        <CustomFieldsPanel client:only="react" postId={id} postType={type} />
+      </div>
+    </div>
+
+    <!-- Right sidebar -->
+    <aside>
+      <!-- Publish box -->
+      <div style="background:#fff;border:1px solid #dcdcde;border-radius:4px;overflow:hidden;margin-bottom:16px">
+        <div style="background:#f6f7f7;padding:10px 14px;font-size:13px;font-weight:600;border-bottom:1px solid #dcdcde">
+          发布
+        </div>
+        <div style="padding:14px">
+          <div style="margin-bottom:12px">
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">状态</label>
+            <select id="post-status" style="width:100%;padding:6px 8px;font-size:13px;border:1px solid #8c8f94;border-radius:3px">
+              <option value="draft" selected={post.status === "draft"}>草稿</option>
+              <option value="publish" selected={post.status === "publish"}>已发布</option>
+              <option value="private" selected={post.status === "private"}>私密</option>
+            </select>
+          </div>
+
+          <div id="save-status" style="font-size:12px;color:#646970;margin-bottom:12px;min-height:16px"></div>
+
+          <div style="display:flex;gap:8px">
+            <button onclick="savePost('draft')" style="flex:1;padding:7px;font-size:13px;background:#f6f7f7;border:1px solid #dcdcde;border-radius:3px;cursor:pointer">
+              保存草稿
+            </button>
+            <button onclick="savePost('publish')" style="flex:1;padding:7px;font-size:13px;background:#2271b1;color:#fff;border:none;border-radius:3px;cursor:pointer;font-weight:600">
+              发布
+            </button>
+          </div>
+
+          <div style="margin-top:10px;padding-top:10px;border-top:1px solid #f0f0f1">
+            <button
+              id="trash-btn"
+              style="font-size:12px;color:#d63638;background:none;border:none;cursor:pointer;padding:0"
+            >
+              移入回收站
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- View link -->
+      {post.status === "publish" && (
+        <div style="background:#fff;border:1px solid #dcdcde;border-radius:4px;padding:12px 14px;margin-bottom:16px;font-size:12px">
+          <a href={`${siteUrl}/${post.slug}`} target="_blank" style="color:#2271b1">查看{postTypeConfig.label} →</a>
+        </div>
+      )}
+
+      <!-- Taxonomy panels -->
+      {postTaxonomies.map((tax) => (
+        <div style="background:#fff;border:1px solid #dcdcde;border-radius:4px;overflow:hidden;margin-bottom:16px">
+          <div style="background:#f6f7f7;padding:10px 14px;font-size:13px;font-weight:600;border-bottom:1px solid #dcdcde">
+            {tax.config.pluralLabel}
+          </div>
+          <div style="padding:14px">
+            <TaxonomyPanel
+              client:only="react"
+              postId={id}
+              taxonomy={tax.slug}
+              label={tax.config.label}
+              hierarchical={tax.config.hierarchical ?? false}
+            />
+          </div>
+        </div>
+      ))}
+
+      <!-- Plugin sidebar panels -->
+      {panels.map((panel) => (
+        <div style="background:#fff;border:1px solid #dcdcde;border-radius:4px;overflow:hidden;margin-bottom:16px">
+          <div style="background:#f6f7f7;padding:10px 14px;font-size:13px;font-weight:600;border-bottom:1px solid #dcdcde">
+            {panel.config.title}
+          </div>
+          <div style="padding:14px">
+            {panel.config.componentId === "SeoPanel" && (
+              <SeoPanel client:only="react" postId={id} />
+            )}
+          </div>
+        </div>
+      ))}
+    </aside>
+  </div>
+
+  <script is:inline>
+    (function () {
+      var root = document.getElementById("editor-root");
+      var postId = root.dataset.postId;
+      var backUrl = root.dataset.backUrl;
+      var currentSlug = root.dataset.initialSlug;
+      var siteUrl = root.dataset.siteUrl || "";
+
+      function slugify(str) {
+        return str.toLowerCase().trim()
+          .replace(/[^\w\s-]/g, "")
+          .replace(/[\s_]+/g, "-")
+          .replace(/^-+|-+$/g, "");
+      }
+
+      var slugLocked = false;
+
+      window.updateSlug = function (title) {
+        if (slugLocked) return;
+        var preview = slugify(title);
+        var link = document.getElementById("permalink-link");
+        if (link) { link.textContent = preview ? (siteUrl + "/" + preview) : "—"; link.href = preview ? (siteUrl + "/" + preview) : "#"; }
+      };
+
+      function setPermalinkDisplay(slug) {
+        var link = document.getElementById("permalink-link");
+        if (link) { link.textContent = slug ? (siteUrl + "/" + slug) : "—"; link.href = slug ? (siteUrl + "/" + slug) : "#"; }
+        var input = document.getElementById("post-slug");
+        if (input) input.value = slug;
+        currentSlug = slug;
+      }
+
+      window.startEditSlug = function () {
+        var input = document.getElementById("post-slug");
+        if (!input.value) input.value = slugify(document.getElementById("post-title").value);
+        document.getElementById("permalink-view").style.display = "none";
+        document.getElementById("permalink-edit").style.display = "inline-flex";
+        input.focus(); input.select();
+      };
+
+      window.confirmSlug = function () {
+        var raw = document.getElementById("post-slug").value.trim();
+        var newSlug = raw ? slugify(raw) || raw.toLowerCase().replace(/[^a-z0-9-]/g, "-") : "";
+        slugLocked = !!newSlug;
+        setPermalinkDisplay(newSlug);
+        document.getElementById("permalink-edit").style.display = "none";
+        document.getElementById("permalink-view").style.display = "inline-flex";
+      };
+
+      window.cancelEditSlug = function () {
+        document.getElementById("post-slug").value = currentSlug;
+        document.getElementById("permalink-edit").style.display = "none";
+        document.getElementById("permalink-view").style.display = "inline-flex";
+      };
+
+      window.savePost = async function (forceStatus) {
+        var title = document.getElementById("post-title").value;
+        var status = forceStatus || document.getElementById("post-status").value;
+        var slug = document.getElementById("post-slug").value.trim() || slugify(title);
+        var excerpt = document.getElementById("post-excerpt").value;
+        var content = window.__editorContent || "";
+
+        document.getElementById("save-status").textContent = "保存中\u2026";
+
+        try {
+          var res = await fetch("/api/posts/" + postId, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: title, content: content, excerpt: excerpt, status: status, slug: slug }),
+          });
+          if (res.ok) {
+            if (!slugLocked) setPermalinkDisplay(slug);
+            document.getElementById("save-status").textContent = "已保存 \u2713";
+            document.getElementById("post-status").value = status;
+            setTimeout(function () { document.getElementById("save-status").textContent = ""; }, 3000);
+          } else {
+            document.getElementById("save-status").textContent = "保存失败";
+          }
+        } catch (e) {
+          document.getElementById("save-status").textContent = "保存失败";
+        }
+      };
+
+      document.getElementById("trash-btn").addEventListener("click", function () {
+        if (confirm("确定移入回收站吗？")) {
+          fetch("/api/posts/" + postId, { method: "DELETE" })
+            .then(function () { location.href = backUrl; });
+        }
+      });
+
+      setInterval(function () {
+        var title = document.getElementById("post-title").value;
+        if (title) window.savePost(null);
+      }, 60000);
+    })();
+  </script>
+</AdminLayout>

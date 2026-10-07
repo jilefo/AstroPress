@@ -1,0 +1,69 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { getFieldGroups } from "@astropress/core/registry";
+
+const groups = getFieldGroups();
+---
+<AdminLayout title="自定义字段">
+
+  <h1 class="wp-heading-inline">自定义字段</h1>
+  <a href="/admin/custom-fields/new" class="page-title-action">添加新字段组</a>
+  <hr class="wp-header-end" />
+
+  {groups.length === 0 ? (
+    <div class="ap-empty-state">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" style="color:#8c8f94;margin-bottom:12px">
+        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+        <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+      </svg>
+      <h2 style="font-size:15px;font-weight:600;color:#1d2327;margin:0 0 8px">还没有字段组</h2>
+      <p style="font-size:13px;color:#646970;margin:0 0 20px;line-height:1.5">
+        创建字段组，为文章、页面和自定义文章类型添加自定义字段。
+      </p>
+      <a href="/admin/custom-fields/new" class="button button-primary">添加你的第一个字段组</a>
+    </div>
+  ) : (
+    <table class="wp-list-table widefat fixed striped">
+      <thead>
+        <tr>
+          <th scope="col" class="manage-column column-primary">标题</th>
+          <th scope="col" class="manage-column" style="width:80px">字段</th>
+          <th scope="col" class="manage-column">位置</th>
+          <th scope="col" class="manage-column" style="width:90px">状态</th>
+        </tr>
+      </thead>
+      <tbody>
+        {groups.map(group => (
+          <tr>
+            <td class="title column-title has-row-actions column-primary">
+              <strong>
+                <a href={`/admin/custom-fields/${group.id}`} class="row-title">{group.title}</a>
+              </strong>
+              <div style="font-size:11px;color:#8c8f94;font-family:monospace;margin-top:2px">{group.key}</div>
+              <div class="row-actions">
+                <span class="edit"><a href={`/admin/custom-fields/${group.id}`}>编辑</a></span>
+              </div>
+            </td>
+            <td style="color:var(--wp-gray-600)">
+              {group.fields.length} 个字段
+            </td>
+            <td style="color:var(--wp-gray-600);font-size:12px">
+              {group.location?.[0]?.[0] ? (
+                <code style="font-size:11px;background:#f6f7f7;border:1px solid #dcdcde;padding:1px 5px;border-radius:2px">
+                  {group.location[0][0].param} {group.location[0][0].operator} {group.location[0][0].value}
+                </code>
+              ) : <span style="color:#c3c4c7">—</span>}
+            </td>
+            <td>
+              <span style={`display:inline-block;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;background:${group.active ? "#d1e7dd" : "#f0f0f1"};color:${group.active ? "#146c43" : "#646970"}`}>
+                {group.active ? "启用" : "停用"}
+              </span>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+
+</AdminLayout>
+

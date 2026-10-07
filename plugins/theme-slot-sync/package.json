@@ -1,0 +1,23 @@
+{
+  "name": "@astropress/plugin-theme-slot-sync",
+  "version": "0.1.0",
+  "description": "主题槽位同步：激活主题时自动把 astropress_template_slots 的 header/footer 槽位切到该主题的模板，修复多主题导入后页头页脚互相覆盖的问题。零核心修改。",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./integration.admin": "./src/integration.admin.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@astropress/core": "workspace:*",
+    "drizzle-orm": "^0.36.0"
+  },
+  "devDependencies": {
+    "astro": "^4.0.0",
+    "typescript": "^5.4.0",
+    "@cloudflare/workers-types": "^4.0.0"
+  }
+}

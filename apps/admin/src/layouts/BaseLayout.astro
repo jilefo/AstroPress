@@ -1,0 +1,185 @@
+---
+import { themeStyles } from "@astropress/theme-default";
+import { getSiteOptions, getNavMenu } from "../lib/public-query";
+import { wpOptions } from "@astropress/core/schema";
+import { safeJsonParse as safeJson } from "@astropress/core/db";
+import { eq } from "drizzle-orm";
+import { DEFAULT_THEME_TOKENS } from "@astropress/core/types/theme";
+import type { ThemeTokens } from "@astropress/core/types/theme";
+import BlockRenderer from "../components/BlockRenderer.astro";
+
+interface Props {
+  title?: string;
+  description?: string;
+  fullWidth?: boolean;
+}
+
+const { title, description, fullWidth = false } = Astro.props;
+const db = Astro.locals.db;
+
+const site = db
+  ? await getSiteOptions(db)
+  : { blogname: "AstroPress", blogdescription: "", siteurl: "" };
+
+const navItems = db ? await getNavMenu(db, "primary") : [];
+
+let headerBlocks: any[] | null = null;
+let footerBlocks: any[] | null = null;
+let tokens: ThemeTokens = DEFAULT_THEME_TOKENS;
+let formsById: Record<string, any> = {};
+let themeCustomCss: string | null = null;
+
+if (db) {
+  // 1. Load theme tokens
+  const [tokenRow] = await db.select({ value: wpOptions.optionValue }).from(wpOptions).where(eq(wpOptions.optionName, "astropress_theme_config")).limit(1);
+  if (tokenRow?.value) tokens = safeJson<ThemeTokens>(tokenRow.value, DEFAULT_THEME_TOKENS);
+
+  // 1b. Load active theme custom CSS
+  const [activeThemeRow] = await db.select({ value: wpOptions.optionValue }).from(wpOptions).where(eq(wpOptions.optionName, "astropress_active_theme")).limit(1);
+  if (activeThemeRow?.value) {
+    const [cssRow] = await db.select({ value: wpOptions.optionValue }).from(wpOptions).where(eq(wpOptions.optionName, `astropress_theme_css_${activeThemeRow.value}`)).limit(1);
+    if (cssRow?.value) themeCustomCss = cssRow.value;
+  }
+
+  // 2. Load active template slots
+  const [slotsRow] = await db.select({ value: wpOptions.optionValue }).from(wpOptions).where(eq(wpOptions.optionName, "astropress_template_slots")).limit(1);
+  let slots: Record<string, string> = {};
+
+  if (slotsRow?.value) {
+    slots = safeJson<Record<string, string>>(slotsRow.value, {});
+  } else {
+    const [tmplRow] = await db.select({ value: wpOptions.optionValue }).from(wpOptions).where(eq(wpOptions.optionName, "astropress_theme_templates")).limit(1);
+    const allTmpls: any[] = safeJson<any[]>(tmplRow?.value, []);
+    for (const tmpl of allTmpls) {
+      if (!slots[tmpl.type] && (tmpl.conditions?.length ?? 0) > 0) {
+        slots[tmpl.type] = tmpl.schemaSlug;
+      }
+    }
+  }
+
+  // 3. Load header schema
+  const headerSlug = slots.header;
+  if (headerSlug) {
+    const [headerRow] = await db.select({ value: wpOptions.optionValue }).from(wpOptions).where(eq(wpOptions.optionName, `astropress_page_schema_${headerSlug}`)).limit(1);
+    if (headerRow?.value) {
+      const s = safeJson<any>(headerRow.value, null);
+      if (s?.blocks?.length > 0) headerBlocks = s.blocks;
+    }
+  }
+
+  // 4. Load footer schema
+  const footerSlug = slots.footer;
+  if (footerSlug) {
+    const [footerRow] = await db.select({ value: wpOptions.optionValue }).from(wpOptions).where(eq(wpOptions.optionName, `astropress_page_schema_${footerSlug}`)).limit(1);
+    if (footerRow?.value) {
+      const s = safeJson<any>(footerRow.value, null);
+      if (s?.blocks?.length > 0) footerBlocks = s.blocks;
+    }
+  }
+
+  // 5. Load forms
+  const [formsRow] = await db.select({ value: wpOptions.optionValue }).from(wpOptions).where(eq(wpOptions.optionName, "astropress_forms")).limit(1);
+  if (formsRow?.value) {
+    const allForms: any[] = safeJson<any[]>(formsRow.value, []);
+    for (const f of allForms) formsById[String(f.id)] = f;
+  }
+}
+
+const pageTitle = title ? `${title} — ${site.blogname}` : site.blogname;
+const metaDesc = description || site.blogdescription;
+---
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{pageTitle}</title>
+    {metaDesc && <meta name="description" content={metaDesc} />}
+    <meta property="og:title" content={pageTitle} />
+    {metaDesc && <meta property="og:description" content={metaDesc} />}
+    <meta property="og:type" content="website" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="alternate" type="application/rss+xml" title={site.blogname + " RSS"} href="/rss.xml" />
+    <style set:html={themeStyles} />
+    {themeCustomCss && <style set:html={themeCustomCss} />}
+    <style set:html={`
+      :root {
+        --color-primary: ${tokens.colors.primary};
+        --color-primary-hover: ${tokens.colors.primary};
+        --color-bg: ${tokens.colors.background};
+        --color-surface: ${tokens.colors.surface};
+        --color-border: ${tokens.colors.border};
+        --color-text: ${tokens.colors.text};
+        --color-muted: ${tokens.colors.textMuted};
+        --font-sans: ${tokens.fonts.body};
+        --font-heading: ${tokens.fonts.heading};
+        --max-width: ${tokens.spacing.containerMax};
+        --radius-md: ${tokens.spacing.borderRadius};
+        --radius-sm: ${tokens.spacing.borderRadius};
+        --section-y: ${tokens.spacing.sectionY};
+      }
+      body {
+        font-family: ${tokens.fonts.body};
+        background: ${tokens.colors.background};
+        color: ${tokens.colors.text};
+      }
+    `} />
+  </head>
+  <body>
+    {headerBlocks ? (
+      <BlockRenderer
+        blocks={headerBlocks}
+        tokens={tokens}
+        navItems={navItems}
+        siteTitle={site.blogname}
+        siteTagline={site.blogdescription}
+        formsById={formsById}
+      />
+    ) : (
+      <header class="site-header">
+        <div class="site-wrapper">
+          <div class="site-branding">
+            <a href="/">{site.blogname}</a>
+            {site.blogdescription && <div class="site-description">{site.blogdescription}</div>}
+          </div>
+          {navItems.length > 0 && (
+            <nav aria-label="主导航">
+              <ul class="site-nav">
+                {navItems.map((item) => (
+                  <li><a href={item.url}>{item.title}</a></li>
+                ))}
+              </ul>
+            </nav>
+          )}
+        </div>
+      </header>
+    )}
+
+    <main class="site-main">
+      {fullWidth ? (
+        <slot />
+      ) : (
+        <div class="site-wrapper">
+          <slot />
+        </div>
+      )}
+    </main>
+
+    {footerBlocks ? (
+      <BlockRenderer
+        blocks={footerBlocks}
+        tokens={tokens}
+        navItems={navItems}
+        siteTitle={site.blogname}
+        siteTagline={site.blogdescription}
+        formsById={formsById}
+      />
+    ) : (
+      <footer class="site-footer">
+        <div class="site-wrapper">
+          <p>由 <a href="https://github.com/jilefo/AstroPress">AstroPress</a> 强力驱动</p>
+        </div>
+      </footer>
+    )}
+  </body>
+</html>

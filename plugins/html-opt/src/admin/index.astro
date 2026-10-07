@@ -1,0 +1,138 @@
+---
+/**
+ * /admin-ext/html-opt — HTML 优化插件设置页
+ */
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+if (!Astro.locals.user || !Astro.locals.db) return Astro.redirect("/login");
+---
+<AdminLayout title="HTML 优化">
+    <style is:global>
+      * { box-sizing: border-box; }
+      .wrap { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+      .card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 20px; }
+      h1 { font-size: 20px; margin: 0 0 16px; }
+      h2 { font-size: 15px; margin: 24px 0 12px; padding-top: 16px; border-top: 1px solid #e5e7eb; }
+      label { display: block; font-size: 13px; font-weight: 600; margin: 16px 0 4px; }
+      textarea { width: 100%; font-size: 13px; padding: 6px 8px; border: 1px solid #8c8f94; border-radius: 3px; font-family: Consolas, Monaco, monospace; resize: vertical; }
+      button { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 8px 16px; cursor: pointer; font-size: 13px; margin-top: 20px; }
+      .msg { font-size: 13px; margin-top: 10px; min-height: 18px; }
+      .ok { color: #00a32a; }
+      .err { color: #b32d2e; }
+      .hint { font-size: 12px; color: #646970; margin-top: 4px; line-height: 1.7; }
+      .check { display: flex; align-items: center; gap: 6px; font-size: 13px; margin: 10px 0; }
+      .check label { margin: 0; font-weight: 400; }
+    </style>
+
+    <div class="wrap">
+      <div class="card">
+        <h1>HTML 优化</h1>
+
+        <div class="check">
+          <input type="checkbox" id="enabled" checked />
+          <label for="enabled">启用 HTML 优化</label>
+        </div>
+
+        <h2>精简选项</h2>
+        <div class="check">
+          <input type="checkbox" id="removeComments" checked />
+          <label for="removeComments">移除 HTML 注释</label>
+        </div>
+        <div class="hint">条件注释（含 [if）、以 &lt;! 开头的特殊声明注释、含 noindex 的 SEO 指令注释会保留。</div>
+
+        <div class="check">
+          <input type="checkbox" id="collapseWhitespace" checked />
+          <label for="collapseWhitespace">折叠标签间换行空白</label>
+        </div>
+        <div class="hint">仅折叠跨标签换行处的空白，不折叠同一行内空白（避免破坏 inline 元素间距）。</div>
+
+        <h2>资源提示</h2>
+        <div class="check">
+          <input type="checkbox" id="resourceHints" checked />
+          <label for="resourceHints">在 &lt;head&gt; 中注入资源提示</label>
+        </div>
+
+        <label for="dnsPrefetch">dns-prefetch 域名列表</label>
+        <textarea id="dnsPrefetch" rows="6" placeholder="https://fonts.googleapis.com&#10;https://cdn.example.com"></textarea>
+        <div class="hint">每行一个完整 URL（如 https://fonts.googleapis.com），最多 10 个；保存时统一按源站（origin）去重。</div>
+
+        <label for="preconnect">preconnect 域名列表</label>
+        <textarea id="preconnect" rows="6" placeholder="https://fonts.gstatic.com&#10;https://api.example.com"></textarea>
+        <div class="hint">每行一个完整 URL（如 https://fonts.gstatic.com），最多 10 个；保存时统一按源站（origin）去重。</div>
+
+        <h2>保护范围</h2>
+        <div class="hint">
+          &lt;script&gt;、&lt;style&gt;、&lt;pre&gt;、&lt;textarea&gt; 标签内的内容受保护，不会被修改；<br />
+          页面已存在相同 href 的资源提示时不会重复注入。
+        </div>
+
+        <button id="save">保存设置</button>
+        <div class="msg" id="msg"></div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        var msg = document.getElementById("msg");
+        var MAX_URLS = 10;
+
+        function linesToArray(value) {
+          return value
+            .split("\n")
+            .map(function (s) { return s.trim(); })
+            .filter(function (s) { return s.length > 0; })
+            .slice(0, MAX_URLS);
+        }
+
+        function arrayToLines(arr) {
+          return Array.isArray(arr) ? arr.slice(0, MAX_URLS).join("\n") : "";
+        }
+
+        async function load() {
+          var r = await fetch("/admin-ext/api/html-opt/settings");
+          if (!r.ok) return;
+          var s = await r.json();
+          document.getElementById("enabled").checked = !!s.enabled;
+          document.getElementById("removeComments").checked = !!s.removeComments;
+          document.getElementById("collapseWhitespace").checked = !!s.collapseWhitespace;
+          document.getElementById("resourceHints").checked = !!s.resourceHints;
+          document.getElementById("dnsPrefetch").value = arrayToLines(s.dnsPrefetch);
+          document.getElementById("preconnect").value = arrayToLines(s.preconnect);
+        }
+
+        document.getElementById("save").addEventListener("click", async function () {
+          var payload = {
+            enabled: document.getElementById("enabled").checked,
+            removeComments: document.getElementById("removeComments").checked,
+            collapseWhitespace: document.getElementById("collapseWhitespace").checked,
+            resourceHints: document.getElementById("resourceHints").checked,
+            dnsPrefetch: linesToArray(document.getElementById("dnsPrefetch").value),
+            preconnect: linesToArray(document.getElementById("preconnect").value),
+          };
+          try {
+            var r = await fetch("/admin-ext/api/html-opt/settings", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+            var d = await r.json();
+            if (r.ok && d.settings) {
+              // 回填服务端规范化后的结果（统一 origin、去重、丢弃非法项）
+              document.getElementById("dnsPrefetch").value = arrayToLines(d.settings.dnsPrefetch);
+              document.getElementById("preconnect").value = arrayToLines(d.settings.preconnect);
+              msg.className = "msg ok";
+              msg.textContent = "已保存。";
+            } else {
+              msg.className = "msg err";
+              msg.textContent = d.error || "保存失败";
+            }
+          } catch (e) {
+            msg.className = "msg err";
+            msg.textContent = "保存失败，请稍后重试";
+          }
+          setTimeout(function () { msg.textContent = ""; }, 3000);
+        });
+
+        load();
+      })();
+    </script>
+</AdminLayout>

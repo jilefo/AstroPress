@@ -1,0 +1,137 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import BlockRenderer from "../components/BlockRenderer.astro";
+import { getPublishedPosts } from "../lib/public-query";
+import { wpOptions, wpPosts } from "@astropress/core/schema";
+import { safeJsonParse } from "@astropress/core/db";
+import { eq } from "drizzle-orm";
+import { DEFAULT_THEME_TOKENS } from "@astropress/core/types/theme";
+import type { Block, ThemeTokens } from "@astropress/core/types/theme";
+import { APF_STYLES, APF_SCRIPT, buildFormHtml } from "../lib/formRenderer";
+import { loadPermalinkSettings, postPath } from "@astropress/core/permalink";
+
+const db = Astro.locals.db;
+const permalinkSettings = db ? await loadPermalinkSettings(db) : undefined;
+
+// Check if a static front page is set
+let frontPageSlug: string | null = null;
+let frontBlocks: Block[] | null = null;
+let frontTitle: string | null = null;
+let frontContent: string | null = null;
+let tokens: ThemeTokens = DEFAULT_THEME_TOKENS;
+let formsById: Record<string, any> = {};
+
+if (db) {
+  const [showRow] = await db.select({ value: wpOptions.optionValue }).from(wpOptions).where(eq(wpOptions.optionName, "show_on_front")).limit(1);
+  const [frontRow] = await db.select({ value: wpOptions.optionValue }).from(wpOptions).where(eq(wpOptions.optionName, "page_on_front")).limit(1);
+
+  if (showRow?.value === "page" && frontRow?.value && frontRow.value !== "0") {
+    const pageId = Number(frontRow.value);
+    const [pageRow] = await db.select({ id: wpPosts.id, title: wpPosts.postTitle, slug: wpPosts.postName, content: wpPosts.postContent })
+      .from(wpPosts).where(eq(wpPosts.id, pageId)).limit(1);
+
+    if (pageRow) {
+      frontPageSlug = pageRow.slug;
+      frontTitle = pageRow.title;
+      frontContent = pageRow.content ?? "";
+      const [schemaRow] = await db.select({ value: wpOptions.optionValue }).from(wpOptions)
+        .where(eq(wpOptions.optionName, `astropress_page_schema_${pageRow.slug}`)).limit(1);
+      if (schemaRow?.value) {
+        const schema = safeJsonParse<any>(schemaRow.value, null);
+        if (schema?.blocks?.length > 0) frontBlocks = schema.blocks;
+      }
+    }
+  }
+
+  const [tokenRow] = await db.select({ value: wpOptions.optionValue }).from(wpOptions).where(eq(wpOptions.optionName, "astropress_theme_config")).limit(1);
+  if (tokenRow?.value) tokens = safeJsonParse<ThemeTokens>(tokenRow.value, DEFAULT_THEME_TOKENS);
+
+  const [formsRow] = await db.select({ value: wpOptions.optionValue }).from(wpOptions).where(eq(wpOptions.optionName, "astropress_forms")).limit(1);
+  if (formsRow?.value) {
+    const allForms: any[] = safeJsonParse<any[]>(formsRow.value, []);
+    for (const f of allForms) formsById[String(f.id)] = f;
+  }
+}
+
+// Fall back to blog post list
+const page = Number(Astro.url.searchParams.get("page") ?? "1");
+const perPage = 10;
+const { posts, total } = (!frontPageSlug && db)
+  ? await getPublishedPosts(db, { page, perPage })
+  : { posts: [], total: 0 };
+const totalPages = Math.ceil(total / perPage);
+
+function formatDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric" });
+}
+
+function plainExcerpt(post: { excerpt: string; content: string }): string {
+  if (post.excerpt) return post.excerpt;
+  return post.content.replace(/<!--.*?-->/gs, "").replace(/<[^>]+>/g, "").slice(0, 200).trim() + (post.content.length > 200 ? "…" : "");
+}
+
+function stripComments(raw: string) {
+  return raw.replace(/<!-- \/?wp:[^\-].*?-->/gs, "").trim();
+}
+
+function renderFrontContent(raw: string): { html: string; hasForms: boolean } {
+  const stripped = stripComments(raw || "");
+  const formIds = [...stripped.matchAll(/data-form-id="([^"]+)"/g)].map(m => m[1]);
+  if (formIds.length === 0) return { html: stripped, hasForms: false };
+  const html = stripped.replace(
+    /<div[^>]*class="wp-block-astropress-form"[^>]*data-form-id="([^"]+)"[^>]*>[\s\S]*?<\/div>/g,
+    (_, fid) => formsById[fid] ? buildFormHtml(formsById[fid]) : `<div style="padding:12px;border:1px solid #dcdcde;border-radius:4px;color:#646970;font-size:13px;">表单不存在。</div>`
+  );
+  return { html, hasForms: true };
+}
+
+const { html: frontContentHtml, hasForms: hasContentForms } = frontBlocks
+  ? { html: "", hasForms: false }
+  : renderFrontContent(frontContent ?? "");
+const hasBlockForms = frontBlocks ? frontBlocks.some((b: any) => b.type === "form") : false;
+const hasForms = hasBlockForms || hasContentForms;
+---
+{frontPageSlug ? (
+  <BaseLayout title={frontTitle ?? undefined} fullWidth={!!frontBlocks}>
+    {hasForms && <Fragment set:html={APF_STYLES} />}
+    {frontBlocks ? (
+      <BlockRenderer blocks={frontBlocks} tokens={tokens} formsById={formsById} />
+    ) : (
+      <article>
+        <header class="post-header"><h1>{frontTitle}</h1></header>
+        <div class="post-content" set:html={frontContentHtml} />
+      </article>
+    )}
+    {hasForms && <Fragment set:html={APF_SCRIPT} />}
+  </BaseLayout>
+) : (
+  <BaseLayout>
+    {posts.length === 0 ? (
+      <div style="text-align:center;padding:60px 0">
+        <p style="color:var(--color-muted);font-size:1.1rem">暂无文章，敬请期待！</p>
+      </div>
+    ) : (
+      <ul class="post-list">
+        {posts.map((post) => (
+          <li class="post-list-item">
+            <h2><a href={postPath(post.slug, permalinkSettings)}>{post.title}</a></h2>
+            <p class="post-meta">{formatDate(post.date)}</p>
+            <p class="post-excerpt">{plainExcerpt(post)}</p>
+            <a href={postPath(post.slug, permalinkSettings)} class="read-more">阅读全文 →</a>
+          </li>
+        ))}
+      </ul>
+    )}
+    {totalPages > 1 && (
+      <nav class="pagination" aria-label="分页">
+        {page > 1 && <a href={`/?page=${page - 1}`}>← 上一页</a>}
+        {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+          p === page
+            ? <span class="current">{p}</span>
+            : <a href={`/?page=${p}`}>{p}</a>
+        ))}
+        {page < totalPages && <a href={`/?page=${page + 1}`}>下一页 →</a>}
+      </nav>
+    )}
+  </BaseLayout>
+)}

@@ -1,0 +1,23 @@
+{
+  "name": "@astropress/plugin-footer",
+  "version": "0.1.0",
+  "description": "网站页脚设置：ICP备案号、公安备案号、版权信息、自定义链接、Powered by AstroPress 徽标",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./integration.admin": "./src/integration.admin.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@astropress/core": "workspace:*",
+    "drizzle-orm": "^0.36.0"
+  },
+  "devDependencies": {
+    "astro": "^4.0.0",
+    "typescript": "^5.4.0",
+    "@cloudflare/workers-types": "^4.0.0"
+  }
+}

@@ -1,0 +1,134 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { wpOptions } from "@astropress/core/schema";
+import { eq } from "drizzle-orm";
+
+const db = Astro.locals.db;
+if (!Astro.locals.user || !db) return Astro.redirect("/login");
+
+let forms: any[] = [];
+try {
+  const [row] = await db.select({ value: wpOptions.optionValue }).from(wpOptions)
+    .where(eq(wpOptions.optionName, "astropress_forms")).limit(1);
+  forms = row?.value ? JSON.parse(row.value) : [];
+} catch {}
+
+forms.sort((a: any, b: any) => (b.updatedAt ?? "").localeCompare(a.updatedAt ?? ""));
+
+const [siteUrlRow] = await db.select({ value: wpOptions.optionValue }).from(wpOptions).where(eq(wpOptions.optionName, "siteurl")).limit(1);
+const siteUrl = (siteUrlRow?.value ?? "http://localhost:4322").replace(/\/$/, "");
+
+function fieldCount(form: any) {
+  return (form.fields ?? []).filter((f: any) =>
+    !["page_break", "section_divider", "html"].includes(f.type)
+  ).length;
+}
+---
+<AdminLayout title="表单">
+
+  <h1 class="wp-heading-inline">表单</h1>
+  <a href="/admin/forms/create" class="page-title-action">添加新表单</a>
+  <hr class="wp-header-end" />
+
+  {forms.length === 0 ? (
+    <div class="ap-empty-state">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" style="color:#8c8f94;margin-bottom:12px">
+        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+        <rect x="8" y="2" width="8" height="4" rx="1"/>
+        <line x1="9" y1="12" x2="15" y2="12"/>
+        <line x1="9" y1="16" x2="13" y2="16"/>
+      </svg>
+      <p style="font-size:14px;color:#646970;margin:0 0 16px">还没有表单。创建一个表单即可开始收集提交条目。</p>
+      <a href="/admin/forms/create" class="button button-primary">创建你的第一个表单</a>
+    </div>
+  ) : (
+    <table class="wp-list-table widefat fixed striped">
+      <thead>
+        <tr>
+          <th scope="col" class="manage-column column-primary" style="width:35%">名称</th>
+          <th scope="col" class="manage-column" style="width:8%">字段</th>
+          <th scope="col" class="manage-column" style="width:28%">简码</th>
+          <th scope="col" class="manage-column" style="width:14%">最后修改</th>
+          <th scope="col" class="manage-column" style="width:15%">条目</th>
+        </tr>
+      </thead>
+      <tbody>
+        {forms.map((form: any) => (
+          <tr>
+            <td class="title column-title has-row-actions column-primary">
+              <strong>
+                <a href={`/admin/forms/${form.id}`} class="row-title">
+                  {form.title ?? form.name ?? "未命名表单"}
+                </a>
+              </strong>
+              <div class="row-actions">
+                <span class="edit">
+                  <a href={`/admin/forms/${form.id}`}>编辑</a> |
+                </span>
+                <span class="view">
+                  <a href={`/admin/forms/${form.id}/entries`}>条目</a> |
+                </span>
+                <span class="view">
+                  <a href={`${siteUrl}/forms/${form.id}`} target="_blank" rel="noopener">预览</a> |
+                </span>
+                <span class="trash">
+                  <button
+                    onclick={`if(confirm('确定删除“${form.title ?? form.name}”？此操作无法撤销。')){fetch('/api/forms/${form.id}',{method:'DELETE'}).then(r=>{if(r.ok)location.reload()})}`}
+                    class="ap-row-delete-btn"
+                  >
+                    删除
+                  </button>
+                </span>
+              </div>
+            </td>
+            <td>
+              <span class="ap-field-count">{fieldCount(form)}</span>
+            </td>
+            <td>
+              <code class="ap-shortcode">[wpforms id="{form.id}"]</code>
+            </td>
+            <td style="color:var(--wp-gray-600)">
+              {form.updatedAt ? new Date(form.updatedAt).toLocaleDateString("zh-CN", { year: "numeric", month: "short", day: "numeric" }) : "—"}
+            </td>
+            <td>
+              <a href={`/admin/forms/${form.id}/entries`} style="font-size:13px;color:var(--wp-blue);text-decoration:none">
+                查看条目
+              </a>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+
+    </table>
+  )}
+
+</AdminLayout>
+
+<style is:global>
+  /* ── Field count badge ───────────────────────────────────────────────── */
+  .ap-field-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    background: #f0f0f1;
+    border-radius: 11px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #3c434a;
+  }
+
+  /* ── Shortcode ───────────────────────────────────────────────────────── */
+  .ap-shortcode {
+    font-size: 11px;
+    background: #f6f7f7;
+    border: 1px solid #dcdcde;
+    padding: 2px 6px;
+    border-radius: 2px;
+    color: #3c434a;
+    user-select: all;
+    cursor: text;
+  }
+</style>

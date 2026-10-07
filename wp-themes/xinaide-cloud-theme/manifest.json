@@ -1,0 +1,26 @@
+{
+  "name": "xinaide-cloud",
+  "version": "1.0.0",
+  "description": "Immersive hero card-based theme with teal accent and serif body",
+  "author": "xinaide",
+  "tokens": {
+    "fonts": {
+      "body": "'Georgia', 'Times New Roman', serif",
+      "heading": "'Inter', -apple-system, sans-serif"
+    },
+    "spacing": {
+      "sectionY": "48px",
+      "borderRadius": "12px",
+      "containerMax": "1200px"
+    },
+    "colors": {
+      "textMuted": "#5e796e",
+      "surface": "#f0fdf4",
+      "background": "#ffffff",
+      "secondary": "#a06707",
+      "border": "#d1f0e0",
+      "text": "#1a2e2a",
+      "primary": "#12816e"
+    }
+  }
+}

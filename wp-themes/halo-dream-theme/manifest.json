@@ -1,0 +1,26 @@
+{
+  "name": "Dream",
+  "version": "2.0.0",
+  "description": "Dream city blog theme from Halo platform with sky blue accent",
+  "author": "Dream",
+  "tokens": {
+    "fonts": {
+      "body": "'Inter', -apple-system, sans-serif",
+      "heading": "'Inter', -apple-system, sans-serif"
+    },
+    "spacing": {
+      "sectionY": "48px",
+      "borderRadius": "8px",
+      "containerMax": "1200px"
+    },
+    "colors": {
+      "textMuted": "#6e7178",
+      "surface": "#f5f7fa",
+      "background": "#ffffff",
+      "secondary": "#e50000",
+      "border": "#e4e7ed",
+      "text": "#303133",
+      "primary": "#0076ba"
+    }
+  }
+}

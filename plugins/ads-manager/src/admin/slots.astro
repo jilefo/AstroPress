@@ -1,0 +1,132 @@
+---
+/**
+ * /admin-ext/ads — slot management + impression/click stats.
+ * /admin-ext prefix is session-protected by admin middleware; locals.user
+ * re-checked below. 通过相对路径引入应用 AdminLayout
+ */
+import { wpPosts, wpPostmeta } from "@astropress/core/schema";
+import { and, eq, inArray } from "drizzle-orm";
+import { loadSlots } from "../lib/store";
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+
+if (!Astro.locals.user || !Astro.locals.db) return Astro.redirect("/login");
+const db = Astro.locals.db;
+
+const slots = await loadSlots(db);
+
+// Aggregate per-day stats across all ap_ad posts
+const adRows = await db
+  .select({ id: wpPosts.id, title: wpPosts.postTitle, status: wpPosts.postStatus })
+  .from(wpPosts)
+  .where(eq(wpPosts.postType, "ap_ad"));
+const statsRows = adRows.length
+  ? await db
+      .select({ postId: wpPostmeta.postId, val: wpPostmeta.metaValue })
+      .from(wpPostmeta)
+      .where(and(inArray(wpPostmeta.postId, adRows.map((r: any) => r.id)), eq(wpPostmeta.metaKey, "_ap_ad_stats")))
+  : [];
+const statsByPost = new Map<number, Record<string, { imp: number; clk: number }>>();
+for (const s of statsRows) {
+  try { statsByPost.set(s.postId, JSON.parse(s.val ?? "{}")); } catch { /* skip */ }
+}
+const stats = adRows.map((r: any) => {
+  const daily = statsByPost.get(r.id) ?? {};
+  let imp = 0, clk = 0;
+  for (const b of Object.values(daily)) { imp += b.imp ?? 0; clk += b.clk ?? 0; }
+  return { id: r.id, title: r.title, status: r.status, imp, clk, ctr: imp > 0 ? ((clk / imp) * 100).toFixed(2) : "0.00" };
+});
+---
+<AdminLayout title="Ads Manager">
+    <style is:global>
+      * { box-sizing: border-box; }
+      .wrap { max-width: 960px; margin: 0 auto; padding: 0 16px; display: grid; gap: 20px; }
+      .card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 20px; }
+      h1 { font-size: 20px; } h2 { font-size: 15px; margin: 0 0 12px; }
+      table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #f0f0f1; }
+      input { font-size: 13px; padding: 6px 8px; border: 1px solid #8c8f94; border-radius: 3px; }
+      button { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 6px 14px; cursor: pointer; font-size: 13px; }
+      button.ghost { background: #f0f0f1; color: #1d2327; border: 1px solid #c3c4c7; }
+      .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+      .msg { font-size: 13px; margin-top: 8px; min-height: 18px; }
+      .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; background: #f0f0f1; }
+      .badge.pub { background: #c6e1c6; }
+    </style>
+
+    <div class="wrap">
+      <section class="card">
+        <h2>Ad slots</h2>
+        <p style="font-size:12px;color:#646970;margin-top:0;">
+          Reference slots in content with <code>[ap-ad key="KEY"]</code> or <code>&lt;div data-ap-ad="KEY"&gt;&lt;/div&gt;</code>.
+          Create ads under <a href="/admin/cpt/ap_ad">Ads Manager</a> (publish = enabled, draft = disabled).
+        </p>
+        <table id="slotTable"><thead>
+          <tr><th>Enabled</th><th>Key</th><th>Name</th><th></th></tr>
+        </thead><tbody></tbody></table>
+        <div class="row" style="margin-top:10px;">
+          <input id="newKey" placeholder="key e.g. header-banner" style="width:170px" />
+          <input id="newName" placeholder="Name" style="width:170px" />
+          <button class="ghost" id="addSlot">Add slot</button>
+          <button id="saveSlots">Save slots</button>
+        </div>
+        <div class="msg" id="msg"></div>
+      </section>
+
+      <section class="card">
+        <h2>Stats (all time)</h2>
+        <table>
+          <thead><tr><th>Ad</th><th>Status</th><th>Impressions</th><th>Clicks</th><th>CTR</th></tr></thead>
+          <tbody>
+            {stats.length === 0 && <tr><td colspan="5" style="color:#646970">No ads yet.</td></tr>}
+            {stats.map((s) => (
+              <tr>
+                <td>{s.title} <span style="color:#646970">#{s.id}</span></td>
+                <td><span class={`badge ${s.status === "publish" ? "pub" : ""}`}>{s.status}</span></td>
+                <td>{s.imp}</td>
+                <td>{s.clk}</td>
+                <td>{s.ctr}%</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+    </div>
+
+    <script type="application/json" id="slots-data" set:html={JSON.stringify(slots).replace(/</g, "\\u003c")} />
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const esc = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      let slots = JSON.parse($("slots-data").textContent || "[]");
+      function render() {
+        $("slotTable").tBodies[0].innerHTML = slots.map((s, i) => ` // ap-audit-ok: 全部插值经 esc()
+          <tr>
+            <td><input type="checkbox" data-i="${i}" ${s.enabled ? "checked" : ""}></td>
+            <td><code>${esc(s.key)}</code></td>
+            <td><input data-i="${i}" data-k="name" value="${esc(s.name)}"></td>
+            <td><button class="ghost" data-del="${i}">Remove</button></td>
+          </tr>`).join("");
+        bind();
+      }
+      function bind() {
+        $("slotTable").querySelectorAll("input[type=checkbox]").forEach((c) =>
+          c.addEventListener("change", () => { slots[+c.dataset.i].enabled = c.checked; }));
+        $("slotTable").querySelectorAll("input[data-k]").forEach((c) =>
+          c.addEventListener("input", () => { slots[+c.dataset.i][c.dataset.k] = c.value; }));
+        $("slotTable").querySelectorAll("[data-del]").forEach((b) =>
+          b.addEventListener("click", () => { slots.splice(+b.dataset.del, 1); render(); }));
+      }
+      $("addSlot").addEventListener("click", () => {
+        const key = $("newKey").value.trim();
+        if (!/^[\w-]+$/.test(key)) { msg("Key must be alphanumeric/dash", true); return; } // ap-audit-ok: 处理型脚本（无 is:inline），正则经编译原样到达浏览器，冒烟实测 addSlot 通过
+        slots.push({ id: crypto.randomUUID(), key, name: $("newName").value.trim() || key, enabled: true });
+        $("newKey").value = $("newName").value = ""; render();
+      });
+      $("saveSlots").addEventListener("click", async () => {
+        const r = await fetch("/admin-ext/api/ads/slots", { method: "PUT", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slots }) });
+        msg(r.ok ? "Saved." : "Save failed (" + r.status + ")", !r.ok);
+      });
+      function msg(t, err) { $("msg").textContent = t; $("msg").style.color = err ? "#b32d2e" : "#00a32a"; }
+      render();
+    </script>
+</AdminLayout>

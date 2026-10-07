@@ -1,0 +1,23 @@
+{
+  "name": "@astropress/plugin-cache-warmer",
+  "version": "0.1.0",
+  "description": "缓存预热：手动/定时串行抓取首页与 sitemap 前 N 个 URL，为 page-cache 主动填充缓存，运行互斥、超时保护与批次记录",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./integration.admin": "./src/integration.admin.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@astropress/core": "workspace:*",
+    "drizzle-orm": "^0.36.0"
+  },
+  "devDependencies": {
+    "astro": "^4.0.0",
+    "typescript": "^5.4.0",
+    "@cloudflare/workers-types": "^4.0.0"
+  }
+}

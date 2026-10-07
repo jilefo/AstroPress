@@ -1,0 +1,168 @@
+---
+/**
+ * /admin-ext/webdav — WebDAV 网盘连接信息 / 令牌管理 / 存储统计
+ */
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+import { getToken } from "../lib/token";
+
+if (!Astro.locals.user) return Astro.redirect("/login");
+
+const davUrl = new URL("/webdav/", Astro.url.origin).href;
+const username = Astro.locals.user.userLogin;
+let hasToken = false;
+try {
+  hasToken = !!(await getToken(Astro.locals.db));
+} catch {
+  hasToken = false;
+}
+---
+<AdminLayout title="WebDAV">
+    <style is:global>
+      * { box-sizing: border-box; }
+      .wd-wrap { max-width: 880px; margin: 0 auto; padding: 0 16px; display: grid; gap: 20px; }
+      .wd-card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 20px; }
+      .wd-card h1 { font-size: 20px; margin: 0 0 6px; }
+      .wd-card h2 { font-size: 15px; margin: 0 0 12px; }
+      .wd-muted { color: #646970; font-size: 12px; }
+      .wd-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+      .wd-field { display: grid; grid-template-columns: 110px 1fr; gap: 6px 12px; align-items: center; margin-top: 12px; font-size: 13px; }
+      .wd-field .k { color: #646970; }
+      .wd-field code { background: #f0f0f1; padding: 2px 6px; border-radius: 3px; font-size: 12px; word-break: break-all; }
+      .wd-btn { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 7px 16px; cursor: pointer; font-size: 13px; }
+      .wd-btn.secondary { background: #f6f7f7; color: #2271b1; border: 1px solid #2271b1; }
+      .wd-btn:disabled { opacity: .5; cursor: default; }
+      .wd-msg { margin-top: 10px; font-size: 13px; min-height: 18px; }
+      .wd-ok { color: #00a32a; }
+      .wd-err { color: #b32d2e; }
+      .wd-token-box { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+      .wd-token-box input { flex: 1; font-family: monospace; font-size: 12px; padding: 6px 8px; border: 1px solid #c3c4c7; border-radius: 3px; }
+      .wd-steps { font-size: 13px; line-height: 1.9; margin: 8px 0 0; padding-left: 20px; }
+      .wd-steps code { background: #f0f0f1; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+      .wd-warn { border: 1px solid #f0c5c7; background: #fcf0f1; border-left: 4px solid #b32d2e; padding: 10px 14px; border-radius: 3px; color: #8a2426; margin-top: 12px; font-size: 12px; }
+      .wd-stats { display: flex; gap: 24px; margin-top: 12px; font-size: 13px; }
+      .wd-stats .num { font-size: 20px; font-weight: 600; color: #1d2327; }
+    </style>
+
+    <div class="wd-wrap">
+      <div class="wd-card">
+        <h1>WebDAV 网盘</h1>
+        <div class="wd-muted">把站点专用存储目录 <code>webdav-storage/</code> 通过 WebDAV 协议暴露，可用 Windows「映射网络驱动器」或 RaiDrive 挂载为网盘/备份存储。</div>
+
+        <div class="wd-field">
+          <span class="k">WebDAV 地址</span>
+          <span><code id="davUrl">{davUrl}</code></span>
+          <span class="k">用户名</span>
+          <span><code>{username}</code>（站点登录用户名）</span>
+          <span class="k">密码</span>
+          <span>下方生成的<strong>专用 access token</strong>（不是登录密码）</span>
+          <span class="k">令牌状态</span>
+          <span id="tokenState">{hasToken ? "已生成" : "未生成"}</span>
+        </div>
+
+        <div class="wd-row">
+          <button class="wd-btn" id="btnGen">生成 / 重置令牌</button>
+          <button class="wd-btn secondary" id="btnCopyUrl">复制 WebDAV 地址</button>
+        </div>
+        <div class="wd-token-box" id="tokenBox" style="display:none">
+          <input type="text" id="tokenInput" readonly />
+          <button class="wd-btn secondary" id="btnCopyToken">复制</button>
+        </div>
+        <div class="wd-msg wd-muted" id="wdMsg"></div>
+        <div class="wd-warn" id="tokenWarn" style="display:none">令牌只显示这一次，请立即复制保存。重置后旧令牌立即失效。</div>
+      </div>
+
+      <div class="wd-card">
+        <h2>Windows「映射网络驱动器」挂载</h2>
+        <ol class="wd-steps">
+          <li>打开「此电脑」→ 右上角「···」→「映射网络驱动器」。</li>
+          <li>文件夹填写 <code>{davUrl}</code>，勾选「使用其他凭据连接」。</li>
+          <li>用户名填站点用户名，密码填专用令牌。</li>
+          <li>若连接失败，确认站点可通过 HTTP 访问，或改用 RaiDrive。</li>
+        </ol>
+        <h2 style="margin-top:18px">RaiDrive 挂载</h2>
+        <ol class="wd-steps">
+          <li>「添加」→ 存储类型选 <code>WebDAV</code>。</li>
+          <li>地址填写 <code>{davUrl}</code>（按界面拆分主机与路径）。</li>
+          <li>账户填站点用户名，密码填专用令牌，选择盘符后连接。</li>
+        </ol>
+      </div>
+
+      <div class="wd-card">
+        <h2>存储占用</h2>
+        <div class="wd-stats">
+          <div><div class="num" id="statFiles">-</div><div class="wd-muted">文件数</div></div>
+          <div><div class="num" id="statBytes">-</div><div class="wd-muted">总大小</div></div>
+        </div>
+        <div class="wd-row">
+          <button class="wd-btn secondary" id="btnRefresh">刷新统计</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        var msg = document.getElementById("wdMsg");
+        var tokenBox = document.getElementById("tokenBox");
+        var tokenInput = document.getElementById("tokenInput");
+        var tokenWarn = document.getElementById("tokenWarn");
+        var tokenState = document.getElementById("tokenState");
+
+        function setMsg(text, cls) {
+          msg.className = "wd-msg " + (cls || "wd-muted");
+          msg.textContent = text;
+        }
+        function fmtSize(n) {
+          if (n < 1024) return n + " B";
+          if (n < 1024 * 1024) return (n / 1024).toFixed(1) + " KB";
+          if (n < 1024 * 1024 * 1024) return (n / 1024 / 1024).toFixed(1) + " MB";
+          return (n / 1024 / 1024 / 1024).toFixed(2) + " GB";
+        }
+        function api(url, opts) {
+          return fetch(url, Object.assign({ credentials: "same-origin" }, opts)).then(function (r) {
+            if (r.status === 401) { location.href = "/login"; throw new Error("未登录"); }
+            return r.json().then(function (d) { return { ok: r.ok, data: d }; });
+          });
+        }
+
+        function loadStats() {
+          api("/admin-ext/api/webdav/stats").then(function (res) {
+            if (!res.ok) { setMsg((res.data && res.data.error) || "统计失败", "wd-err"); return; }
+            document.getElementById("statFiles").textContent = String(res.data.files);
+            document.getElementById("statBytes").textContent = fmtSize(res.data.bytes);
+          }).catch(function (e) { setMsg(e.message || "网络错误", "wd-err"); });
+        }
+
+        document.getElementById("btnGen").addEventListener("click", function () {
+          if (!confirm("生成新令牌后旧令牌立即失效（已挂载的客户端需重新填写密码）。确定继续吗？")) return;
+          api("/admin-ext/api/webdav/token", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ confirm: true }),
+          }).then(function (res) {
+            if (!res.ok) { setMsg((res.data && res.data.error) || "生成失败", "wd-err"); return; }
+            tokenInput.value = res.data.token;
+            tokenBox.style.display = "flex";
+            tokenWarn.style.display = "block";
+            tokenState.textContent = "已生成";
+            setMsg("令牌已生成，请立即复制保存", "wd-ok");
+          }).catch(function (e) { setMsg(e.message || "网络错误", "wd-err"); });
+        });
+
+        document.getElementById("btnCopyUrl").addEventListener("click", function () {
+          var text = document.getElementById("davUrl").textContent || "";
+          navigator.clipboard.writeText(text).then(function () {
+            setMsg("已复制 WebDAV 地址", "wd-ok");
+          });
+        });
+
+        document.getElementById("btnCopyToken").addEventListener("click", function () {
+          navigator.clipboard.writeText(tokenInput.value).then(function () {
+            setMsg("已复制令牌", "wd-ok");
+          });
+        });
+
+        document.getElementById("btnRefresh").addEventListener("click", loadStats);
+        loadStats();
+      })();
+    </script>
+</AdminLayout>

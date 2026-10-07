@@ -1,0 +1,62 @@
+node_modules/
+dist/
+.astro/
+.cache/
+.turbo/
+*.local
+.env
+.env.*
+!.env.example
+.wrangler/
+local.db
+
+# Uploaded media files
+apps/admin/public/media/
+apps/web/public/media/
+
+# Runtime data
+.ap-data/
+backups/
+webdav-storage/
+
+# static-html 插件的静态导出产物（默认目录，可在插件设置中改名）
+static-html/
+
+# ---- 开源发布前清理：本地工作产物，不应进入公开仓库 ----
+# 截图 / 录屏 / 审计与运行日志
+ScreenShot_*.png
+.theme-*.png
+*.mp4
+*.mkv
+audit*.log
+audit*.txt
+dev-*.log
+*.err
+# 第三方工具与压缩包
+adminer-*.php
+themes.zip
+wp-themes.zip
+# 本地备份与 IDE/Agent 工作目录
+.backup-*/
+.codeartsdoer/
+.joycode/
+.arts/
+# Python 缓存
+__pycache__/
+*.pyc
+# 本地测试脚本与报告（含本地凭据，不发布）
+logs/
+插件真实测试报告.md
+# 宝塔面板等第三方服务器软件（误放仓库根目录）
+panel/
+# 第三方参考源码/主题（本地保留，不入库不进发布包）
+wordpress/
+hexothemes/
+# 发布包产物（通过 GitHub Releases 上传，不入库）
+releases/**/*.zip
+# 内部工作文档（交接/计划/线上验收史，不属于产品）
+HANDOVER.md
+PLAN.md
+onlinereadme.md
+CLAUDE.md
+插件真实测试报告.md

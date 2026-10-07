@@ -1,0 +1,26 @@
+{
+  "name": "Aiphoto",
+  "version": "1.0.0",
+  "description": "Masonry gallery photo blog theme with purple accent",
+  "author": "Aiphoto",
+  "tokens": {
+    "fonts": {
+      "body": "'DM Sans', -apple-system, sans-serif",
+      "heading": "'DM Sans', -apple-system, sans-serif"
+    },
+    "spacing": {
+      "sectionY": "64px",
+      "borderRadius": "12px",
+      "containerMax": "1280px"
+    },
+    "colors": {
+      "textMuted": "#6f6f7c",
+      "surface": "#f5f3ff",
+      "background": "#ffffff",
+      "secondary": "#d61675",
+      "border": "#e9d5ff",
+      "text": "#1e1b4b",
+      "primary": "#7c3aed"
+    }
+  }
+}

@@ -1,0 +1,81 @@
+---
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+import { loadSettings, saveSettings } from "../lib/settings";
+
+const user = Astro.locals.user;
+const db = Astro.locals.db;
+if (!user) return Astro.redirect("/login");
+
+let saved = false;
+if (Astro.request.method === "POST") {
+  try {
+    const body = await Astro.request.json();
+    await saveSettings(db, {
+      enabled: !!body.enabled,
+      maxPosts: body.maxPosts,
+      includePages: !!body.includePages,
+    });
+    saved = true;
+  } catch { /* ignore */ }
+}
+
+const s = await loadSettings(db);
+---
+<AdminLayout title="Sitemap">
+  <style is:global>
+    .sm-card { background:#fff;border:1px solid #c3c4c7;border-radius:4px;padding:20px;max-width:640px; }
+    .sm-card h2 { margin:0 0 12px;font-size:16px; }
+    .sm-row { display:flex;align-items:center;gap:10px;margin:12px 0;flex-wrap:wrap; }
+    .sm-note { color:#646970;font-size:13px;line-height:1.6;margin-top:10px; }
+    .sm-ok { color:#00a32a;font-weight:600;margin-top:10px; }
+    .btn { background:#2271b1;color:#fff;border:0;border-radius:3px;padding:6px 14px;cursor:pointer;font-size:13px; }
+    .btn.secondary { background:#f6f7f7;color:#2271b1;border:1px solid #2271b1; }
+  </style>
+
+  <div class="sm-card">
+    <h2>XML 站点地图</h2>
+    <div class="sm-note">
+      启用后，搜索引擎可通过 <a href="/sitemap.xml" target="_blank">/sitemap.xml</a> 抓取站点结构。<br/>
+      robots.txt 中建议加入 <code>Sitemap: {new URL(Astro.request.url).origin}/sitemap.xml</code>。
+    </div>
+
+    <form id="smForm" method="post" style="margin-top:16px">
+      <label class="sm-row">
+        <input type="checkbox" id="smEnabled" checked={s.enabled} />
+        <span>启用 /sitemap.xml</span>
+      </label>
+      <label class="sm-row">
+        <input type="checkbox" id="smPages" checked={s.includePages} />
+        <span>包含页面（Page）</span>
+      </label>
+      <label class="sm-row">
+        <span>文章数量上限</span>
+        <input id="smMaxPosts" type="number" min="1" max="5000" value={s.maxPosts} style="width:100px;padding:4px 8px;border:1px solid #8c8f94;border-radius:2px;" />
+      </label>
+      <button type="submit" class="btn">保存设置</button>
+    </form>
+    <div id="smStatus" class="sm-ok" style="display:none">已保存 ✓</div>
+  </div>
+
+  <script>
+    (function () {
+      var form = document.getElementById("smForm");
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        fetch(location.pathname, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            enabled: document.getElementById("smEnabled").checked,
+            maxPosts: Number(document.getElementById("smMaxPosts").value),
+            includePages: document.getElementById("smPages").checked,
+          }),
+        }).then(function () {
+          var s = document.getElementById("smStatus");
+          s.style.display = "block";
+          setTimeout(function () { s.style.display = "none"; }, 2000);
+        });
+      });
+    })();
+  </script>
+</AdminLayout>

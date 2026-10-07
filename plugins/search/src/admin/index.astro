@@ -1,0 +1,106 @@
+---
+/**
+ * /admin-ext/search — 全站搜索设置页
+ *
+ * 可配置：启用开关、每页条数、最小字符数、占位文案、前台浮动搜索按钮。
+ */
+import AdminLayout from "../../../../apps/admin/src/layouts/AdminLayout.astro";
+if (!Astro.locals.user || !Astro.locals.db) return Astro.redirect("/login");
+---
+<AdminLayout title="全站搜索">
+    <style is:global>
+      * { box-sizing: border-box; }
+      .wrap { max-width: 720px; margin: 0 auto; padding: 0 16px; display: grid; gap: 20px; }
+      .card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 20px; }
+      h1 { font-size: 20px; margin: 0 0 16px; }
+      label { display: block; font-size: 13px; font-weight: 600; margin: 16px 0 4px; }
+      input[type="number"], input[type="text"] { width: 100%; font-size: 13px; padding: 6px 8px; border: 1px solid #8c8f94; border-radius: 3px; }
+      button { background: #2271b1; color: #fff; border: 0; border-radius: 3px; padding: 8px 16px; cursor: pointer; font-size: 13px; margin-top: 20px; }
+      .msg { font-size: 13px; margin-top: 10px; min-height: 18px; }
+      .ok { color: #00a32a; }
+      .err { color: #b32d2e; }
+      .hint { font-size: 12px; color: #646970; margin-top: 4px; }
+      .check { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+      .check label { margin: 0; font-weight: normal; }
+      .linkbox { font-size: 13px; margin-top: 8px; }
+      .linkbox a { color: #2271b1; text-decoration: none; }
+      .linkbox a:hover { text-decoration: underline; }
+    </style>
+
+    <div class="wrap">
+      <div class="card">
+        <h1>全站搜索</h1>
+        <div class="linkbox">
+          前台搜索页：<a href="/search" target="_blank">/search</a>
+        </div>
+
+        <div class="check" style="margin-top:16px">
+          <input type="checkbox" id="enabled" checked />
+          <label for="enabled">启用全站搜索</label>
+        </div>
+
+        <label for="placeholder">搜索框占位文案</label>
+        <input type="text" id="placeholder" value="搜索文章…" />
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">
+          <div>
+            <label for="perPage">每页结果数</label>
+            <input type="number" id="perPage" min="1" max="100" value="20" />
+            <div class="hint">范围 1-100</div>
+          </div>
+          <div>
+            <label for="minChars">最小搜索字符数</label>
+            <input type="number" id="minChars" min="1" max="10" value="2" />
+            <div class="hint">范围 1-10</div>
+          </div>
+        </div>
+
+        <div class="check" style="margin-top:12px">
+          <input type="checkbox" id="injectButton" checked />
+          <label for="injectButton">在前台注入右下角浮动搜索按钮</label>
+        </div>
+
+        <button id="save">保存设置</button>
+        <div class="msg" id="msg"></div>
+      </div>
+    </div>
+
+    <script>
+      (async () => {
+        const msg = document.getElementById("msg");
+
+        async function load() {
+          const r = await fetch("/admin-ext/api/search/settings", { credentials: "same-origin" });
+          if (!r.ok) return;
+          const s = await r.json();
+          document.getElementById("enabled").checked = s.enabled;
+          document.getElementById("placeholder").value = s.placeholder;
+          document.getElementById("perPage").value = s.perPage;
+          document.getElementById("minChars").value = s.minChars;
+          document.getElementById("injectButton").checked = s.injectButton;
+        }
+
+        document.getElementById("save").addEventListener("click", async () => {
+          const payload = {
+            enabled: document.getElementById("enabled").checked,
+            placeholder: document.getElementById("placeholder").value.trim(),
+            perPage: parseInt(document.getElementById("perPage").value, 10) || 20,
+            minChars: parseInt(document.getElementById("minChars").value, 10) || 2,
+            injectButton: document.getElementById("injectButton").checked,
+          };
+          const r = await fetch("/admin-ext/api/search/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify(payload),
+          });
+          const d = await r.json();
+          msg.className = "msg " + (r.ok ? "ok" : "err");
+          msg.textContent = r.ok ? "已保存。" : (d.error || "保存失败");
+          setTimeout(() => (msg.textContent = ""), 3000);
+        });
+
+        load();
+      })();
+    </script>
+</AdminLayout>

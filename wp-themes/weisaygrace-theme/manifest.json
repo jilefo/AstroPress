@@ -1,0 +1,26 @@
+{
+  "name": "Weisay Grace",
+  "version": "2.6.0",
+  "description": "Two-column responsive blog theme with red-pink accent",
+  "author": "Weisay",
+  "tokens": {
+    "fonts": {
+      "body": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      "heading": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    },
+    "spacing": {
+      "sectionY": "48px",
+      "borderRadius": "4px",
+      "containerMax": "1100px"
+    },
+    "colors": {
+      "textMuted": "#737373",
+      "surface": "#f9f9f9",
+      "background": "#ffffff",
+      "secondary": "#ad5e07",
+      "border": "#eeeeee",
+      "text": "#333333",
+      "primary": "#e1182d"
+    }
+  }
+}

@@ -1,0 +1,219 @@
+---
+/**
+ * /search — 全站搜索页面（公开，SSR）
+ *
+ * - enabled=false 时返回 404
+ * - ?q= 为空或长度不足 minChars 时只渲染搜索框
+ * - 命中 wpPosts(postStatus=publish AND postType IN post/page)，
+ *   按标题/摘要/内容 LIKE 模糊匹配（参数化 + ESCAPE '\'），
+ *   标题命中优先，再按 postDate DESC
+ */
+export const prerender = false;
+
+import { getSiteInfo } from "@astropress/core/query";
+import { likeNeedle } from "@astropress/core";
+import { wpPosts } from "@astropress/core/schema";
+import { loadPermalinkSettings, postPath } from "@astropress/core/permalink";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { loadSettings } from "../lib/settings";
+
+// 供 set:html 使用的 HTML 转义（snippet 内部手动转义）
+// 注意：Astro 模板中的 {} 插值会自动转义，模板里不要再手动 esc()，否则会双重转义
+const esc = (s: unknown): string =>
+  String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+const db = (Astro.locals as any).db;
+if (!db) return new Response("服务器开小差了，请稍后再试", { status: 500 });
+
+// D1 瞬时故障兜底：数据库异常时降级渲染中文提示页，而非空 500（生产实测出现过间歇性 500/503）
+let dbError = false;
+let settings: Awaited<ReturnType<typeof loadSettings>> | null = null;
+try {
+  settings = await loadSettings(db);
+} catch (e) {
+  console.error("[search] loadSettings failed:", e);
+  dbError = true;
+}
+// 未启用时按 404 处理（不暴露插件存在）
+if (settings && !settings.enabled) {
+  return new Response("页面不存在", { status: 404, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+}
+
+let site: Awaited<ReturnType<typeof getSiteInfo>> | null = null;
+try {
+  site = await getSiteInfo(db);
+} catch (e) {
+  console.error("[search] getSiteInfo failed:", e);
+  dbError = true;
+}
+
+const rawQ = Astro.url.searchParams.get("q") ?? "";
+// 截断超长关键词，防止超长 LIKE 全表扫描拖慢数据库
+const q = rawQ.trim().slice(0, 100);
+const canSearch = !dbError && settings != null && q.length >= settings.minChars;
+// 文章出站形态跟随 permalink 设置（启用 → /{slug}，否则 /blog/{slug}）
+const permalinkSettings = dbError ? undefined : await loadPermalinkSettings(db);
+
+interface Hit {
+  id: number;
+  title: string;
+  excerpt: string;
+  content: string;
+  name: string;
+  type: string;
+  date: string;
+}
+
+let hits: Hit[] = [];
+
+// 命中高亮用关键词（截断到 D1 安全长度）；模板中也引用，需提升到模块作用域
+const kw = likeNeedle(q);
+
+if (canSearch) {
+  // LIKE 通配符转义：% _ \ 用反斜杠转义，并在 SQL 里声明 ESCAPE '\'；
+  // D1 的 SQLite 对 LIKE 模式有 50 字节上限（needle ≤48 字节），超长关键词截断匹配前缀
+  const escQ = likeNeedle(q.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_"));
+  const like = `%${escQ}%`;
+
+  try {
+    const rows = await db
+      .select({
+        id: wpPosts.id,
+        title: wpPosts.postTitle,
+        excerpt: wpPosts.postExcerpt,
+        content: wpPosts.postContent,
+        name: wpPosts.postName,
+        type: wpPosts.postType,
+        date: wpPosts.postDate,
+      })
+      .from(wpPosts)
+      .where(
+        and(
+          eq(wpPosts.postStatus, "publish"),
+          inArray(wpPosts.postType, ["post", "page"]),
+          sql`(${wpPosts.postTitle} LIKE ${like} ESCAPE '\\' OR ${wpPosts.postExcerpt} LIKE ${like} ESCAPE '\\' OR ${wpPosts.postContent} LIKE ${like} ESCAPE '\\')`
+        )
+      )
+      // 标题命中优先，其次日期倒序
+      .orderBy(
+        sql`CASE WHEN ${wpPosts.postTitle} LIKE ${like} ESCAPE '\\' THEN 0 ELSE 1 END`,
+        desc(wpPosts.postDate)
+      )
+      .limit(settings.perPage);
+
+    hits = rows as Hit[];
+  } catch (e) {
+    console.error("[search] query failed:", e);
+    dbError = true;
+  }
+}
+
+// 从纯文本中截取关键词前后各 80 字符，命中词用 <mark> 包裹（大小写不敏感）
+function snippet(text: string, kw: string): string {
+  const plain = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  const idx = plain.toLowerCase().indexOf(kw.toLowerCase());
+  let start = 0;
+  let end = plain.length;
+  if (idx >= 0) {
+    start = Math.max(0, idx - 80);
+    end = Math.min(plain.length, idx + kw.length + 80);
+  } else {
+    end = Math.min(plain.length, 160);
+  }
+  let s = plain.slice(start, end);
+  if (start > 0) s = "…" + s;
+  if (end < plain.length) s = s + "…";
+  const escaped = esc(s);
+  // 转义后再做大小写不敏感的命中高亮
+  const kwEsc = esc(kw);
+  if (!kwEsc) return escaped;
+  const re = new RegExp(kwEsc.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+  return escaped.replace(re, (m) => `<mark>${m}</mark>`);
+}
+
+const resultCount = hits.length;
+---
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{canSearch ? `${q} - 搜索 - ` : "搜索 - "}{site?.name || "AstroPress"}</title>
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f6f7f9; color: #1d2327; }
+      .wrap { max-width: 760px; margin: 40px auto; padding: 0 16px; }
+      h1 { font-size: 22px; font-weight: 600; margin: 0 0 16px; }
+      .search-form { display: flex; gap: 8px; margin-bottom: 24px; }
+      .search-form input { flex: 1; font-size: 15px; padding: 10px 14px; border: 1px solid #c3c4c7; border-radius: 6px; background: #fff; }
+      .search-form button { font-size: 15px; padding: 10px 20px; border: 0; border-radius: 6px; background: #2271b1; color: #fff; cursor: pointer; }
+      .search-form button:hover { background: #135e96; }
+      .meta { font-size: 13px; color: #646970; margin-bottom: 16px; }
+      .result { background: #fff; border: 1px solid #e2e4e7; border-radius: 8px; padding: 16px 20px; margin-bottom: 12px; }
+      .result h2 { font-size: 17px; margin: 0 0 6px; font-weight: 600; }
+      .result h2 a { color: #135e96; text-decoration: none; }
+      .result h2 a:hover { text-decoration: underline; }
+      .result .date { font-size: 12px; color: #8c8f94; margin-left: 8px; }
+      .result p { font-size: 14px; line-height: 1.6; color: #3c434a; margin: 0; }
+      .result mark { background: #fff3a8; padding: 0 1px; border-radius: 2px; }
+      .empty { background: #fff; border: 1px solid #e2e4e7; border-radius: 8px; padding: 32px 20px; text-align: center; color: #646970; font-size: 14px; }
+      .hint { font-size: 13px; color: #8c8f94; margin-top: 8px; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>搜索</h1>
+
+      <!-- 顶部搜索表单，GET 提交，q 值回填（属性转义） -->
+      <form class="search-form" method="get" action="/search">
+        <input
+          type="search"
+          name="q"
+          value={q}
+          placeholder={settings?.placeholder ?? "输入关键词搜索"}
+          minlength={settings?.minChars ?? 1}
+          autofocus
+        />
+        <button type="submit">搜索</button>
+      </form>
+
+      {dbError ? (
+        // 数据库瞬时故障：优雅降级为中文提示，而非空白 500
+        <div class="empty">搜索服务暂时不可用，请稍后再试。</div>
+      ) : canSearch ? (
+        <>
+          <div class="meta">
+            找到 {resultCount} 条与「<strong>{q}</strong>」相关的结果
+          </div>
+          {resultCount > 0 ? (
+            hits.map((h) => {
+              const url = h.type === "page" ? `/${h.name}` : postPath(h.name, permalinkSettings);
+              const snipText = h.excerpt && h.excerpt.trim() ? h.excerpt : h.content;
+              return (
+                <article class="result">
+                  <h2>
+                    <a href={url}>{h.title || "(无标题)"}</a>
+                    <span class="date">{String(h.date).slice(0, 10)}</span>
+                  </h2>
+                  <p set:html={snippet(snipText, kw)} />
+                </article>
+              );
+            })
+          ) : (
+            <div class="empty">没有找到与「{q}」相关的内容，换个关键词试试。</div>
+          )}
+        </>
+      ) : (
+        q.length > 0 && (
+          <div class="empty">
+            关键词至少 {settings?.minChars ?? 1} 个字符，请继续输入。
+          </div>
+        )
+      )}
+    </div>
+  </body>
+</html>
