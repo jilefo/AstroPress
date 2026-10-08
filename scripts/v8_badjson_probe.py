@@ -17,6 +17,7 @@ import os
 import ssl
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -68,6 +69,8 @@ def call(method, path, body=None, ctype="application/json", raw=False):
         return r.status, dict(r.headers), r.read()
     except urllib.error.HTTPError as e:
         return e.code, dict(e.headers), e.read()
+    except urllib.error.URLError as e:
+        return -1, {}, f"{type(e).__name__}: {e}".encode()
 
 
 # (method, path, expect)  expect: 400json=标准断言
