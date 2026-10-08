@@ -38,7 +38,7 @@ function plainExcerpt(post: { excerpt: string; content: string }): string {
       {posts.map((post) => (
         <li class="post-list-item">
           <h2><a href={postPath(post.slug, permalinkSettings)}>{post.title}</a></h2>
-          <p class="post-meta">{formatDate(post.date)}</p>
+          <p class="post-meta"><time datetime={post.date}>{formatDate(post.date)}</time></p>
           <p class="post-excerpt">{plainExcerpt(post)}</p>
           <a href={postPath(post.slug, permalinkSettings)} class="read-more">阅读全文 →</a>
         </li>

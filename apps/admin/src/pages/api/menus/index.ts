@@ -1,7 +1,31 @@
 import type { APIRoute } from "astro";
+import { eq } from "drizzle-orm";
 import { wpTerms, wpTermTaxonomy } from "@astropress/core/schema";
 import { slugify } from "../../../lib/slugify";
 import { readJsonBody, jsonError } from "../../../lib/json-body";
+
+// GET — 菜单列表
+export const GET: APIRoute = async ({ locals }) => {
+  const db = locals.db;
+  if (!db || !locals.user) return new Response("未登录或登录已过期", { status: 401 });
+
+  const rows = await db
+    .select({
+      id: wpTerms.termId,
+      name: wpTerms.name,
+      slug: wpTerms.slug,
+    })
+    .from(wpTerms)
+    .innerJoin(
+      wpTermTaxonomy,
+      eq(wpTermTaxonomy.termId, wpTerms.termId)
+    )
+    .where(eq(wpTermTaxonomy.taxonomy, "nav_menu"));
+
+  return new Response(JSON.stringify({ items: rows }), {
+    headers: { "Content-Type": "application/json" },
+  });
+};
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const db = locals.db;
