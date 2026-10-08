@@ -125,11 +125,13 @@ def req(method, path, body=None, ctype="application/json", origin=True, follow=T
             time.sleep(2)
 
 
-def parallel(calls, workers=10, hard_timeout=60):
-    """并发请求；硬超时兜底防止 urllib SSL 死锁。
+def parallel(calls, workers=10, hard_timeout=60, cf_degrade_threshold=0.2):
+    """并发请求；硬超时兜底防止 urllib SSL 死锁；支持 CF 503 降级标记。
 
     共享 CookieJar 在多线程下非线程安全，可能死锁——
     用 as_completed + hard_timeout 保证线程池总能退出。
+
+    cf_degrade_threshold: 允许的 5xx 比例上限（默认 20%），超过则整体标 FAIL。
     """
     def one(c):
         method, path, body, kw = c
@@ -153,10 +155,23 @@ def parallel(calls, workers=10, hard_timeout=60):
     return results
 
 
+def count_5xx(results):
+    """统计并发结果中 5xx 的数量（CF D1 降级检测）。"""
+    return sum(1 for r in results if isinstance(r, tuple) and len(r) >= 1 and 500 <= r[0] < 600)
+
+
 # ---------- 登录 ----------
 _LOGIN_OK = True
-st, _, _ = req("POST", "/api/auth/login", {"username": "admin", "password": _PWD},
-               ctype="application/x-www-form-urlencoded", origin=False)
+st = -1
+for _li in range(3):  # CF D1 503 容错：登录最多重试 3 次
+    st, _, _ = req("POST", "/api/auth/login", {"username": "admin", "password": _PWD},
+                   ctype="application/x-www-form-urlencoded", origin=False)
+    if st in (302, 200):
+        break
+    if st >= 500 or st == -1:
+        time.sleep(1 + _li)
+        continue
+    break  # 4xx 不重试（凭证错误）
 if st not in (302, 200):
     _LOGIN_OK = False
     info(f"登录失败 st={st}，全部 17 项判 FAIL")
@@ -234,8 +249,13 @@ for r in ok200:
         pass
 mine = [r for r in jl(req("GET", "/admin-ext/api/redirects")[2], [])
         if r["from"].startswith(f"/{STAMP}-p")]
-ck("C02", "并发10条不同from零丢失", len(ok200) == 10 and len(mine) == 10,
-   f"200响应={len(ok200)} 实际落库={len(mine)}")
+n5xx_c02 = count_5xx(res_c02)
+if n5xx_c02 > 2:  # >20% 5xx → 标记 CF 降级
+    ck("C02", "并发10条不同from零丢失", False,
+       f"CF平台降级: 5xx={n5xx_c02}/10 200响应={len(ok200)} 落库={len(mine)}")
+else:
+    ck("C02", "并发10条不同from零丢失", len(ok200) == 10 and len(mine) == 10,
+       f"200响应={len(ok200)} 实际落库={len(mine)}" + (f" [CF降级5xx={n5xx_c02}]" if n5xx_c02 else ""))
 time.sleep(0.4)
 
 calls = [("POST", "/admin-ext/api/redirects",
@@ -301,8 +321,13 @@ if created["cat_id"]:
         time.sleep(1.0)
         after = next((x["clicks"] for x in jl(req("GET", "/admin-ext/api/links")[2], [])
                       if x["id"] == created["link_id"]), -1)
-        ck("D04", "20次并发点击全部302", n302 == 20,
-           f"302={n302} codes={sorted(set(x[0] for x in rr))}")
+        n5xx_d04 = count_5xx(rr)
+        if n5xx_d04 > 4:  # >20% 5xx → 标记 CF 降级
+            ck("D04", "20次并发点击全部302", False,
+               f"CF平台降级: 5xx={n5xx_d04}/20 302={n302}")
+        else:
+            ck("D04", "20次并发点击全部302", n302 == 20,
+               f"302={n302} codes={sorted(set(x[0] for x in rr))}" + (f" [CF降级5xx={n5xx_d04}]" if n5xx_d04 else ""))
         ck("D05", "原子计数零丢失(+20)", after == before + 20, f"before={before} after={after}")
 
 # ============================================================
@@ -352,8 +377,13 @@ ck("A05", "待审列表含本批4条评论", len(ids) >= 4, f"ids={ids[:8]}")
 if len(ids) >= 4:
     rr_ap = parallel([("POST", "/admin-ext/api/comments/action",
                        {"ids": ids[:4], "action": "approve"}, {}) for _ in range(5)], workers=5)
-    ck("A06", "并发5次审批无500(幂等)", all(x[0] == 200 for x in rr_ap),
-       f"codes={[x[0] for x in rr_ap]}")
+    n5xx_a06 = count_5xx(rr_ap)
+    if n5xx_a06 > 1:  # >20% 5xx → 标记 CF 降级
+        ck("A06", "并发5次审批无500(幂等)", False,
+           f"CF平台降级: 5xx={n5xx_a06}/5 codes={[x[0] for x in rr_ap]}")
+    else:
+        ck("A06", "并发5次审批无500(幂等)", all(x[0] == 200 for x in rr_ap),
+           f"codes={[x[0] for x in rr_ap]}" + (f" [CF降级5xx={n5xx_a06}]" if n5xx_a06 else ""))
     created["comment_ids"] = ids[:4]
     # V8 epoch 收口为 2s；poll 0.5s × 16 次（8s 上限）
     t0 = time.time()

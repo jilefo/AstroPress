@@ -64,7 +64,8 @@ op = urllib.request.build_opener(
     urllib.request.HTTPSHandler(context=_ssl_ctx))
 
 
-def _req(method, path, body=None, ctype="application/json", origin=True):
+def _req(method, path, body=None, ctype="application/json", origin=True, retries=1):
+    """HTTP 请求；retries>1 时对 5xx 做指数退避重试（CF D1 503 容错）。"""
     url = path if path.startswith("http") else BASE + path
     headers = {"User-Agent": UA}
     if origin:
@@ -77,14 +78,25 @@ def _req(method, path, body=None, ctype="application/json", origin=True):
         headers["Content-Type"] = ctype
     else:
         data = None
-    rr = urllib.request.Request(url, data=data, method=method, headers=headers)
-    try:
-        with op.open(rr, timeout=15) as x:
-            return x.status, {k.lower(): v for k, v in x.headers.items()}, x.read().decode("utf-8", "replace")
-    except urllib.error.HTTPError as e:
-        return e.code, {k.lower(): v for k, v in e.headers.items()}, e.read().decode("utf-8", "replace")
-    except Exception as e:
-        return -1, {}, f"{type(e).__name__}: {e}"
+    last_status = -1
+    for attempt in range(retries):
+        rr = urllib.request.Request(url, data=data, method=method, headers=headers)
+        try:
+            with op.open(rr, timeout=15) as x:
+                return x.status, {k.lower(): v for k, v in x.headers.items()}, x.read().decode("utf-8", "replace")
+        except urllib.error.HTTPError as e:
+            last_status = e.code
+            # 5xx 且还有重试次数 → 指数退避后重试
+            if e.code >= 500 and attempt < retries - 1:
+                time.sleep(0.5 * (2 ** attempt))
+                continue
+            return e.code, {k.lower(): v for k, v in e.headers.items()}, e.read().decode("utf-8", "replace")
+        except Exception as e:
+            if attempt < retries - 1:
+                time.sleep(0.5 * (2 ** attempt))
+                continue
+            return -1, {}, f"{type(e).__name__}: {e}"
+    return last_status, {}, "max retries exceeded"
 
 
 # ── 结果收集 ──────────────────────────────────────────────
@@ -162,16 +174,16 @@ _t0 = time.time()
 print("\n── 阶段 1/4  冒烟（健康+登录+公开端点）──")
 smoke_checks = []
 
-# 1a 健康检查
-st, h, t = _req("GET", "/ap-health", origin=False)
+# 1a 健康检查（retries=3 防 CF D1 503 瞬态抖动）
+st, h, t = _req("GET", "/ap-health", origin=False, retries=3)
 ok_health = st == 200 and '"ok"' in t
 smoke_checks.append({"id": "S01", "name": "/ap-health 存活", "pass": ok_health, "detail": f"st={st}"})
 print(f"  [{'PASS' if ok_health else 'FAIL'}] S01 /ap-health  st={st}")
 
-# 1b 管理员登录
+# 1b 管理员登录（retries=3 防 CF D1 503 瞬态抖动）
 st, h, t = _req("POST", "/api/auth/login",
                  {"username": "admin", "password": _PWD},
-                 ctype="application/x-www-form-urlencoded", origin=False)
+                 ctype="application/x-www-form-urlencoded", origin=False, retries=3)
 ok_login = st in (200, 302)
 smoke_checks.append({"id": "S02", "name": "管理员登录", "pass": ok_login, "detail": f"st={st}"})
 print(f"  [{'PASS' if ok_login else 'FAIL'}] S02 管理员登录  st={st}")
