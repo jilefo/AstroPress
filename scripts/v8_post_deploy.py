@@ -252,32 +252,43 @@ GATE_STAMP = f"V8GATE-{STAMP.replace('V8DEPLOY-', '')}"
 def _del_with_retry(path, retries=2):
     for attempt in range(retries):
         st, _, _ = _req("DELETE", path)
-        if st in (200, 204):
+        if st in (200, 204, 404):  # 404=已删，幂等视为成功
             return True
         time.sleep(0.5)
     return False
 
-for r in _jl(_req("GET", "/admin-ext/api/redirects")[2], []):
-    if GATE_STAMP in str(r.get("from", "")):
-        _del_with_retry(f"/admin-ext/api/redirects?id={r['id']}")
-for x in _jl(_req("GET", "/admin-ext/api/links")[2], []):
-    if GATE_STAMP in str(x.get("name", "")):
-        _del_with_retry(f"/admin-ext/api/links?id={x['id']}")
-for c in _jl(_req("GET", "/admin-ext/api/links/cats")[2], []):
-    if GATE_STAMP in str(c.get("name", "")):
-        _del_with_retry(f"/admin-ext/api/links/cats?id={c['id']}")
-for qs in ("pending", "approved", "spam", "trash", ""):
-    arr = _jl(_req("GET", f"/admin-ext/api/comments/list?status={qs}&perPage=100")[2], {})
-    items = arr.get("items", []) if isinstance(arr, dict) else []
-    ids = [c["id"] for c in items if GATE_STAMP in str(c.get("content", ""))]
-    if ids:
-        for attempt in range(2):
-            st, _, _ = _req("POST", "/admin-ext/api/comments/action",
-                            {"ids": ids, "action": "delete"})
-            if st in (200, 204):
-                break
-            time.sleep(0.5)
-time.sleep(1)  # CF D1 最终一致性：删除后等 1s 再扫描
+
+def _cleanup_pass():
+    """单轮清扫；返回本轮尝试删除的条目数。CF GET 偶发瞬空，故需双轮。"""
+    n = 0
+    for r in _jl(_req("GET", "/admin-ext/api/redirects")[2], []):
+        if GATE_STAMP in str(r.get("from", "")):
+            _del_with_retry(f"/admin-ext/api/redirects?id={r['id']}"); n += 1
+    for x in _jl(_req("GET", "/admin-ext/api/links")[2], []):
+        if GATE_STAMP in str(x.get("name", "")):
+            _del_with_retry(f"/admin-ext/api/links?id={x['id']}"); n += 1
+    for c in _jl(_req("GET", "/admin-ext/api/links/cats")[2], []):
+        if GATE_STAMP in str(c.get("name", "")):
+            _del_with_retry(f"/admin-ext/api/links/cats?id={c['id']}"); n += 1
+    for qs in ("pending", "approved", "spam", "trash", ""):
+        arr = _jl(_req("GET", f"/admin-ext/api/comments/list?status={qs}&perPage=100")[2], {})
+        items = arr.get("items", []) if isinstance(arr, dict) else []
+        ids = [c["id"] for c in items if GATE_STAMP in str(c.get("content", ""))]
+        if ids:
+            for attempt in range(2):
+                st, _, _ = _req("POST", "/admin-ext/api/comments/action",
+                                {"ids": ids, "action": "delete"})
+                if st in (200, 204):
+                    break
+                time.sleep(0.5)
+            n += len(ids)
+    return n
+
+# 双轮清扫：第一轮漏掉的（GET 瞬空/DELETE 503）第二轮兜底
+_deleted = _cleanup_pass()
+time.sleep(1)  # CF D1 最终一致性
+_deleted += _cleanup_pass()
+time.sleep(1)
 
 # 扫描本 run 残留（只看 GATE_STAMP 前缀，不扫历史残留）
 red = [r["from"] for r in _jl(_req("GET", "/admin-ext/api/redirects")[2], []) if GATE_STAMP in str(r.get("from", ""))]
