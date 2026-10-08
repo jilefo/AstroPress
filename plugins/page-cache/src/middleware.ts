@@ -83,8 +83,8 @@ export const onRequest: MiddlewareHandler = async (ctx, next) => {
         headers.set("content-type", hit.contentType);
         headers.set("X-Cache", "HIT");
         headers.set("Age", String(age));
-        // 浏览器不私自缓存，回源以中间件判定为准
-        headers.set("Cache-Control", "no-cache");
+        // 浏览器不私自缓存；CF 边缘缓存 30s（减少 Worker 执行，多 isolate 最终一致性可接受）
+        headers.set("Cache-Control", "public, s-maxage=30, max-age=0");
         return new Response(hit.body, { status: hit.status, statusText: hit.statusText, headers });
       }
     }
@@ -116,6 +116,10 @@ export const onRequest: MiddlewareHandler = async (ctx, next) => {
 
     const headers = new Headers(res.headers);
     headers.set("X-Cache", "MISS");
+    // 让 CF 边缘也缓存新生成的 HTML（30s），与内存缓存协同
+    if (!headers.has("Cache-Control")) {
+      headers.set("Cache-Control", "public, s-maxage=30, max-age=0");
+    }
     headers.delete("content-length");
     return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
   } catch {
