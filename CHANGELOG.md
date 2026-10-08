@@ -20,6 +20,7 @@ V2 实例最终部署版本 `9050001b`；旧实例 astropress 部署版本 `1987
 2. **epoch 收敛断言工具**（[logs/v8_cf_epoch.py](logs/v8_cf_epoch.py)）：发文/改标题/删除三类写后收敛轮询（0.4s 间隔 / 8s 超时 / 断言 ≤3.5s），双实例各 **7/7 PASS**，实测收敛 1.56–3.06s（V6 时代断言窗口为 ≤16s、实测最高 5.2s）。
 3. **开源发布工程化**：全仓脱敏 186+ 文件（明文凭据清零，测试脚本改 `ASTROPRESS_TEST_PASSWORD` 环境变量注入，管理员凭据迁至 `.ap-data/credential.txt`，git 与发布包双排除）；`.gitignore` 补齐第三方参考物/内部工作文档/发布包产物；新增 `.github/` 开源基建六件——[ci.yml](.github/workflows/ci.yml)（typecheck → Node 构建 → CF 构建 → 部署脚本语法检查）、Issue 模板×3、PR 模板、CODEOWNERS、dependabot；根 `package.json` 版本对齐 `1.0.4`；发布包 [astropress-v1.0.4-source.zip](releases/v1.0.4/astropress-v1.0.4-source.zip)（2.1 MB，1427 文件，以 `git ls-files` 为唯一白名单打包，内置强制安全扫描 PASS，SHA256 `f2d21d04…5261`）。
 4. **写路径混沌复测快组门禁（V8 中优先级任务 5）**：新增 [v8_gate_acd.py](logs/v8_gate_acd.py)，自包含 ~90s 跑完 A 评论频控（7 项）/C 重定向并发（5 项）/D 链接原子计数（5 项）共 17 断言，同一脚本双形态通用（Node http 内置 Secure cookie 策略，CF https 直跑），非零退出码可直接接部署流水线；配套 [v8_badjson_probe.py](logs/v8_badjson_probe.py) 对 35 个 JSON 端点发畸形 body，断言 400 + JSON content-type + 中文 error 且不回退首页 HTML；[v8_gate_residue.py](logs/v8_gate_residue.py) 三端零残留独立扫描。
+5. **V8 部署后标准回归编排器**（[v8_post_deploy.py](scripts/v8_post_deploy.py)）：一条命令 ~2min 跑完 4 阶段全链路回归——① 冒烟 7 项（健康+登录+6 公开端点）→ ② 坏 JSON 探针 41 断言 → ③ A/C/D 混沌门禁 17 断言 → ④ 当前 STAMP 零残留扫描；子进程 JSON 轮询读结果（Popen 继承 fd 无管道死锁），parallel() 硬超时兜底防 urllib SSL 死锁，登录失败优雅写 JSON 不崩溃，退出码 0/1 直接接 CI；子脚本 [v8_gate_acd.py](scripts/v8_gate_acd.py) / [v8_badjson_probe.py](scripts/v8_badjson_probe.py) 同步迁入 `scripts/`。
 
 ### 文档
 
