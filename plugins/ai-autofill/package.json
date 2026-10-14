@@ -14,7 +14,7 @@
     "@astropress/core": "workspace:*",
     "@astropress/plugin-ai-chat": "workspace:*",
     "drizzle-orm": "^0.44.7",
-    "marked": "^18.0.14"
+    "marked": "^18.1.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.0.0",
